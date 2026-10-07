@@ -1,0 +1,12 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Player.App/Player.App.csproj" />
+    <Project Path="src/Player.Audio/Player.Audio.csproj" />
+    <Project Path="src/Player.Core/Player.Core.fsproj" />
+  </Folder>
+</Solution>
