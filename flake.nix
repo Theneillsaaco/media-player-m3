@@ -64,7 +64,7 @@
         inputsFrom = [ qt.qtbase qt.qtdeclarative ];
         nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
         packages = [
-          pkgs.dotnet-sdk_9
+          pkgs.dotnet-sdk_10
           (pkgs.python3.withPackages (ps: [ ps.ytmusicapi ps.yt-dlp ]))
           pkgs.deno   # JS runtime yt-dlp needs for YouTube
           pkgs.mpv    # CLI, only for debugging streams by hand
