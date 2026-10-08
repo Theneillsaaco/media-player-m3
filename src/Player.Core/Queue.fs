@@ -103,10 +103,9 @@ module PlayQueue =
         
     /// Manual "previous". At the start it stays (or wraps with repeat all).
     let previous (q: QueueState) =
-        if q.Position = 0 then q
-        elif q.Position > 0 then
+        if q.Position > 0 then
             { q with Position = q.Position - 1 }
-        elif q.Repeat = All then
+        elif q.Position = 0 && q.Repeat = All && q.Order.Length > 0 then
             { q with Position = q.Order.Length - 1 }
         else q
         

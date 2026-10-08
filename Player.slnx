@@ -11,6 +11,6 @@
     <Project Path="src/Player.Providers/Player.Providers.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <File Path="tests\Player.Tests\Player.Tests.fsproj" />
+    <Project Path="tests/Player.Tests/Player.Tests.fsproj" />
   </Folder>
 </Solution>
