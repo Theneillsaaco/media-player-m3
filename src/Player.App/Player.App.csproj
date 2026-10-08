@@ -26,8 +26,8 @@
   </Target>
 
   <ItemGroup>
-    <None Include="Main.qml" />
-    <None Include="MButton.qml" />
+    <Compile Include="TrackListModel.cs" />
+    <Compile Include="TrackModels.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="PlayerViewModel.cs" />
   </ItemGroup>
@@ -35,6 +35,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Player.Audio\Player.Audio.csproj" />
     <ProjectReference Include="..\Player.Core\Player.Core.fsproj" />
+    <ProjectReference Include="..\Player.Providers\Player.Providers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="QML\*.qml" />
   </ItemGroup>
 
 </Project>
