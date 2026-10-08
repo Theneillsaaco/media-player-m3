@@ -1,10 +1,6 @@
 using Qt.Quick;
 
-public class Program
-{
-    internal static void Main(string[] args)
-    {
-        Qml.LoadFromRootModule("Main");
-        Qml.WaitForExit();
-    }
-}
+// Initialize Qt
+Qml.LoadFromRootModule("Main");
+Qml.WaitForExit();
+    
