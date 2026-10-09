@@ -1,6 +1,4 @@
-using Qt.Bridge.Models;
-
-namespace PlayerApp;
+namespace Player.App;
 
 public class TrackRow
 {

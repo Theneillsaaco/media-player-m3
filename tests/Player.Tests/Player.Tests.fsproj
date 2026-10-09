@@ -13,12 +13,15 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Include="LastFmTests.fs" />
+      <Compile Include="ListeningTests.fs" />
       <Compile Include="QueueTests.fs" />
       <Compile Include="ScrobbleTests.fs" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Player.Core\Player.Core.fsproj" />
+      <ProjectReference Include="..\..\src\Player.Scrobble\Player.Scrobble.fsproj" />
     </ItemGroup>
 
 </Project>

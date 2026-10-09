@@ -26,6 +26,7 @@
   </Target>
 
   <ItemGroup>
+    <Compile Include="ScrobbleService.cs" />
     <Compile Include="TrackListModel.cs" />
     <Compile Include="TrackModels.cs" />
     <Compile Include="Program.cs" />
@@ -36,6 +37,8 @@
     <ProjectReference Include="..\Player.Audio\Player.Audio.csproj" />
     <ProjectReference Include="..\Player.Core\Player.Core.fsproj" />
     <ProjectReference Include="..\Player.Providers\Player.Providers.csproj" />
+    <ProjectReference Include="..\Player.Scrobble\Player.Scrobble.fsproj" />
+    <ProjectReference Include="..\Player.Storage\Player.Storage.csproj" />
   </ItemGroup>
 
   <ItemGroup>

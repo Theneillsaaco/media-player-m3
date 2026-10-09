@@ -7,5 +7,6 @@
     <Compile Include="Contracts.fs" />
     <Compile Include="Scrobble.fs" />
     <Compile Include="Queue.fs" />
+    <Compile Include="Listening.fs" />
   </ItemGroup>
 </Project>

@@ -1,17 +1,20 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Player.Audio;
 using Player.Core;
 using Player.Providers;
+using Player.Scrobble;
+using Player.Storage;
 
-namespace PlayerApp;
+namespace Player.App;
 
 /// <summary>
 /// What QML sees. Instantiated from Main.qml as <c>PlayerViewModel { id: player }</c>.
 /// All state is refreshed by <see cref="Poll"/>, which QML calls from a Timer on the Qt
-/// thread. Background work (searching) leaves its result in a field under a lock and
-/// Poll picks it up, so no property change is ever raised from a foreign thread.
+/// thread. Background work (searching, scrobbling) leaves its result in a field under a lock
+/// and Poll picks it up, so no property change is ever raised from a foreign thread.
 /// </summary>
 public class PlayerViewModel : INotifyPropertyChanged
 {
@@ -19,11 +22,16 @@ public class PlayerViewModel : INotifyPropertyChanged
 
     private readonly IAudioEngine _engine = new MpvEngine();
     private readonly IMusicProvider? _provider;
+    private readonly PlayerDatabase? _db;
+    private readonly ScrobbleService? _scrobble;
     private readonly Random _rng = new();
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
 
     private QueueState _queue = PlayQueue.empty;
-    private IReadOnlyList<Track> _results = Array.Empty<Track>();
+    private IReadOnlyList<Track> _results = [];
+    private ListenTracker? _tracker;
+    private string _currentId = "";
     private double _knownDuration;
     private bool _sawActive;
 
@@ -33,21 +41,33 @@ public class PlayerViewModel : INotifyPropertyChanged
     private string? _pendingError;
     private int _searchTicket;
 
-    private double _position, _duration;
-    private bool _paused = true, _isloaded, _searching, _shuffle, _canNext, _canPrevious;
-    private int _queuePosition = -1, _queueCount;
-    private string _status = "Busca una canción o pega un enlace o ruta";
-    private string _currentTitle = "", _currentArtist = "", _currentArt = "", _repeatMode = "off";
-
     public PlayerViewModel()
     {
         try { _provider = new YtSidecarProvider(); }
-        catch (Exception e) { _status = "Búsqueda no disponible: " + e.Message; }
+        catch (Exception e) { Status = "Búsqueda no disponible: " + e.Message; }
+
+        try
+        {
+            _db = new PlayerDatabase(PlayerDatabase.DefaultPath);
+            IScrobbler? client = LastFmConfig.load(AppPaths.ConfigFile("lastfm.json")) is { IsSome: true } credentials
+                ? new LastFmClient(credentials.Value)
+                : null;
+            _scrobble = new ScrobbleService(client, _db, new SecretStore());
+            _scrobble.Start();
+            SyncScrobbler();
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine("[player] storage unavailable: " + e.Message);
+            ScrobbleStatus = "No se pudo abrir la base de datos: " + e.Message;
+        }
 
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {
+            _scrobble?.Dispose();
             _provider?.Dispose();
             _engine.Dispose();
+            _db?.Dispose();
         };
     }
 
@@ -56,22 +76,32 @@ public class PlayerViewModel : INotifyPropertyChanged
     public TrackListModel Results { get; } = new();
     public TrackListModel Queue { get; } = new();
 
-    public double Position { get => _position; private set => Set(ref _position, value); }
-    public double Duration { get => _duration; private set => Set(ref _duration, value); }
-    public bool Paused { get => _paused; private set => Set(ref _paused, value); }
-    public bool IsLoaded { get => _isloaded; private set => Set(ref _isloaded, value); }
-    public bool Searching { get => _searching; private set => Set(ref _searching, value); }
-    public string Status { get => _status; private set => Set(ref _status, value); }
-    public string CurrentTitle { get => _currentTitle; private set => Set(ref _currentTitle, value); }
-    public string CurrentArtist { get => _currentArtist; private set => Set(ref _currentArtist, value); }
-    public string CurrentArt { get => _currentArt; private set => Set(ref _currentArt, value); }
-    public string RepeatMode { get => _repeatMode; private set => Set(ref _repeatMode, value); }
-    public bool Shuffle { get => _shuffle; private set => Set(ref _shuffle, value); }
-    public bool CanNext { get => _canNext; private set => Set(ref _canNext, value); }
-    public bool CanPrevious { get => _canPrevious; private set => Set(ref _canPrevious, value); }
+    public double Position { get; private set => Set(ref field, value); }
+    public double Duration { get; private set => Set(ref field, value); }
+    public bool Paused { get; private set => Set(ref field, value); } = true;
+    public bool IsLoaded { get; private set => Set(ref field, value); }
+    public bool Searching { get; private set => Set(ref field, value); }
+    public string Status { get; private set => Set(ref field, value); } = "Busca una canción o pega un enlace o ruta";
+    public string CurrentTitle { get; private set => Set(ref field, value); } = "";
+    public string CurrentArtist { get; private set => Set(ref field, value); } = "";
+    public string CurrentArt { get; private set => Set(ref field, value); } = "";
+    public string RepeatMode { get; private set => Set(ref field, value); } = "off";
+    public bool Shuffle { get; private set => Set(ref field, value); }
+    public bool CanNext { get; private set => Set(ref field, value); }
+    public bool CanPrevious { get; private set => Set(ref field, value); }
     /// <summary>Position of the current track in the queue panel (play order), -1 if none.</summary>
-    public int QueuePosition { get => _queuePosition; private set => Set(ref _queuePosition, value); }
-    public int QueueCount { get => _queueCount; private set => Set(ref _queueCount, value); }
+    public int QueuePosition { get; private set => Set(ref field, value); } = -1;
+    public int QueueCount { get; private set => Set(ref field, value); }
+
+    // Last.fm, for the settings dialog. State is one of:
+    // unavailable, signedOut, authorizing, signedIn, reconnect.
+    public string ScrobbleState { get; private set => Set(ref field, value); } = "unavailable";
+    public string ScrobbleUser { get; private set => Set(ref field, value); } = "";
+    public string ScrobbleStatus { get; private set => Set(ref field, value); } = "";
+    public string ScrobbleAuthUrl { get; private set => Set(ref field, value); } = "";
+    public bool ScrobbleEnabled { get; private set => Set(ref field, value); }
+    public bool ScrobbleBusy { get; private set => Set(ref field, value); }
+    public int ScrobblePending { get; private set => Set(ref field, value); }
 
     // ---- search ----
 
@@ -83,8 +113,8 @@ public class PlayerViewModel : INotifyPropertyChanged
 
         if (IsDirect(query))
         {
-            var direct = new Track(query, query, "", "", 0.0, "", TrackKind.Song);
-            _queue = PlayQueue.replace(_rng.Next(), new[] { direct }, 0, _queue);
+            var direct = new Track(query, query, "", [], "", 0.0, "", TrackKind.Song);
+            _queue = PlayQueue.replace(_rng.Next(), [direct], 0, _queue);
             RefreshQueueModel();
             PlayCurrent();
             Poll();
@@ -126,7 +156,7 @@ public class PlayerViewModel : INotifyPropertyChanged
     {
         if (index < 0 || index >= _results.Count) return;
         var wasEmpty = PlayQueue.count(_queue) == 0;
-        _queue = PlayQueue.add(new[] { _results[index] }, _queue);
+        _queue = PlayQueue.add([_results[index]], _queue);
         RefreshQueueModel();
         if (wasEmpty)
         {
@@ -195,16 +225,60 @@ public class PlayerViewModel : INotifyPropertyChanged
 
     public void SetVolume(int percent) => _engine.SetVolume(percent);
 
+    // ---- scrobbling ----
+
+    public void ConnectScrobbler() { _scrobble?.BeginSignIn(); SyncScrobbler(); }
+    public void FinishScrobblerSignIn() { _scrobble?.CompleteSignIn(); SyncScrobbler(); }
+    public void CancelScrobblerSignIn() { _scrobble?.CancelSignIn(); SyncScrobbler(); }
+    public void DisconnectScrobbler() { _scrobble?.Disconnect(); SyncScrobbler(); }
+    public void SetScrobbleEnabled(bool on) { _scrobble?.SetEnabled(on); SyncScrobbler(); }
+    public void RetryScrobbles() { _scrobble?.RetryNow(); SyncScrobbler(); }
+
+    private void SyncScrobbler()
+    {
+        if (_scrobble is null) return;
+        var s = _scrobble.Snapshot;
+        ScrobbleState = s.Stage switch
+        {
+            ScrobbleStage.SignedOut => "signedOut",
+            ScrobbleStage.Authorizing => "authorizing",
+            ScrobbleStage.SignedIn => "signedIn",
+            ScrobbleStage.Reconnect => "reconnect",
+            _ => "unavailable",
+        };
+        ScrobbleUser = s.User;
+        ScrobbleStatus = s.Status;
+        ScrobbleAuthUrl = s.AuthUrl;
+        ScrobbleEnabled = s.Enabled;
+        ScrobbleBusy = s.Busy;
+        ScrobblePending = s.Pending;
+    }
+
+    /// <summary>Feeds the listen tracker; when the track counts it goes to the history and the queue to Last.fm.</summary>
+    private void ObserveListening()
+    {
+        if (_tracker is not { } tracker) return;
+        var (next, due) = Listening.observe(_clock.Elapsed.TotalSeconds, Position, Paused, Duration, tracker);
+        _tracker = next;
+        if (!due.IsSome) return;
+
+        try { _db?.AddHistory(due.Value, next.Listened, _currentId); }
+        catch (Exception e) { Console.Error.WriteLine("[player] history: " + e.Message); }
+        _scrobble?.Submit(due.Value);
+    }
+
     // ---- polling ----
 
     public void Poll()
     {
         TakeSearchResults();
+        SyncScrobbler();
 
         var error = _engine.DrainEvents();
         if (error.Length > 0)
         {
             IsLoaded = false;
+            _sawActive = false;
             Status = "Error: " + error;
             return;
         }
@@ -219,6 +293,7 @@ public class PlayerViewModel : INotifyPropertyChanged
         {
             _sawActive = true;
             if (d > 0 && Status == Loading) Status = "Reproduciendo";
+            ObserveListening();
         }
         else if (_sawActive)
         {
@@ -260,6 +335,7 @@ public class PlayerViewModel : INotifyPropertyChanged
             PlayCurrent();
             return;
         }
+        _sawActive = false;
         IsLoaded = false;
         Position = 0;
         Status = "Terminó";
@@ -279,6 +355,7 @@ public class PlayerViewModel : INotifyPropertyChanged
         CurrentTitle = t.Title;
         CurrentArtist = t.Artist;
         CurrentArt = t.ArtUrl;
+        _currentId = t.Id;
         _knownDuration = t.DurationSeconds;
         _sawActive = false;
         IsLoaded = true;
@@ -286,6 +363,9 @@ public class PlayerViewModel : INotifyPropertyChanged
         Duration = t.DurationSeconds;
         Status = Loading;
         _engine.Load(SourceOf(t));
+
+        _tracker = Listening.start(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), t);
+        if (_tracker.Listen is { IsSome: true } listen) _scrobble?.NowPlaying(listen.Value);
     }
 
     /// <summary>Rebuilds the queue panel rows (the queue content or its order changed).</summary>

@@ -4,7 +4,7 @@ open Xunit
 open Player.Core
 
 let track (id: string) =
-    { Id = id; Title = id; Artist = "a"; Album = ""; DurationSeconds = 100.0; ArtUrl = ""; Kind = Song }
+    { Id = id; Title = id; Artist = "a"; Artists = [| "a" |]; Album = ""; DurationSeconds = 100.0; ArtUrl = ""; Kind = Song }
 
 let tracks n = [ for i in 0 .. n - 1 -> track (string i) ]
 

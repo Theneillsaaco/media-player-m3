@@ -18,11 +18,13 @@ ApplicationWindow {
 
     PlayerViewModel { id: player }
 
+    SettingsDialog { id: settings; vm: player }
+
     // Polls only while something is playing or a search is running, so an idle player wakes nothing.
     Timer {
         interval: 250
         repeat: true
-        running: (player.isLoaded && !player.paused) || player.searching
+        running: (player.isLoaded && !player.paused) || player.searching || player.scrobbleBusy
         onTriggered: player.poll()
     }
 
@@ -50,6 +52,10 @@ ApplicationWindow {
                 glyph: "queue"
                 selected: win.queueOpen
                 onClicked: win.queueOpen = !win.queueOpen
+            }
+            MIconButton {
+                glyph: "settings"
+                onClicked: settings.open()
             }
         }
 

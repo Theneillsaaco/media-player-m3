@@ -9,6 +9,8 @@
     <Project Path="src/Player.Audio/Player.Audio.csproj" />
     <Project Path="src/Player.Core/Player.Core.fsproj" />
     <Project Path="src/Player.Providers/Player.Providers.csproj" />
+    <Project Path="src/Player.Scrobble/Player.Scrobble.fsproj" />
+    <Project Path="src/Player.Storage/Player.Storage.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Player.Tests/Player.Tests.fsproj" />

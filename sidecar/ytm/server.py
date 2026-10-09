@@ -56,12 +56,14 @@ def artwork(item):
         src = re.sub(r"=w\d+-h\d+[^?]*$", "=w544-h544-l90-rj", src)
     return src
 
+def artist_names(value):
+    if isinstance(value, str):
+        return [value] if value else []
+    return [a["name"] for a in (value or []) if isinstance(a, dict) and a.get("name")]
+
 
 def names(value):
-    if isinstance(value, str):
-        return value
-    return ", ".join(a.get("name", "") for a in (value or []) if isinstance(a, dict))
-
+    return ", ".join(artist_names(value))
 
 def track(item):
     video = item.get("videoId") or ""
@@ -74,6 +76,7 @@ def track(item):
         "id": video,
         "title": item.get("title") or "Untitled",
         "artist": names(item.get("artists")),
+        "artists": artist_names(item.get("artists")),
         "album": album.get("name", "") if isinstance(album, dict) else "",
         "art": artwork(item),
         "seconds": item.get("duration_seconds") or 0,
@@ -101,6 +104,7 @@ def song(params):
         "id": video,
         "title": details.get("title") or "Untitled",
         "artist": details.get("author", ""),
+        "artists": artist_names(details.get("author", "")),
         "album": "",
         "art": artwork({"thumbnails": details.get("thumbnail", {}).get("thumbnails", [])}),
         "seconds": int(details.get("lengthSeconds") or 0),

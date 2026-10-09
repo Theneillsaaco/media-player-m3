@@ -68,6 +68,8 @@
           (pkgs.python3.withPackages (ps: [ ps.ytmusicapi ps.yt-dlp ]))
           pkgs.deno   # JS runtime yt-dlp needs for YouTube
           pkgs.mpv    # CLI, only for debugging streams by hand
+          pkgs.libsecret
+          pkgs.xdg-utils
         ];
         shellHook = ''
           export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
