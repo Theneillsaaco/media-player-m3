@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(QtBridgeTemplateRid)' == 'win-x64'&#xD;&#xA;                    or '$(QtBridgeTemplateRid)' == 'win-arm64'&#xD;&#xA;                    or '$(QtBridgeTemplateRid)' == 'linux-x64'&#xD;&#xA;                    or '$(QtBridgeTemplateRid)' == 'osx-x64'&#xD;&#xA;                    or '$(QtBridgeTemplateRid)' == 'osx-arm64'">
-    <PackageReference Include="$(QtBridgePackageId)" Version="0.4.*-*" />
+    <PackageReference Include="$(QtBridgePackageId)" Version="0.4.0-beta" />
   </ItemGroup>
 
   <Target Name="EnsureSupportedQtBridgePlatform" BeforeTargets="Restore;Build" Condition="'$(QtBridgeTemplateRid)' != 'win-x64'&#xD;&#xA;                  and '$(QtBridgeTemplateRid)' != 'win-arm64'&#xD;&#xA;                  and '$(QtBridgeTemplateRid)' != 'linux-x64'&#xD;&#xA;                  and '$(QtBridgeTemplateRid)' != 'osx-x64'&#xD;&#xA;                  and '$(QtBridgeTemplateRid)' != 'osx-arm64'">
@@ -44,7 +44,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="QML\*.qml" />
+    <None Include="QML\*.qml" CopyToOutputDirectory="PreserveNewest" LinkBase="QML" />
+    <None Include="Main.qml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

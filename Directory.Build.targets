@@ -1,0 +1,22 @@
+<Project>
+  <!-- Mismo target que el de Qt Bridge, pero tolerante al fallo del deploy de Qt en Nix.
+       Fuera de Nix se comporta igual que el original. -->
+  <Target Name="QtBridgeDeploy_SourceCode_Linux_MacOS"
+    AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="QtBridgeBuild"
+    Condition="'$(DesignTimeBuild)' != 'true' AND '$(QtGenSourceCode)' == 'true'
+      AND ('$(QtHostIsLinux)' == 'true' OR '$(QtHostIsMacOS)' == 'true')">
+
+    <Message Importance="high" Text="Qt Bridge: Deploying Qt..." />
+    <Exec Command="cmake --install . --prefix &quot;$(TargetDir)&quot;"
+      WorkingDirectory="$(QtNativeBuildDir)" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="DeployResult" />
+    </Exec>
+    <Warning Condition="'$(DeployResult)' != '0' AND '$(PLAYER_NIX)' == '1'"
+      Text="Qt deploy fallo (ignorado en Nix, se usa el Qt del store)." />
+    <Error Condition="'$(DeployResult)' != '0' AND '$(PLAYER_NIX)' != '1'"
+      Text="Error deploying Qt binaries with CMake install!" />
+    <Exec Condition="Exists('$(QtNativeBuildDir)/install_manifest.txt')"
+        Command="sed -e &quot;s#^$(TargetDir.Replace('\', '/').TrimEnd('/'))/##&quot; &quot;$(QtNativeBuildDir)/install_manifest.txt&quot; &gt;&gt; &quot;$(TargetDir)qtdeploy.txt&quot;"
+        IgnoreExitCode="true" />
+  </Target>
+</Project>
