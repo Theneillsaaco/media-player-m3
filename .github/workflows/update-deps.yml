@@ -9,30 +9,34 @@ on:
 
 jobs:
   update-deps:
-      runs-on: ubuntu-latest
-      permissions:
-        contents: write
-        pull-requests: write
-        id-token: write
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v7
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-        - name: Install Nix
-          uses: DeterminateSystems/nix-installer-action@main
-          
-        - name: Build fetch-deps script
-          run: nix build .#default.fetch-deps
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
         
-        - name: Regenerate deps.json
-          run: ./result deps.json
+      - name: Build fetch-deps script
+        run: nix build .#default.fetch-deps
         
-        - name: Create Pull Request if changed
-          uses: peter-evans/create-pull-request@v8
-          with:
-            commit-message: "chore(deps): auto-update deps.json"
-            title: "chore(deps): actualizar deps.json por cambios en proyectos .NET"
-            body: "Actualización automática de dependencias de NuGet generada debido a modificaciones en archivos `.csproj` o `.fsproj`."
-            branch: automated/update-deps-json
-            delete-branch: true
-          
+      - name: Regenerate deps.json
+        run: ./result deps.json
+        
+      - name: Create Pull Request if changed
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "chore(deps): auto-update deps.json"
+          title: "chore(deps): actualizar deps.json por cambios en proyectos .NET"
+          body: "Actualización automática de dependencias de NuGet generada debido a modificaciones en archivos `.csproj` o `.fsproj`."
+          branch: automated/update-deps-json
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+          reviewers: Theneillsaaco
+          assignees: Theneillsaaco
