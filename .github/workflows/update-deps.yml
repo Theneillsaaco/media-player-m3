@@ -25,7 +25,7 @@ jobs:
           run: nix build .#default.fetch-deps
         
         - name: Regenerate deps.json
-          run: ./result -o deps.json
+          run: ./result deps.json
         
         - name: Create Pull Request if changed
           uses: peter-evans/create-pull-request@v8
