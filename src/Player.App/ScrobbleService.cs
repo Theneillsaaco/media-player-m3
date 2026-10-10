@@ -133,7 +133,6 @@ internal sealed class ScrobbleService : IDisposable
             try
             {
                 var account = await _client!.CompleteSignIn(request);
-                await _secrets.Set(SessionSecret, account.SessionKey);
                 _db.SetSetting(UserKey, account.User);
                 _db.SetSetting(EnabledKey, "1");
                 lock (_gate)
@@ -141,6 +140,9 @@ internal sealed class ScrobbleService : IDisposable
                     (_account, _request, _user) = (account, null, account.User);
                     (_needsReconnect, _enabled, _attempt, _note) = (false, true, 0, "");
                 }
+                
+                try { await _secrets.Set(SessionSecret, account.SessionKey); }
+                catch (Exception e) { Log("could not save the session (it will work until you close the app)", e); }
             }
             catch (LastFmException e) when (e.Code == 14)
             {

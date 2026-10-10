@@ -29,7 +29,7 @@ public  sealed class SecretStore(string application = "player")
 
         if (ok)
         {
-            File.Delete(FilePath(name));
+            File.Delete(name);
             return;
         }
 
@@ -49,7 +49,14 @@ public  sealed class SecretStore(string application = "player")
     public async Task Delete(string name)
     {
         await RunTool(["clear", "application", application, "account", name], null);
-        File.Delete(FilePath(name));
+        DeleteFile(name);
+    }
+    
+    /// <summary>File.Delete throws when the folder is missing; File.Exists just says no.</summary>
+    private static void DeleteFile(string name)
+    {
+        var path = FilePath(name);
+        if (File.Exists(path)) File.Delete(path);
     }
     
     private static string FilePath(string name)
