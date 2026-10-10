@@ -1,0 +1,148 @@
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls.Basic
+
+// The user's YouTube Music library: the playlists ("Me gusta" first) and, once one is open,
+// its tracks with Play / Shuffle. Everything comes from the view model.
+Item {
+    id: root
+
+    required property var vm
+    signal settingsRequested()
+
+    readonly property bool signedIn: vm.accountState === "signedIn"
+    readonly property bool inList: signedIn && vm.openListId !== ""
+
+    // No account connected
+    ColumnLayout {
+        anchors.centerIn: parent
+        width: parent.width - 48
+        visible: !root.signedIn
+        spacing: 16
+
+        Text {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            color: "#49454F"
+            font.pixelSize: 14
+            text: root.vm.accountBusy || root.vm.accountState === "unavailable" ? root.vm.accountStatus
+                : root.vm.accountState === "expired" ? "La sesión de YouTube Music caducó."
+                    : "Conecta tu cuenta de YouTube Music para ver tu biblioteca y tus Me gusta."
+        }
+        MButton {
+            Layout.alignment: Qt.AlignHCenter
+            visible: root.vm.accountState !== "unavailable" && !root.vm.accountBusy
+            text: "Abrir ajustes"
+            onClicked: root.settingsRequested()
+        }
+    }
+
+    // Playlists
+    ListView {
+        id: listsView
+        anchors.fill: parent
+        visible: root.signedIn && !root.inList
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        model: root.vm.library
+        ScrollBar.vertical: ScrollBar {}
+        delegate: TrackItem {
+            required property int index
+            required property var model
+            width: ListView.view.width
+            heading: model.title
+            supporting: model.artist
+            artUrl: model.artUrl
+            onActivated: root.vm.openPlaylist(index)
+        }
+    }
+    Text {
+        anchors.centerIn: parent
+        width: parent.width - 48
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.Wrap
+        visible: root.signedIn && !root.inList && listsView.count === 0
+        text: root.vm.libraryStatus
+        color: "#49454F"
+        font.pixelSize: 14
+    }
+
+    // One playlist
+    ColumnLayout {
+        anchors.fill: parent
+        visible: root.inList
+        spacing: 0
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.margins: 8
+            spacing: 8
+
+            MIconButton {
+                glyph: "back"
+                onClicked: root.vm.closeList()
+            }
+            Text {
+                Layout.fillWidth: true
+                text: root.vm.openListTitle + (root.vm.listCount > 0 ? " · " + root.vm.listCount : "")
+                color: "#1D1B20"
+                font.pixelSize: 16
+                font.weight: Font.Medium
+                elide: Text.ElideRight
+            }
+            MButton {
+                kind: "tonal"
+                text: "Aleatorio"
+                enabled: root.vm.listCount > 0
+                onClicked: root.vm.playList(true)
+            }
+            MButton {
+                text: "Reproducir"
+                enabled: root.vm.listCount > 0
+                onClicked: root.vm.playList(false)
+            }
+        }
+
+        Text {
+            Layout.leftMargin: 16
+            Layout.bottomMargin: 4
+            visible: root.vm.listStatus !== "" && tracksView.count > 0
+            text: root.vm.listStatus
+            color: "#49454F"
+            font.pixelSize: 12
+        }
+
+        ListView {
+            id: tracksView
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            model: root.vm.tracks
+            ScrollBar.vertical: ScrollBar {}
+            delegate: TrackItem {
+                required property int index
+                required property var model
+                width: ListView.view.width
+                heading: model.title
+                supporting: model.artist
+                trailing: model.duration
+                artUrl: model.artUrl
+                showAdd: true
+                onActivated: root.vm.playListItem(index)
+                onAddRequested: root.vm.addListItem(index)
+            }
+            Text {
+                anchors.centerIn: parent
+                width: parent.width - 48
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                visible: tracksView.count === 0
+                text: root.vm.listStatus
+                color: "#49454F"
+                font.pixelSize: 14
+            }
+        }
+    }
+}

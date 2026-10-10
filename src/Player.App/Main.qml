@@ -14,19 +14,26 @@ ApplicationWindow {
     color: "#FEF7FF" // M3 baseline surface
 
     property bool queueOpen: true
+    property bool libraryOpen: false
     property real vol: 100
 
     PlayerViewModel { id: player }
 
     SettingsDialog { id: settings; vm: player }
 
-    // Polls only while something is playing or a search is running, so an idle player wakes nothing.
+    // Polls only while something is playing, searching or working in the background,
+    // so an idle player wakes nothing.
     Timer {
         interval: 250
         repeat: true
-        running: (player.isLoaded && !player.paused) || player.searching || player.scrobbleBusy
+        running: (player.isLoaded && !player.paused) || player.searching || player.working || player.scrobbleBusy
         onTriggered: player.poll()
     }
+
+    // Opening the library, or signing in while it is open, loads the playlists.
+    onLibraryOpenChanged: if (libraryOpen) player.loadLibrary()
+    property string accountState: player.accountState
+    onAccountStateChanged: if (libraryOpen) player.loadLibrary()
 
     function clock(s) {
         const t = Math.max(0, Math.floor(s))
@@ -46,7 +53,12 @@ ApplicationWindow {
                 id: input
                 Layout.fillWidth: true
                 placeholderText: "Busca canciones, o pega un enlace o ruta"
-                onAccepted: player.search(text)
+                onAccepted: { win.libraryOpen = false; player.search(text) }
+            }
+            MIconButton {
+                glyph: "library"
+                selected: win.libraryOpen
+                onClicked: win.libraryOpen = !win.libraryOpen
             }
             MIconButton {
                 glyph: "queue"
@@ -68,6 +80,7 @@ ApplicationWindow {
             Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                visible: !win.libraryOpen
 
                 ListView {
                     id: resultsView
@@ -99,6 +112,15 @@ ApplicationWindow {
                     color: "#49454F"
                     font.pixelSize: 14
                 }
+            }
+
+            // Library
+            LibraryPanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: win.libraryOpen
+                vm: player
+                onSettingsRequested: settings.open()
             }
 
             // Queue panel
@@ -185,8 +207,8 @@ ApplicationWindow {
 
                     // Track info
                     RowLayout {
-                        Layout.preferredWidth: 240
-                        Layout.maximumWidth: 240
+                        Layout.preferredWidth: 280
+                        Layout.maximumWidth: 280
                         spacing: 12
                         Rectangle {
                             Layout.preferredWidth: 48
@@ -221,6 +243,12 @@ ApplicationWindow {
                                 font.pixelSize: 12
                                 elide: Text.ElideRight
                             }
+                        }
+                        MIconButton {
+                            visible: player.canLike
+                            glyph: player.liked ? "favorite" : "favorite_border"
+                            selected: player.liked
+                            onClicked: player.toggleLike()
                         }
                     }
 

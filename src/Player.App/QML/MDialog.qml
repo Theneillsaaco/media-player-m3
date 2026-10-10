@@ -3,7 +3,8 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
 // Material 3 basic dialog: surface container high, 28dp corners, 24dp padding, 32% scrim,
-// headline-small title. Put the content (and the action buttons) inside it as children.
+// headline-small title. Put the content (and the action buttons) inside it as children;
+// it scrolls when the window is too short for it.
 // Imports the Basic style explicitly so no system style can change it.
 Popup {
     id: dialog
@@ -15,7 +16,8 @@ Popup {
 
     parent: Overlay.overlay
     anchors.centerIn: parent
-    width: Math.min(parent ? parent.width - 48 : 420, 440)
+    width: Math.min(parent ? parent.width - 48 : 440, 440)
+    height: Math.min(implicitHeight, parent ? parent.height - 48 : implicitHeight)
     modal: true
     focus: true
     padding: 24
@@ -43,10 +45,21 @@ Popup {
             wrapMode: Text.Wrap
         }
 
-        ColumnLayout {
-            id: body
+        Flickable {
             Layout.fillWidth: true
-            spacing: 16
+            Layout.fillHeight: true
+            Layout.preferredHeight: body.implicitHeight
+            contentWidth: width
+            contentHeight: body.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar {}
+
+            ColumnLayout {
+                id: body
+                width: parent.width
+                spacing: 16
+            }
         }
     }
 }

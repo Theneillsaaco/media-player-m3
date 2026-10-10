@@ -11,7 +11,7 @@ namespace Player.Providers;
 /// replies matched to requests by id. If the process dies or stalls, the next call starts a
 /// fresh one. Every method is safe to call from any thread.
 /// </summary>
-public sealed class YtSidecarProvider : IMusicProvider
+public sealed class YtSidecarProvider : IMusicProvider, IAccountProvider
 {
     public static string FindScript()
     {
@@ -29,15 +29,59 @@ public sealed class YtSidecarProvider : IMusicProvider
     public async Task<IReadOnlyList<Track>> Search(string query)
     {
         var result = await CallAsync("search", new { query, limit = 30 });
-        var tracks = new List<Track>();
-        foreach (var item in result.EnumerateArray())
-            tracks.Add(ToTrack(item));
-        
-        return tracks;
+        return [.. result.EnumerateArray().Select(ToTrack)];
     }
 
     public async Task<Track> GetTrack(string id) => ToTrack(await CallAsync("song", new { id }));
 
+    public async Task<AccountSession> SignIn(string cookie)
+    {
+        lock (_gate) _cookie = cookie; // kept on a network failure so a later call can sign in again
+        try
+        {
+            var result = await CallAsync("auth.set", new { cookie, authuser = 0 });
+            return new AccountSession(cookie, Text(result, "name"));
+        }
+        catch (AuthExpiredException)
+        {
+            lock (_gate) _cookie = null;
+            throw;
+        }
+    }
+    
+    public async Task<AccountSession> ImportBrowser(string browser, string profile)
+    {
+        var result = await CallAsync("auth.import_browser", new { browser, profile }, ImportTimeout);
+        var cookie = Text(result, "cookie");
+        lock (_gate) _cookie = cookie;
+        return new AccountSession(cookie, Text(result, "name"));
+    }
+
+    public async Task SignOut()
+    {
+        lock (_gate) _cookie = null;
+        try { await CallAsync("auth.clear", new { }); }
+        catch (Exception e) { Console.Error.WriteLine("[ytm] sign out: " + e.Message); }
+    }
+
+    public async Task<IReadOnlyList<PlaylistInfo>> GetLibrary()
+    {
+        var result = await CallAsync("library_playlists", new { }, ListTimeout, signedIn: true);
+        return [.. result.EnumerateArray().Select(p => new PlaylistInfo(
+            Text(p, "id"), Text(p, "title"),
+            p.TryGetProperty("count", out var n) && n.ValueKind == JsonValueKind.Number ? n.GetInt32() : 0,
+            Text(p, "art")))];
+    }
+
+    public async Task<IReadOnlyList<Track>> GetPlaylist(string id, int limit)
+    {
+        var result = await CallAsync("playlist", new { id, limit }, ListTimeout, signedIn: true);
+        return [.. result.GetProperty("tracks").EnumerateArray().Select(ToTrack)];
+    } 
+    
+    public async Task Rate(string id, bool liked) => 
+        await CallAsync("rate_song", new { id, rating = liked ? "LIKE" : "INDIFFERENT" }, signedIn: true);
+    
     private Session EnsureStarted()
     {
         lock (_gate)
@@ -69,40 +113,74 @@ public sealed class YtSidecarProvider : IMusicProvider
         }
     }
     
-    private async Task<JsonElement> CallAsync(string method, object args)
+    private async Task<JsonElement> CallAsync(string method, object args, TimeSpan? timeout = null, bool signedIn = false)
     {
         for (var attempt = 0;; attempt++)
         {
             var session = EnsureStarted();
-            var id = Interlocked.Increment(ref _nextId);
-            var tcs = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
-            session.Pending[id] = tcs;
-
             try
             {
-                var line = JsonSerializer.Serialize(new { id, method, @params = args });
-                lock (session.WriteLock)
-                {
-                    session.Proc.StandardInput.WriteLine(line);
-                    session.Proc.StandardInput.Flush();
-                }
-
-                return await tcs.Task.WaitAsync(CallTimeout);
-            }
-            catch (TimeoutException)
-            {
-                session.Pending.TryRemove(id, out _);
-                Kill(session); // a stalled process is worse than a restart
-                throw new TimeoutException("Youtube Music server timed out");
+                if (signedIn) 
+                    await EnsureSignedIn(session);
+                
+                return await Send(session, method, args, timeout ?? CallTimeout);
             }
             catch (IOException) when (attempt == 0)
             {
-                // The process died under us (broken pipe or EOF). Start a new one and retry once.
-                session.Pending.TryRemove(id, out _);
                 Kill(session);
             }
         }
-    }   
+    }
+
+    /// <summary>A fresh process knows nothing: hand it the saved cookie before the first signed-in call.</summary>
+    private async Task EnsureSignedIn(Session session)
+    {
+        string? cookie;
+        lock (_gate) cookie = _cookie;
+        
+        if (cookie is null)
+            throw new AuthExpiredException("Not signed in");
+        if (session.SignedIn) 
+            return;
+
+        await Send(session, "auth.set", new { cookie, authuser = 0 }, CallTimeout);
+    }
+    
+    private async Task<JsonElement> Send(Session session, string method, object args, TimeSpan timeout)
+    {
+        var id = Interlocked.Increment(ref _nextId);
+        var tcs = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.Pending[id] = tcs;
+
+        try
+        {
+            var line = JsonSerializer.Serialize(new { id, method, @params = args });
+            lock (session.WriteLock)
+            {
+                session.Proc.StandardInput.WriteLine(line);
+                session.Proc.StandardInput.Flush();
+            }
+
+            var result = await tcs.Task.WaitAsync(timeout);
+            if (method is "auth.set" or "auth.import_browser")
+                session.SignedIn = true;
+            else if (method == "auth.clear")
+                session.SignedIn = false;
+
+            return result;
+        }
+        catch (TimeoutException)
+        {
+            session.Pending.TryRemove(id, out _);
+            Kill(session); // a stalled process is worse than a restart
+            throw new TimeoutException("Youtube Music server timed out");
+        }
+        catch (IOException)
+        {
+            session.Pending.TryRemove(id, out _);
+            throw;
+        }
+    }
 
     private static async Task ReadReplies(Session session)
     {
@@ -119,9 +197,15 @@ public sealed class YtSidecarProvider : IMusicProvider
                     if (!root.TryGetProperty("id", out var idEl) || idEl.ValueKind != JsonValueKind.Number) continue;
                     if (!session.Pending.TryRemove(idEl.GetInt64(), out var tcs)) continue;
                     if (root.GetProperty("ok").GetBoolean())
+                    {
                         tcs.TrySetResult(root.GetProperty("result").Clone());
-                    else
-                        tcs.TrySetException(new InvalidOperationException(root.GetProperty("error").GetString()));
+                        continue;
+                    }
+
+                    var error = root.GetProperty("error").GetString() ?? "error";
+                    tcs.TrySetException(root.TryGetProperty("code", out var code) && code.GetString() is "auth_expired" or "auth_required"
+                        ? new AuthExpiredException(error)
+                        : new InvalidOperationException(error));
                 }
                 catch (JsonException) { /* not ours: ignore */ }
             }
@@ -191,6 +275,7 @@ public sealed class YtSidecarProvider : IMusicProvider
             _disposed = true;
             session = _session;
             _session = null;
+            _cookie = null;
         }
         
         if (session is not null) Kill(session);
@@ -199,21 +284,24 @@ public sealed class YtSidecarProvider : IMusicProvider
     #region Fields
 
     private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(25);
+    private static readonly TimeSpan ImportTimeout = TimeSpan.FromSeconds(60); // keyring prompts can be slow
+    private static readonly TimeSpan ListTimeout = TimeSpan.FromMinutes(5);    // a big library paginates
 
     private sealed class Session(Process proc)
     {
         public Process Proc { get; } = proc;
         public ConcurrentDictionary<long, TaskCompletionSource<JsonElement>> Pending { get; } = new();
         public object WriteLock { get; } = new();
+        public volatile bool SignedIn;
     }
     
     private readonly string _python;
     private readonly string _script;
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private Session? _session;
+    private string? _cookie;
     private long _nextId;
     private bool _disposed;
-
     
     public YtSidecarProvider(string? script = null, string? python = null)
     {

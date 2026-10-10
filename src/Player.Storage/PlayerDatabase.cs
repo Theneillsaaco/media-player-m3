@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Player.Core;
 
@@ -30,6 +31,7 @@ public class PlayerDatabase : IDisposable
     
     #region scrobble queue
 
+    /// <summary>Adds a listen, then keeps only the newest <paramref name="keep"/> rows of that service.</summary>
     public void Enqueue(string service, Listen listen, int keep)
     {
         lock (_gate)
@@ -114,6 +116,66 @@ public class PlayerDatabase : IDisposable
                 ("$album", listen.Album), ("$duration", listen.DurationSeconds),
                 ("$listened", listenedSeconds), ("$id", trackId));
     }
+
+    #region playlist cache
+
+    /// <summary>Replaces the cached tracks of a playlist.</summary>
+    public void SaveTracks(string listId, IReadOnlyList<Track> tracks)
+    {
+        lock (_gate)
+        {
+            using var tx = _db.BeginTransaction();
+            Run("DELETE FROM track_cache WHERE list_id = $l", ("$l", listId));
+
+            for (var i = 0; i < tracks.Count; i++)
+            {
+                var t = tracks[i];
+                Run("""
+                    INSERT INTO track_cache (list_id, position, id, title, artist, artists, album, seconds, art, kind)
+                    VALUES ($l, $p, $id, $title, $artist, $artists, $album, $seconds, $art, $kind)
+                    """,
+                    ("$l", listId), ("$p", i), ("$id", t.Id), ("$title", t.Title), ("$artist", t.Artist),
+                    ("$artists", JsonSerializer.Serialize(t.Artists ?? [])), ("$album", t.Album),
+                    ("$seconds", t.DurationSeconds), ("$art", t.ArtUrl),
+                    ("$kind", t.Kind.IsVideo ? "video" : "song"));
+            }
+            
+            tx.Commit();
+        }
+    }
+
+    public IReadOnlyList<Track> LoadTracks(string listId)
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = """
+                              SELECT id, title, artist, artists, album, seconds, art, kind
+                              FROM track_cache WHERE list_id = $l ORDER BY position
+                              """;
+            cmd.Parameters.AddWithValue("$l", listId);
+            using var reader = cmd.ExecuteReader();
+            List<Track> rows = [];
+            
+            while (reader.Read())
+                rows.Add(new(reader.GetString(0), reader.GetString(1), reader.GetString(2),
+                    JsonSerializer.Deserialize<string[]>(reader.GetString(3)) ?? Array.Empty<string>(),
+                    reader.GetString(4), reader.GetDouble(5), reader.GetString(6),
+                    reader.GetString(7) == "video" ? TrackKind.Video : TrackKind.Song));
+            
+            return rows;
+        }
+    }
+
+    /// <summary>Forgets every cached playlist (used when the account signs out).</summary>
+    public void ClearTrackCache()
+    {
+        lock (_gate)
+            Run("DELETE FROM track_cache");
+    }
+
+    #endregion
+    
     
     public void Dispose()
     {
@@ -204,6 +266,21 @@ public class PlayerDatabase : IDisposable
             shuffle     INTEGER NOT NULL
         );
         """,
+        """
+        CREATE TABLE track_cache (
+            list_id  TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            id       TEXT NOT NULL,
+            title    TEXT NOT NULL,
+            artist   TEXT NOT NULL,
+            artists  TEXT NOT NULL,
+            album    TEXT NOT NULL,
+            seconds  REAL NOT NULL,
+            art      TEXT NOT NULL,
+            kind     TEXT NOT NULL,
+            PRIMARY KEY (list_id, position)
+        ) WITHOUT ROWID;
+        """
     ];
 
     private readonly Lock _gate = new();

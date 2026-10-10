@@ -66,6 +66,7 @@
         packages = [
           pkgs.dotnet-sdk_10
           (pkgs.python3.withPackages (ps: [ ps.ytmusicapi ps.yt-dlp ]))
+          (pkgs.python3.withPackages (ps: [ ps.ytmusicapi ps.yt-dlp ps.secretstorage ]))   
           pkgs.deno   # JS runtime yt-dlp needs for YouTube
           pkgs.mpv    # CLI, only for debugging streams by hand
           pkgs.libsecret

@@ -26,6 +26,7 @@
   </Target>
 
   <ItemGroup>
+    <Compile Include="AccountService.cs" />
     <Compile Include="ScrobbleService.cs" />
     <Compile Include="TrackListModel.cs" />
     <Compile Include="TrackModels.cs" />
