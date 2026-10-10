@@ -29,7 +29,7 @@ public class PlayerDatabase : IDisposable
             Run("DELETE FROM settings WHERE key = $k", ("$k", key));
     }
     
-    #region scrobble queue
+    #region Scrobble queue
 
     /// <summary>Adds a listen, then keeps only the newest <paramref name="keep"/> rows of that service.</summary>
     public void Enqueue(string service, Listen listen, int keep)
@@ -117,6 +117,61 @@ public class PlayerDatabase : IDisposable
                 ("$listened", listenedSeconds), ("$id", trackId));
     }
 
+    #region Saved queue
+
+    private sealed record TrackDto(string Id, string Title, string Artist, string[] Artists, string Album, double Seconds, string Art, string Kind);
+
+    /// <summary>Stores the whole queue (insertion order; the shuffle order is not kept, it is rebuilt).</summary>
+    public void SaveQueueState(IReadOnlyList<Track> items, int index, double seconds, int volume, string repeat, bool shuffle)
+    {
+        var json = JsonSerializer.Serialize(items.Select(t => new TrackDto(
+            t.Id, t.Title, t.Artist, t.Artists ?? [], t.Album, t.DurationSeconds, t.ArtUrl,
+            t.Kind.IsVideo ? "video" : "song")));
+        
+        lock (_gate)
+            Run("""
+                INSERT INTO queue_state (id, items, position, seconds, volume, repeat_mode, shuffle)
+                VALUES (1, $items, $pos, $sec, $vol, $rep, $shuf)
+                ON CONFLICT(id) DO UPDATE SET items = $items, position = $pos, seconds = $sec,
+                    volume = $vol, repeat_mode = $rep, shuffle = $shuf
+                """,
+                ("$items", json), ("$pos", index), ("$sec", seconds), ("$vol", volume),
+                ("$rep", repeat), ("$shuf", shuffle ? 1 : 0));
+    }
+    
+    /// <summary>Cheap update of where the listening is, for when only the position or volume moved.</summary>
+    public void SaveProgress(double seconds, int volume)
+    {
+        lock (_gate)
+            Run("UPDATE queue_state SET seconds = $sec, volume = $vol WHERE id = 1", ("$sec", seconds),
+                ("$vol", volume));
+    }
+    
+    public SavedQueue? LoadQueueState()
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = "SELECT items, position, seconds, volume, repeat_mode, shuffle FROM queue_state WHERE id = 1";
+            using var reader = cmd.ExecuteReader();
+            
+            if (!reader.Read())
+                return null;
+            
+            var dtos = JsonSerializer.Deserialize<TrackDto[]>(reader.GetString(0)) ?? [];
+            IReadOnlyList<Track> items =
+            [
+                .. dtos.Select(d => new Track(d.Id, d.Title, d.Artist, d.Artists ?? [], d.Album, d.Seconds, d.Art,
+                    d.Kind == "video" ? TrackKind.Video : TrackKind.Song))
+            ];
+
+            return new SavedQueue(items, reader.GetInt32(1), reader.GetDouble(2), reader.GetInt32(3),
+                reader.GetString(4), reader.GetInt32(5) != 0);
+        }
+    }
+
+    #endregion
+    
     #region playlist cache
 
     /// <summary>Replaces the cached tracks of a playlist.</summary>

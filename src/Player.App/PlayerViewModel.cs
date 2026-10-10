@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using Player.Audio;
 using Player.Core;
+using Player.Mpris;
 using Player.Providers;
 using Player.Scrobble;
 using Player.Storage;
@@ -39,6 +40,11 @@ public class PlayerViewModel : INotifyPropertyChanged
     private HashSet<string> _likedIds = [];
     private bool _libraryLoaded;
     private int _jobs;
+    private volatile MprisService? _mpris; // set by the task that connects to the session bus
+    private bool _mprisPublished;
+    private double _restoreSeek;  // where the restored track resumes when it is played
+    private double _pendingSeek;  // the same, once the track is loading
+    private double _lastSavedAt;
     private ListenTracker? _tracker;
     private string _currentId = "";
     private double _knownDuration;
@@ -77,8 +83,13 @@ public class PlayerViewModel : INotifyPropertyChanged
             ScrobbleStatus = "No se pudo abrir la base de datos: " + e.Message;
         }
 
+        RestoreSession();
+        StartMpris();
+
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {
+            SaveProgress();
+            _mpris?.Dispose();
             _scrobble?.Dispose();
             _provider?.Dispose();
             _engine.Dispose();
@@ -106,6 +117,17 @@ public class PlayerViewModel : INotifyPropertyChanged
     public string CurrentArt { get; private set => Set(ref field, value); } = "";
     public string RepeatMode { get; private set => Set(ref field, value); } = "off";
     public bool Shuffle { get; private set => Set(ref field, value); }
+    /// <summary>0..100, restored from the last session.</summary>
+    public int Volume { 
+        get;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 100);
+            Set(ref field, clamped);
+            _engine.SetVolume(field);
+        } 
+    } = 100;
+    
     public bool CanNext { get; private set => Set(ref field, value); }
     public bool CanPrevious { get; private set => Set(ref field, value); }
     /// <summary>Position of the current track in the queue panel (play order), -1 if none.</summary>
@@ -152,7 +174,7 @@ public class PlayerViewModel : INotifyPropertyChanged
         {
             var direct = new Track(query, query, "", [], "", 0.0, "", TrackKind.Song);
             _queue = PlayQueue.replace(_rng.Next(), [direct], 0, _queue);
-            RefreshQueueModel();
+            RefreshQueueModel(persist: false);
             PlayCurrent();
             Poll();
             return;
@@ -188,7 +210,7 @@ public class PlayerViewModel : INotifyPropertyChanged
     {
         if (index < 0 || index >= tracks.Count) return;
         _queue = PlayQueue.replace(_rng.Next(), tracks, index, _queue);
-        RefreshQueueModel();
+        RefreshQueueModel(persist: false);
         PlayCurrent();
         Poll();
     }
@@ -226,6 +248,7 @@ public class PlayerViewModel : INotifyPropertyChanged
         }
         _engine.SetPaused(!_engine.Paused);
         Poll();
+        SaveProgress();
     }
 
     public void Next()
@@ -239,7 +262,7 @@ public class PlayerViewModel : INotifyPropertyChanged
     public void Previous()
     {
         if (PlayQueue.count(_queue) == 0) return;
-        if (IsLoaded && Position > 3) { _engine.Seek(0); Poll(); return; } // restart first, like every player
+        if (IsLoaded && Position > 3) { _engine.Seek(0); _mpris?.Seeked(0); Poll(); return; } // restart first, like every player
         _queue = PlayQueue.previous(_queue);
         PlayCurrent();
         Poll();
@@ -249,6 +272,7 @@ public class PlayerViewModel : INotifyPropertyChanged
     {
         _queue = PlayQueue.cycleRepeat(_queue);
         SyncQueueState();
+        PersistQueue();
     }
 
     public void ToggleShuffle()
@@ -261,10 +285,14 @@ public class PlayerViewModel : INotifyPropertyChanged
     {
         if (!IsLoaded) return;
         _engine.Seek(seconds);
+        _mpris?.Seeked((long)(seconds * 1e6));
         Poll();
     }
 
-    public void SetVolume(int percent) => _engine.SetVolume(percent);
+    public void SetVolume(int percent)
+    {
+        Volume = percent;
+    }
 
     // ---- account and library ----
 
@@ -508,6 +536,7 @@ public class PlayerViewModel : INotifyPropertyChanged
     {
         PollCore();
         UpdateLikeState();
+        PublishMpris();
     }
 
     private void PollCore()
@@ -541,7 +570,13 @@ public class PlayerViewModel : INotifyPropertyChanged
         {
             _sawActive = true;
             if (d > 0 && Status == Loading) Status = "Reproduciendo";
+            if (_pendingSeek > 0 && d > 0)
+            {
+                _engine.Seek(_pendingSeek); // a restored track resumes where it was left
+                _pendingSeek = 0;
+            }
             ObserveListening();
+            if (!Paused && _clock.Elapsed.TotalSeconds - _lastSavedAt > 5) SaveProgress();
         }
         else if (_sawActive)
         {
@@ -588,6 +623,175 @@ public class PlayerViewModel : INotifyPropertyChanged
         Position = 0;
         Status = "Terminó";
         SyncQueueState();
+        PersistQueue();
+    }
+
+    // ---- session: save and restore ----
+
+    /// <summary>Where listening resumes: the playback position, or the restored one while nothing is loaded.</summary>
+    private double ResumeSeconds => IsLoaded ? Position : _restoreSeek;
+
+    /// <summary>Writes the whole queue. Called when it changes, not on every tick.</summary>
+    private void PersistQueue()
+    {
+        if (_db is null) return;
+        try
+        {
+            _db.SaveQueueState(_queue.Items, PlayQueue.currentIndex(_queue), ResumeSeconds, Volume,
+                PlayQueue.repeatName(_queue), _queue.Shuffle);
+        }
+        catch (Exception e) { Console.Error.WriteLine("[player] save queue: " + e.Message); }
+    }
+
+    /// <summary>Writes only the position and volume (every few seconds, on pause and at exit).</summary>
+    private void SaveProgress()
+    {
+        _lastSavedAt = _clock.Elapsed.TotalSeconds;
+        try { _db?.SaveProgress(ResumeSeconds, Volume); }
+        catch (Exception e) { Console.Error.WriteLine("[player] save progress: " + e.Message); }
+    }
+
+    /// <summary>
+    /// Brings back the last queue, position, volume, repeat and shuffle, paused. Nothing is loaded into
+    /// mpv until the user presses play, so opening the app never touches the network.
+    /// </summary>
+    private void RestoreSession()
+    {
+        if (_db is null) return;
+        SavedQueue? saved;
+        try { saved = _db.LoadQueueState(); }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine("[player] restore: " + e.Message);
+            return;
+        }
+        if (saved is null) return;
+
+        SetVolume(saved.Volume);
+        if (saved.Items.Count == 0) return;
+
+        var repeat = saved.Repeat switch
+        {
+            "one" => Player.Core.RepeatMode.One,
+            "all" => Player.Core.RepeatMode.All,
+            _ => Player.Core.RepeatMode.Off,
+        };
+        var queue = PlayQueue.setShuffle(_rng.Next(), saved.Shuffle, PlayQueue.setRepeat(repeat, PlayQueue.empty));
+        _queue = PlayQueue.replace(_rng.Next(), saved.Items, Math.Clamp(saved.Index, 0, saved.Items.Count - 1), queue);
+        RefreshQueueModel(persist: false);
+
+        if (PlayQueue.current(_queue) is { } current)
+        {
+            var t = current.Value;
+            CurrentTitle = t.Title;
+            CurrentArtist = t.Artist;
+            CurrentArt = t.ArtUrl;
+            _currentId = t.Id;
+            _knownDuration = t.DurationSeconds;
+            Duration = t.DurationSeconds;
+        }
+        _restoreSeek = Math.Max(0, saved.Seconds);
+        Position = _restoreSeek;
+        Status = "Cola restaurada: pulsa reproducir para continuar";
+    }
+
+    // ---- MPRIS ----
+
+    private void StartMpris()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var service = new MprisService();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await service.StartAsync();
+                _mpris = service;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("[player] mpris unavailable: " + e.Message);
+                service.Dispose();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Runs what the desktop asked for (playerctl, media keys). QML calls it from an always-on timer,
+    /// because a command can arrive while the player is idle and the main poll is not running.
+    /// </summary>
+    public void Pump()
+    {
+        if (_mpris is not { } mpris) return;
+        var any = false;
+        while (mpris.TryDequeue(out var command))
+        {
+            any = true;
+            try { Handle(command); }
+            catch (Exception e) { Console.Error.WriteLine("[player] mpris command: " + e.Message); }
+        }
+        if (any) Poll();
+        else if (!_mprisPublished) PublishMpris();
+    }
+
+    private void Handle(MprisCommand command)
+    {
+        switch (command.Action)
+        {
+            case MprisAction.Play: if (!IsLoaded || Paused) Toggle(); break;
+            case MprisAction.Pause: if (IsLoaded && !Paused) Toggle(); break;
+            case MprisAction.PlayPause: Toggle(); break;
+            case MprisAction.Stop:
+                if (IsLoaded) { _engine.SetPaused(true); _engine.Seek(0); _mpris?.Seeked(0); }
+                break;
+            case MprisAction.Next: Next(); break;
+            case MprisAction.Previous: Previous(); break;
+            case MprisAction.SeekRelative: Seek(Math.Clamp(Position + command.Number / 1e6, 0, Duration)); break;
+            case MprisAction.SeekTo: Seek(Math.Clamp(command.Number / 1e6, 0, Duration)); break;
+            case MprisAction.SetVolume: SetVolume((int)Math.Round(Math.Clamp(command.Number, 0, 1) * 100)); break;
+            case MprisAction.SetShuffle:
+                if (_queue.Shuffle != command.Number > 0) ToggleShuffle();
+                break;
+            case MprisAction.SetLoop:
+                _queue = PlayQueue.setRepeat(command.Text switch
+                {
+                    "Track" => Player.Core.RepeatMode.One,
+                    "Playlist" => Player.Core.RepeatMode.All,
+                    _ => Player.Core.RepeatMode.Off,
+                }, _queue);
+                SyncQueueState();
+                PersistQueue();
+                break;
+        }
+        Poll();
+    }
+
+    private void PublishMpris()
+    {
+        if (_mpris is not { } mpris) return;
+        _mprisPublished = true;
+
+        var track = PlayQueue.current(_queue)?.Value;
+        string[] artists = track is null ? []
+            : track.Artists is { Length: > 0 } list ? list
+            : track.Artist.Length > 0 ? [track.Artist] : [];
+
+        mpris.Publish(new MprisState(
+            Status: IsLoaded ? (Paused ? "Paused" : "Playing") : track is null ? "Stopped" : "Paused",
+            TrackKey: track?.Id ?? "",
+            Title: track?.Title ?? "",
+            Artists: artists,
+            Album: track?.Album ?? "",
+            ArtUrl: track?.ArtUrl ?? "",
+            LengthMicros: (long)(Duration * 1e6),
+            PositionMicros: (long)(Position * 1e6),
+            Volume: Volume / 100.0,
+            Loop: RepeatMode switch { "one" => "Track", "all" => "Playlist", _ => "None" },
+            Shuffle: Shuffle,
+            CanGoNext: CanNext,
+            CanGoPrevious: CanPrevious,
+            CanPlay: QueueCount > 0,
+            CanSeek: IsLoaded));
     }
 
     // ---- queue plumbing ----
@@ -597,7 +801,7 @@ public class PlayerViewModel : INotifyPropertyChanged
     {
         var cur = PlayQueue.current(_queue);
         SyncQueueState();
-        if (cur == null) return;
+        if (cur == null) { PersistQueue(); return; }
 
         var t = cur.Value;
         CurrentTitle = t.Title;
@@ -607,20 +811,26 @@ public class PlayerViewModel : INotifyPropertyChanged
         _knownDuration = t.DurationSeconds;
         _sawActive = false;
         IsLoaded = true;
-        Position = 0;
+        _pendingSeek = _restoreSeek;
+        _restoreSeek = 0;
+        Position = _pendingSeek;
         Duration = t.DurationSeconds;
         Status = Loading;
+        
         _engine.Load(SourceOf(t));
-
+        _engine.SetVolume(Volume);
+        
         _tracker = Listening.start(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), t);
         if (_tracker.Listen is { IsSome: true } listen) _scrobble?.NowPlaying(listen.Value);
+        PersistQueue();
     }
 
     /// <summary>Rebuilds the queue panel rows (the queue content or its order changed).</summary>
-    private void RefreshQueueModel()
+    private void RefreshQueueModel(bool persist = true)
     {
         Queue.Replace(PlayQueue.ordered(_queue).Select(ToRow));
         SyncQueueState();
+        if (persist) PersistQueue();
     }
 
     /// <summary>Cheap state that changes with every track change; does not touch the list rows.</summary>

@@ -8,6 +8,7 @@
     <Project Path="src/Player.App/Player.App.csproj" />
     <Project Path="src/Player.Audio/Player.Audio.csproj" />
     <Project Path="src/Player.Core/Player.Core.fsproj" />
+    <Project Path="src/Player.Mpris/Player.Mpris.csproj" />
     <Project Path="src/Player.Providers/Player.Providers.csproj" />
     <Project Path="src/Player.Scrobble/Player.Scrobble.fsproj" />
     <Project Path="src/Player.Storage/Player.Storage.csproj" />

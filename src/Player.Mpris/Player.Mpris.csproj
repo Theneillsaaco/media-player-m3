@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Tmds.DBus.Generator" Version="0.95.1" PrivateAssets="all" />
+      <PackageReference Include="Tmds.DBus.Protocol" Version="0.95.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdditionalFiles Include="dbus/org.mpris.MediaPlayer2.xml" Namespace="Mpris.DBus" DBusGeneratorMode="Handler" />
+        <AdditionalFiles Include="dbus/org.mpris.MediaPlayer2.Player.xml" Namespace="Mpris.DBus" DBusGeneratorMode="Handler" />
+    </ItemGroup>
+    
+</Project>

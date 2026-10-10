@@ -37,6 +37,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Player.Audio\Player.Audio.csproj" />
     <ProjectReference Include="..\Player.Core\Player.Core.fsproj" />
+    <ProjectReference Include="..\Player.Mpris\Player.Mpris.csproj" />
     <ProjectReference Include="..\Player.Providers\Player.Providers.csproj" />
     <ProjectReference Include="..\Player.Scrobble\Player.Scrobble.fsproj" />
     <ProjectReference Include="..\Player.Storage\Player.Storage.csproj" />

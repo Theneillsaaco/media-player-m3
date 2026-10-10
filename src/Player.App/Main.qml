@@ -15,7 +15,6 @@ ApplicationWindow {
 
     property bool queueOpen: true
     property bool libraryOpen: false
-    property real vol: 100
 
     PlayerViewModel { id: player }
 
@@ -28,6 +27,14 @@ ApplicationWindow {
         repeat: true
         running: (player.isLoaded && !player.paused) || player.searching || player.working || player.scrobbleBusy
         onTriggered: player.poll()
+    }
+
+    // Runs what the desktop asked for (playerctl, media keys). Cheap: it only looks at a queue.
+    Timer {
+        interval: 250
+        repeat: true
+        running: true
+        onTriggered: player.pump()
     }
 
     // Opening the library, or signing in while it is open, loads the playlists.
@@ -297,9 +304,9 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             from: 0
                             to: 100
-                            value: win.vol
+                            value: player.volume
                             live: true
-                            onChangedByUser: (v) => { win.vol = v; player.setVolume(Math.round(v)) }
+                            onChangedByUser: (v) => player.setVolume(Math.round(v))
                         }
                     }
                 }
