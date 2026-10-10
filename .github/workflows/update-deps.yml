@@ -13,16 +13,20 @@ jobs:
       permissions:
         contents: write
         pull-requests: write
+        id-token: write
       steps:
         - name: Checkout repository
           uses: actions/checkout@v7
 
         - name: Install Nix
           uses: DeterminateSystems/nix-installer-action@main
-
+          
+        - name: Build fetch-deps script
+          run: nix build .#default.fetch-deps
+        
         - name: Regenerate deps.json
-          run: nix run github:nix-community/dotnet-to-nix -- --project src/Player.App/Player.App.csproj -o deps.json
-
+          run: ./result -o deps.json
+        
         - name: Create Pull Request if changed
           uses: peter-evans/create-pull-request@v8
           with:
@@ -31,4 +35,4 @@ jobs:
             body: "Actualización automática de dependencias de NuGet generada debido a modificaciones en archivos `.csproj` o `.fsproj`."
             branch: automated/update-deps-json
             delete-branch: true
-        
+          
