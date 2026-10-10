@@ -5,6 +5,8 @@ on:
     paths:
       - '**/*.csproj'
       - '**/*.fsproj'
+      - '**/Directory.Build.*'
+      - 'flake.lock'
   workflow_dispatch:
 
 jobs:
