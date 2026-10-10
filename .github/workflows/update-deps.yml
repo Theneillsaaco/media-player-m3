@@ -1,0 +1,34 @@
+name: Update NuGet deps.json
+
+on: 
+  push:
+    paths:
+      - '**/*.csproj'
+      - '**/*.fsproj'
+  workflow_dispatch:
+
+jobs:
+  update-deps:
+      runs-on: ubuntu-latest
+      permissions:
+        contents: write
+        pull-requests: write
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v7
+
+        - name: Install Nix
+          uses: DeterminateSystems/nix-installer-action@main
+
+        - name: Regenerate deps.json
+          run: nix run github:nix-community/dotnet-to-nix -- --project src/Player.App/Player.App.csproj -o deps.json
+
+        - name: Create Pull Request if changed
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "chore(deps): auto-update deps.json"
+          title: "chore(deps): actualizar deps.json por cambios en proyectos .NET"
+          body: "Actualización automática de dependencias de NuGet generada debido a modificaciones en archivos `.csproj` o `.fsproj`."
+          branch: automated/update-deps-json
+          delete-branch: true
+        
