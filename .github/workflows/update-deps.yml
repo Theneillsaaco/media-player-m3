@@ -31,8 +31,8 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore(deps): auto-update deps.json"
-          title: "chore(deps): actualizar deps.json por cambios en proyectos .NET"
-          body: "Actualización automática de dependencias de NuGet generada debido a modificaciones en archivos `.csproj` o `.fsproj`."
+          title: "chore(deps): update deps.json due to .NET project changes"
+          body: "Automatic update of NuGet dependencies generated due to modifications in `.csproj` or `.fsproj` files."
           branch: automated/update-deps-json
           delete-branch: true
           labels: |
