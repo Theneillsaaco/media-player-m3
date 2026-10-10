@@ -26,5 +26,5 @@ jobs:
           pr-labels: |
             dependencies
             automated
-          reviewers: Theneillsaaco
-          assignees: Theneillsaaco
+          pr-reviewers: Theneillsaaco
+          pr-assignees: Theneillsaaco
