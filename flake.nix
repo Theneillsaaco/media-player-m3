@@ -112,7 +112,7 @@
           cp -r sidecar $out/share/player/
 
           if [ -f "$out/bin/Player.App" ]; then
-            mv "$out/bin/Player.App" "$out/bin/player"
+            mv "$out/bin/Player.App" "$out/bin/media-player"
           fi
         '';
         
