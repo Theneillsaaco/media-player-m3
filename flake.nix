@@ -13,8 +13,7 @@
       qtPrefix = pkgs.symlinkJoin {
         name = "qt6-prefix";
         paths = lib.concatMap (p: [ p (lib.getDev p) (lib.getBin p) ])
-          ([ qt.qtbase qt.qtdeclarative qt.qtshadertools qt.qtsvg qt.qtwayland ]
-            ++ map (n: qt.${n}) (lib.filter (n: qt ? ${n}) [ "qtquick3d" "qtquick3dphysics" "qtquicktimeline" ]));
+          ([ qt.qtbase qt.qtdeclarative qt.qtshadertools qt.qtsvg qt.qtwayland ]);
         nativeBuildInputs = [ pkgs.jq ];
         postBuild = ''
           for f in $(find -L $out -name Gui.json -o -name Sql.json); do
