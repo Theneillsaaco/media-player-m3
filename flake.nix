@@ -110,6 +110,19 @@
         
           mkdir -p $out/share/player
           cp -r sidecar $out/share/player/
+
+          mkdir -p $out/share/applications
+          cat <<'EOF' > $out/share/applications/media-player.desktop
+          [Desktop Entry]
+          Type=Application
+          Name=YouTube Music Player
+          Exec=media-player
+          Comment=YouTube Music player (.NET + Qt Bridge + libmpv)
+          Categories=AudioVideo;Player;Music;
+          Terminal=false
+          StartupNotify=true
+          Keywords=Music;YouTube;Player;Audio;
+          EOF
         '';
 
         postFixup = ''
