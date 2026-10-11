@@ -1,5 +1,10 @@
 [
   {
+    "pname": "FSharp.Core",
+    "version": "10.0.100",
+    "hash": "sha256-stXiDuNoO0xYs82vm6CNWbTsxUErbWc1iSirUyiUdXA="
+  },
+  {
     "pname": "Microsoft.Data.Sqlite",
     "version": "10.0.12",
     "hash": "sha256-JGZ52MbIP/z0yKSABm4/T8TgUclrcb7f2TL+elrx99Q="
