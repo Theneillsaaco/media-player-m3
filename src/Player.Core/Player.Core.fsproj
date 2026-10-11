@@ -3,10 +3,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="10" />
-  </ItemGroup>
   
   <ItemGroup>
     <Compile Include="Domain/Track.fs" />

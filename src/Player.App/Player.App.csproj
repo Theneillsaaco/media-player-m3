@@ -44,4 +44,8 @@
     <None Include="Main.qml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FSharp.Core" Version="10.1.401" />
+  </ItemGroup>
+
 </Project>
