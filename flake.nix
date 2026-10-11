@@ -110,9 +110,13 @@
         
           mkdir -p $out/share/player
           cp -r sidecar $out/share/player/
+
+          if [ -f "$out/bin/Player.App" ]; then
+            mv "$out/bin/Player.App" "$out/bin/player"
+          fi
         '';
         
-        meta.mainProgram = "Player.App";
+        meta.mainProgram = "media-player";
       };
     };
 }
