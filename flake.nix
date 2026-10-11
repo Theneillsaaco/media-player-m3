@@ -110,9 +110,11 @@
         
           mkdir -p $out/share/player
           cp -r sidecar $out/share/player/
+        '';
 
+        postFixup = ''
           if [ -f "$out/bin/Player.App" ]; then
-            mv "$out/bin/Player.App" "$out/bin/media-player"
+          mv "$out/bin/Player.App" "$out/bin/media-player"
           fi
         '';
         
