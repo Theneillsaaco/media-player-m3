@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
+import "../Components"
 
 // The user's YouTube Music library: the playlists ("Me gusta" first) and, once one is open,
 // its tracks with Play / Shuffle. Everything comes from the view model.

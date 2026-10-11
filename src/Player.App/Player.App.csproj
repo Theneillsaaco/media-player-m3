@@ -28,6 +28,19 @@
   <!-- Globs instead of one line per file. Root files plus subfolders, so bin/ and obj/ never match. -->
   <ItemGroup>
     <Compile Include="*.cs;Models/**/*.cs" />
+    <Compile Include="Services\AccountService.cs" />
+    <Compile Include="Services\AccountView.cs" />
+    <Compile Include="Services\BackgroundWork.cs" />
+    <Compile Include="Services\PlaybackService.cs" />
+    <Compile Include="Services\ScrobbleService.cs" />
+    <Compile Include="Services\StatusLine.cs" />
+    <Compile Include="Services\TimeFormat.cs" />
+    <Compile Include="Services\TrackSource.cs" />
+    <Compile Include="ViewModels\LibraryViewModel.cs" />
+    <Compile Include="ViewModels\PlaybackViewModel.cs" />
+    <Compile Include="ViewModels\QueueViewModel.cs" />
+    <Compile Include="ViewModels\SearchViewModel.cs" />
+    <Compile Include="ViewModels\SettingsViewModel.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +55,50 @@
   <ItemGroup>
     <None Include="QML/**/*.qml" CopyToOutputDirectory="PreserveNewest" LinkBase="QML" />
     <None Include="Main.qml" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="QML\Pages\LibraryPanel.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Pages\SettingsDialog.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\Icon.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\MIconButton.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\MSlider.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\MSwitch.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\MDialog.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\MSearchField.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\TrackItem.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Dialogs\SettingsDialog.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
+    <None Update="QML\Components\MButton.qml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>QML/</LinkBase>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

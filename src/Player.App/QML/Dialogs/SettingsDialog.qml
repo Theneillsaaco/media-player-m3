@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
-import "Components"
+import "../Components"
 
 // Settings: the YouTube Music account and the Last.fm connection.
 // The dialog polls the view model while it is open so progress shows up.

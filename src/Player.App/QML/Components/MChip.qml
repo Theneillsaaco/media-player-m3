@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
-import ".."
 
 // Material 3 filter chip: 32dp, 8dp corners, outlined; selected = secondary container + check.
 // State layers: hover 8%, focus/pressed 10%. Imports the Basic style explicitly.

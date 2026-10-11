@@ -29,7 +29,7 @@ public  sealed class SecretStore(string application = "player")
 
         if (ok)
         {
-            File.Delete(name);
+            DeleteFile(name); // the keyring has it now: drop any older fallback file
             return;
         }
 

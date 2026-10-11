@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
-import "../QML"
+import "../QML/Components"
+import "../QML/Pages"
+import "../QML/Dialogs"
 
 ApplicationWindow {
     id: win
@@ -16,17 +18,28 @@ ApplicationWindow {
     property bool queueOpen: true
     property bool libraryOpen: false
 
-    PlayerViewModel { id: player }
+    PlaybackViewModel { id: playback }
+    QueueViewModel { id: queueVm }
+    SearchViewModel { id: searchVm }
+    LibraryViewModel { id: libraryVm }
+    SettingsViewModel { id: settingsVm }
 
-    SettingsDialog { id: settings; vm: player }
+    SettingsDialog { id: settings; vm: settingsVm }
+
+    function pollAll() {
+        settingsVm.poll()
+        searchVm.poll()
+        libraryVm.poll()
+        playback.poll()
+    }
 
     // Polls only while something is playing, searching or working in the background,
     // so an idle player wakes nothing.
     Timer {
         interval: 250
         repeat: true
-        running: (player.isLoaded && !player.paused) || player.searching || player.working || player.scrobbleBusy
-        onTriggered: player.poll()
+        running: (playback.isLoaded && !playback.paused) || searchVm.searching || libraryVm.working || settingsVm.busy
+        onTriggered: win.pollAll()
     }
 
     // Runs what the desktop asked for (playerctl, media keys). Cheap: it only looks at a queue.
@@ -34,18 +47,13 @@ ApplicationWindow {
         interval: 250
         repeat: true
         running: true
-        onTriggered: player.pump()
+        onTriggered: playback.pump()
     }
 
     // Opening the library, or signing in while it is open, loads the playlists.
-    onLibraryOpenChanged: if (libraryOpen) player.loadLibrary()
-    property string accountState: player.accountState
-    onAccountStateChanged: if (libraryOpen) player.loadLibrary()
-
-    function clock(s) {
-        const t = Math.max(0, Math.floor(s))
-        return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0")
-    }
+    onLibraryOpenChanged: if (libraryOpen) libraryVm.loadLibrary()
+    property string accountState: libraryVm.accountState
+    onAccountStateChanged: if (libraryOpen) libraryVm.loadLibrary()
 
     ColumnLayout {
         anchors.fill: parent
@@ -60,7 +68,7 @@ ApplicationWindow {
                 id: input
                 Layout.fillWidth: true
                 placeholderText: "Busca canciones, o pega un enlace o ruta"
-                onAccepted: { win.libraryOpen = false; player.search(text) }
+                onAccepted: { win.libraryOpen = false; searchVm.search(text) }
             }
             MIconButton {
                 glyph: "library"
@@ -83,98 +91,26 @@ ApplicationWindow {
             Layout.fillHeight: true
             spacing: 0
 
-            // Search results
-            Item {
+            SearchPage {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 visible: !win.libraryOpen
-
-                ListView {
-                    id: resultsView
-                    anchors.fill: parent
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
-                    model: player.results
-                    ScrollBar.vertical: ScrollBar {}
-                    delegate: TrackItem {
-                        required property int index
-                        required property var model
-                        width: ListView.view.width
-                        heading: model.title
-                        supporting: model.artist
-                        trailing: model.duration
-                        artUrl: model.artUrl
-                        showAdd: true
-                        onActivated: player.playResult(index)
-                        onAddRequested: player.addResult(index)
-                    }
-                }
-                Text {
-                    anchors.centerIn: parent
-                    width: parent.width - 48
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    visible: resultsView.count === 0
-                    text: player.status
-                    color: "#49454F"
-                    font.pixelSize: 14
-                }
+                vm: searchVm
             }
 
-            // Library
-            LibraryPanel {
+            LibraryPage {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 visible: win.libraryOpen
-                vm: player
+                vm: libraryVm
                 onSettingsRequested: settings.open()
             }
 
-            // Queue panel
-            Rectangle {
+            QueuePanel {
                 Layout.preferredWidth: 340
                 Layout.fillHeight: true
                 visible: win.queueOpen
-                color: "#F7F2FA"
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: 0
-                    Text {
-                        Layout.margins: 16
-                        text: "Cola" + (player.queueCount > 0 ? " · " + player.queueCount : "")
-                        color: "#1D1B20"
-                        font.pixelSize: 16
-                        font.weight: Font.Medium
-                    }
-                    ListView {
-                        id: queueView
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        clip: true
-                        boundsBehavior: Flickable.StopAtBounds
-                        model: player.queue
-                        ScrollBar.vertical: ScrollBar {}
-                        delegate: TrackItem {
-                            required property int index
-                            required property var model
-                            width: ListView.view.width
-                            heading: model.title
-                            supporting: model.artist
-                            trailing: model.duration
-                            artUrl: model.artUrl
-                            current: index === player.queuePosition
-                            onActivated: player.playQueueItem(index)
-                        }
-                        Text {
-                            anchors.centerIn: parent
-                            visible: queueView.count === 0
-                            text: "La cola está vacía"
-                            color: "#49454F"
-                            font.pixelSize: 14
-                        }
-                    }
-                }
+                vm: queueVm
             }
         }
 
@@ -195,16 +131,16 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
-                    Text { text: win.clock(player.position); color: "#49454F"; font.pixelSize: 12 }
+                    Text { text: playback.positionText; color: "#49454F"; font.pixelSize: 12 }
                     MSlider {
                         Layout.fillWidth: true
                         from: 0
-                        to: Math.max(1, player.duration)
-                        value: player.position
-                        enabled: player.isLoaded && player.duration > 0
-                        onChangedByUser: (v) => player.seek(v)
+                        to: Math.max(1, playback.duration)
+                        value: playback.position
+                        enabled: playback.isLoaded && playback.duration > 0
+                        onChangedByUser: (v) => playback.seek(v)
                     }
-                    Text { text: win.clock(player.duration); color: "#49454F"; font.pixelSize: 12 }
+                    Text { text: playback.durationText; color: "#49454F"; font.pixelSize: 12 }
                 }
 
                 RowLayout {
@@ -225,7 +161,7 @@ ApplicationWindow {
                             Image {
                                 id: art
                                 anchors.fill: parent
-                                source: player.currentArt
+                                source: playback.currentArt
                                 asynchronous: true
                                 fillMode: Image.PreserveAspectCrop
                                 sourceSize.width: 96
@@ -237,7 +173,7 @@ ApplicationWindow {
                             spacing: 2
                             Text {
                                 Layout.fillWidth: true
-                                text: player.currentTitle
+                                text: playback.currentTitle
                                 color: "#1D1B20"
                                 font.pixelSize: 14
                                 font.weight: Font.Medium
@@ -245,17 +181,17 @@ ApplicationWindow {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: player.currentArtist
+                                text: playback.currentArtist
                                 color: "#49454F"
                                 font.pixelSize: 12
                                 elide: Text.ElideRight
                             }
                         }
                         MIconButton {
-                            visible: player.canLike
-                            glyph: player.liked ? "favorite" : "favorite_border"
-                            selected: player.liked
-                            onClicked: player.toggleLike()
+                            visible: libraryVm.canLike
+                            glyph: libraryVm.liked ? "favorite" : "favorite_border"
+                            selected: libraryVm.liked
+                            onClicked: libraryVm.toggleLike()
                         }
                     }
 
@@ -266,30 +202,30 @@ ApplicationWindow {
                         spacing: 4
                         MIconButton {
                             glyph: "shuffle"
-                            selected: player.shuffle
-                            onClicked: player.toggleShuffle()
+                            selected: playback.shuffle
+                            onClicked: playback.toggleShuffle()
                         }
                         MIconButton {
                             glyph: "previous"
-                            enabled: player.canPrevious
-                            onClicked: player.previous()
+                            enabled: playback.canPrevious
+                            onClicked: playback.previous()
                         }
                         MIconButton {
-                            glyph: player.isLoaded && !player.paused ? "pause" : "play"
+                            glyph: playback.isLoaded && !playback.paused ? "pause" : "play"
                             filled: true
                             containerSize: 48
-                            enabled: player.queueCount > 0
-                            onClicked: player.toggle()
+                            enabled: queueVm.count > 0
+                            onClicked: playback.toggle()
                         }
                         MIconButton {
                             glyph: "next"
-                            enabled: player.canNext
-                            onClicked: player.next()
+                            enabled: playback.canNext
+                            onClicked: playback.next()
                         }
                         MIconButton {
-                            glyph: player.repeatMode === "one" ? "repeat_one" : "repeat"
-                            selected: player.repeatMode !== "off"
-                            onClicked: player.cycleRepeat()
+                            glyph: playback.repeatMode === "one" ? "repeat_one" : "repeat"
+                            selected: playback.repeatMode !== "off"
+                            onClicked: playback.cycleRepeat()
                         }
                     }
 
@@ -304,9 +240,9 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             from: 0
                             to: 100
-                            value: player.volume
+                            value: playback.volume
                             live: true
-                            onChangedByUser: (v) => player.setVolume(Math.round(v))
+                            onChangedByUser: (v) => playback.setVolume(Math.round(v))
                         }
                     }
                 }
