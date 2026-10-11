@@ -1,7 +1,12 @@
 using System.Diagnostics;
 using Player.Core;
+using Player.Core.Contracts;
+using Player.Core.Domain;
 using Player.Scrobble;
+using Player.Scrobble.LastFm;
 using Player.Storage;
+using Player.Storage.Database;
+using Player.Storage.Secrets;
 
 namespace Player.App;
 

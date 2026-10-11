@@ -1,61 +1,17 @@
-namespace Player.Scrobble
+namespace Player.Scrobble.LastFm
 
 open System
 open System.Collections.Generic
 open System.IO
 open System.Net.Http
-open System.Security.Cryptography
-open System.Text
 open System.Text.Json
 open System.Threading.Tasks
-open Player.Core
+open Player.Core.Contracts
+open Player.Core.Domain
 
 type LastFmException(code: int, message: string) =
     inherit Exception(message)
     member _.Code = code
-    
-type LastFmCredentials = {
-    ApiKey: string
-    Secret: string
-}
-
-module LastFmSigning =
-    let private unsigned = set [ "format"; "callback" ]
-    
-    let sign (secret: string) (parameters: (string * string) seq) : string =
-        let payload =
-            parameters
-            |> Seq.filter (fun ( name, _) -> not (unsigned.Contains name))
-            |> Seq.sortWith (fun (a, _) (b, _) -> String.CompareOrdinal(a, b))
-            |> Seq.map (fun (name, value) -> name + value)
-            |> String.concat ""
-            
-        Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(payload + secret)))
-        
-/// The API key and secret come from the environment or from a JSON file kept out of the repo:
-/// PLAYER_LASTFM_KEY / PLAYER_LASTFM_SECRET, or {"apiKey": "...", "secret": "..."} in the given file.
-module LastFmConfig =
-    let load (file: string) : LastFmCredentials voption =
-        let env name = (Environment.GetEnvironmentVariable name |> Option.ofObj |> Option.defaultValue "").Trim()
-        let key, secret = env "PLAYER_LASTFM_KEY", env "PLAYER_LASTFM_SECRET"
-
-        if key <> "" && secret <> "" then
-            ValueSome { ApiKey = key; Secret = secret }
-        elif File.Exists file then
-            try
-                use doc = JsonDocument.Parse(File.ReadAllText file)
-
-                let text (name: string) =
-                    match doc.RootElement.TryGetProperty(name) with
-                    | true, v when v.ValueKind = JsonValueKind.String -> v.GetString().Trim()
-                    | _ -> ""
-
-                let key, secret = text "apiKey", text "secret"
-                if key <> "" && secret <> "" then ValueSome { ApiKey = key; Secret = secret } else ValueNone
-            with _ ->
-                ValueNone
-        else
-            ValueNone
 
 module private Wire =
     let endpoint = Uri "https://ws.audioscrobbler.com/2.0/"

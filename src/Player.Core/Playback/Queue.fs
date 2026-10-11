@@ -1,15 +1,17 @@
-namespace Player.Core
+namespace Player.Core.Playback
 
 open System
+open Player.Core.Domain
 
 /// Items are kept in insertion order. Order is the play order (a permutation of item
 /// indices; the identity unless shuffled) and Position is an index into Order, -1 = none.
-type QueueState =
-    { Items: Track[]
-      Order: int[]
-      Position: int
-      Repeat: RepeatMode
-      Shuffle: bool }
+type QueueState = {
+    Items: Track[]
+    Order: int[]
+    Position: int
+    Repeat: RepeatMode
+    Shuffle: bool
+}
     
 /// Pure functions over QueueState. Anything random takes a seed so tests are deterministic.
 module PlayQueue =

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 
-namespace Player.Storage;
+namespace Player.Storage.Secrets;
 
 /// <summary>
 /// Keeps small secrets (a session key). The Secret Service through secret-tool comes first;

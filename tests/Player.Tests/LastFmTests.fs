@@ -1,7 +1,7 @@
 module LastFmTests
 
+open Player.Scrobble.LastFm
 open Xunit
-open Player.Scrobble
 
 // Expected values are the MD5 of the concatenation written out by hand, so they pin the rule
 // (sorted by name, name+value, secret last, UTF-8), not just the implementation.

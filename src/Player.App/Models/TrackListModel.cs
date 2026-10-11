@@ -1,6 +1,6 @@
 using Qt.Bridge.Models;
 
-namespace Player.App;
+namespace Player.App.Models;
 
 public class TrackListModel : ListModel<TrackRow>
 {

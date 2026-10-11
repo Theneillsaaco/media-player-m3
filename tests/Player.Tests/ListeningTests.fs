@@ -1,7 +1,8 @@
 module ListeningTests
 
+open Player.Core.Domain
+open Player.Core.Playback
 open Xunit
-open Player.Core
 
 let song: Track =
     { Id = "a"; Title = "t"; Artist = "x, y"; Artists = [| "x"; "y" |]; Album = " alb "

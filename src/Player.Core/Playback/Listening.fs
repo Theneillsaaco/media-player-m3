@@ -1,6 +1,8 @@
-namespace Player.Core
+namespace Player.Core.Playback
 
 open System
+open Player.Core.Domain
+open Player.Core.Scrobbling
 
 /// One reading of the player: wall-clock seconds, track position and whether it was paused.
 type ListenSample = {

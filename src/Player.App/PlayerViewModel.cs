@@ -3,12 +3,17 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Player.Audio;
-using Player.Core;
+using Player.App.Models;
+using Player.Audio.Mpv;
+using Player.Core.Contracts;
+using Player.Core.Domain;
+using Player.Core.Playback;
 using Player.Mpris;
-using Player.Providers;
-using Player.Scrobble;
+using Player.Providers.YoutubeMusic;
+using Player.Scrobble.LastFm;
 using Player.Storage;
+using Player.Storage.Database;
+using Player.Storage.Secrets;
 
 namespace Player.App;
 
@@ -672,9 +677,9 @@ public class PlayerViewModel : INotifyPropertyChanged
 
         var repeat = saved.Repeat switch
         {
-            "one" => Player.Core.RepeatMode.One,
-            "all" => Player.Core.RepeatMode.All,
-            _ => Player.Core.RepeatMode.Off,
+            "one" => Player.Core.Domain.RepeatMode.One,
+            "all" => Player.Core.Domain.RepeatMode.All,
+            _ => Player.Core.Domain.RepeatMode.Off,
         };
         var queue = PlayQueue.setShuffle(_rng.Next(), saved.Shuffle, PlayQueue.setRepeat(repeat, PlayQueue.empty));
         _queue = PlayQueue.replace(_rng.Next(), saved.Items, Math.Clamp(saved.Index, 0, saved.Items.Count - 1), queue);
@@ -755,9 +760,9 @@ public class PlayerViewModel : INotifyPropertyChanged
             case MprisAction.SetLoop:
                 _queue = PlayQueue.setRepeat(command.Text switch
                 {
-                    "Track" => Player.Core.RepeatMode.One,
-                    "Playlist" => Player.Core.RepeatMode.All,
-                    _ => Player.Core.RepeatMode.Off,
+                    "Track" => Player.Core.Domain.RepeatMode.One,
+                    "Playlist" => Player.Core.Domain.RepeatMode.All,
+                    _ => Player.Core.Domain.RepeatMode.Off,
                 }, _queue);
                 SyncQueueState();
                 PersistQueue();

@@ -1,4 +1,4 @@
-namespace Player.Core
+namespace Player.Core.Scrobbling
 
 /// Last.fm / ListenBrainz rule: a track counts once it has played for half its length or
 /// four minutes, whichever comes first, and tracks under thirty seconds never count.

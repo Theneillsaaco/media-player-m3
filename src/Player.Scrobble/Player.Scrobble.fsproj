@@ -11,7 +11,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Include="LastFm.fs" />
+      <Compile Include="LastFm\Signing.fs" />
+      <Compile Include="LastFm\Config.fs" />
+      <Compile Include="LastFm\Client.fs" />
     </ItemGroup>
 
     <ItemGroup>

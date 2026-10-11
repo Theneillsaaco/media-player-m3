@@ -1,4 +1,4 @@
-namespace Player.Core
+namespace Player.Core.Domain
 
 type TrackKind =
     | Song
@@ -15,15 +15,3 @@ type Track ={
     Kind: TrackKind
 }
     
-type RepeatMode =
-    | Off
-    | One
-    | All
-    
-type Listen = {
-    StartedAt: int64
-    Artist: string
-    Title: string
-    Album: string
-    DurationSeconds: float
-}

@@ -1,5 +1,9 @@
 using Player.Core;
+using Player.Core.Contracts;
+using Player.Core.Domain;
 using Player.Storage;
+using Player.Storage.Database;
+using Player.Storage.Secrets;
 
 namespace Player.App;
 

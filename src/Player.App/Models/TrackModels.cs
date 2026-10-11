@@ -1,4 +1,4 @@
-namespace Player.App;
+namespace Player.App.Models;
 
 public class TrackRow
 {

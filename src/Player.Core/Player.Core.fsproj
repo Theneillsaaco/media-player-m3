@@ -9,10 +9,15 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Compile Include="Domain.fs" />
-    <Compile Include="Contracts.fs" />
-    <Compile Include="Scrobble.fs" />
-    <Compile Include="Queue.fs" />
-    <Compile Include="Listening.fs" />
+    <Compile Include="Domain/Track.fs" />
+    <Compile Include="Domain/RepeatMode.fs" />
+    <Compile Include="Domain/Listen.fs" />
+    <Compile Include="Contracts/Audio.fs" />
+    <Compile Include="Contracts/Provider.fs" />
+    <Compile Include="Contracts/Scrobbler.fs" />
+    <Compile Include="Scrobbling/Scrobble.fs" />
+    <Compile Include="Playback/Queue.fs" />
+    <Compile Include="Playback/Listening.fs" />
+    <Compile Include="Logging.fs" />
   </ItemGroup>
 </Project>

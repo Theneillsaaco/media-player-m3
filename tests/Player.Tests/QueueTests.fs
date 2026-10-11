@@ -1,7 +1,8 @@
 module QueueTests
 
+open Player.Core.Domain
+open Player.Core.Playback
 open Xunit
-open Player.Core
 
 let track (id: string) =
     { Id = id; Title = id; Artist = "a"; Artists = [| "a" |]; Album = ""; DurationSeconds = 100.0; ArtUrl = ""; Kind = Song }

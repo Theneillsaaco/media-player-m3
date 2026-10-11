@@ -1,7 +1,7 @@
 module ScrobbleTests
 
+open Player.Core.Scrobbling
 open Xunit
-open Player.Core
 
 [<Fact>]
 let ``tracks under 30 seconds never count`` () =

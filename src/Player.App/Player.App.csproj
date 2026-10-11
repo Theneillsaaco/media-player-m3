@@ -25,13 +25,9 @@
     <Error Text="Qt Bridge for C# currently supports win-x64, win-arm64, linux-x64, osx-x64, and osx-arm64. Selected RID: '$(QtBridgeTemplateRid)'." />
   </Target>
 
+  <!-- Globs instead of one line per file. Root files plus subfolders, so bin/ and obj/ never match. -->
   <ItemGroup>
-    <Compile Include="AccountService.cs" />
-    <Compile Include="ScrobbleService.cs" />
-    <Compile Include="TrackListModel.cs" />
-    <Compile Include="TrackModels.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="PlayerViewModel.cs" />
+    <Compile Include="*.cs;Models/**/*.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,7 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="QML\*.qml" CopyToOutputDirectory="PreserveNewest" LinkBase="QML" />
+    <None Include="QML/**/*.qml" CopyToOutputDirectory="PreserveNewest" LinkBase="QML" />
     <None Include="Main.qml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
