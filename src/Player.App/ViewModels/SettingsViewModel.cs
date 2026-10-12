@@ -1,21 +1,27 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Player.App.Services;
+using Player.Core;
+using Player.Core.Playback;
 
 namespace Player.App.ViewModels;
 
-/// <summary>The settings dialog: YouTube Music account and Last.fm connection (state, status, commands).</summary>
+/// <summary>The settings dialog: startup behaviour, YouTube Music account and Last.fm connection (state, status, commands).</summary>
 public class SettingsViewModel : INotifyPropertyChanged
 {
     public SettingsViewModel()
     {
         AppServices.EnsureStarted();
         ScrobbleStatus = AppServices.DatabaseError;
+        Startup = ReadStartup();
         SyncScrobbler();
         SyncAccount();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>What happens to the saved session at start: "continue", "fromStart" (default) or "none".</summary>
+    public string Startup { get; private set => Set(ref field, value); } = "fromStart";
 
     // Last.fm. State is one of: unavailable, signedOut, authorizing, signedIn, reconnect.
     public string ScrobbleState { get; private set => Set(ref field, value); } = "unavailable";
@@ -42,6 +48,15 @@ public class SettingsViewModel : INotifyPropertyChanged
         SyncAccount();
     }
 
+    public void ChooseStartup(string mode)
+    {
+        var value = Resume.toSetting(Resume.parse(mode));
+        Startup = value;
+
+        try { AppServices.Db?.SetSetting(Resume.settingKey, value); }
+        catch (Exception e) { Log.Warn("settings", "startup mode", e); }
+    }
+
     public void ImportBrowserSession(string browser) { AppServices.Account?.ImportBrowser(browser); AccountChangedByUser(); }
     public void UseCookie(string text) { AppServices.Account?.SignInWithCookie(text); AccountChangedByUser(); }
     public void SignOutAccount() { AppServices.Account?.SignOut(); AccountChangedByUser(); }
@@ -50,8 +65,18 @@ public class SettingsViewModel : INotifyPropertyChanged
     public void FinishScrobblerSignIn() { AppServices.Scrobble?.CompleteSignIn(); SyncScrobbler(); }
     public void CancelScrobblerSignIn() { AppServices.Scrobble?.CancelSignIn(); SyncScrobbler(); }
     public void DisconnectScrobbler() { AppServices.Scrobble?.Disconnect(); SyncScrobbler(); }
-    public void SetScrobbleEnabled(bool on) { AppServices.Scrobble?.SetEnabled(on); SyncScrobbler(); }
+    public void EnableScrobbling(bool on) { AppServices.Scrobble?.SetEnabled(on); SyncScrobbler(); }
     public void RetryScrobbles() { AppServices.Scrobble?.RetryNow(); SyncScrobbler(); }
+
+    private static string ReadStartup()
+    {
+        try { return Resume.toSetting(Resume.parse(AppServices.Db?.GetSetting(Resume.settingKey))); }
+        catch (Exception e)
+        {
+            Log.Warn("settings", "read startup mode", e);
+            return "fromStart";
+        }
+    }
 
     private void AccountChangedByUser()
     {

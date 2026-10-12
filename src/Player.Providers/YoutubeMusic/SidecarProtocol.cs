@@ -12,9 +12,10 @@ namespace Player.Providers.YoutubeMusic;
 internal static class SidecarProtocol
 {
     public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(25);
+    public static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(45); // yt-dlp can be slow
     public static readonly TimeSpan ImportTimeout = TimeSpan.FromSeconds(60); // keyring prompts can be slow
     public static readonly TimeSpan ListTimeout = TimeSpan.FromMinutes(5);    // a big library paginates
-
+    
     public static string FindScript()
     {
         var env = Environment.GetEnvironmentVariable("PLAYER_SIDECAR");

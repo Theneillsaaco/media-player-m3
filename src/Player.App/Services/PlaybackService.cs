@@ -13,6 +13,8 @@ namespace Player.App.Services;
 /// Qt-free. Everything runs on the Qt thread (the view models call it from QML); the only thing a
 /// foreign thread touches is the MPRIS command queue. After any change it raises <see cref="Changed"/>
 /// so the view models can copy the new state.
+/// While a track plays, the next one is resolved in the background and queued in mpv, so the switch
+/// is instant and gapless; <see cref="_queuedNextId"/> is the id of that queued entry.
 /// </summary>
 internal sealed class PlaybackService
 {
@@ -64,6 +66,10 @@ internal sealed class PlaybackService
             _queue = PlayQueue.jumpTo(0, _queue);
             PlayCurrent();
         }
+        else
+        {
+            AfterQueueEdit(); // the new track may be what plays next
+        }
         Poll();
     }
     
@@ -100,8 +106,6 @@ internal sealed class PlaybackService
     
     public void Previous()
     {
-        if (PlayQueue.currentIndex(_queue) == 0)
-            return;
         if (IsLoaded && Position > 3)
         {
             _engine.Seek(0); 
@@ -110,6 +114,7 @@ internal sealed class PlaybackService
             return;
         }
         
+        _queue = PlayQueue.previous(_queue);
         PlayCurrent();
         Poll();
     }
@@ -118,6 +123,7 @@ internal sealed class PlaybackService
     {
         _queue = PlayQueue.cycleRepeat(_queue);
         RefreshQueue();
+        AfterQueueEdit();
         Changed?.Invoke();
     }
     
@@ -125,6 +131,7 @@ internal sealed class PlaybackService
     {
         _queue = PlayQueue.setShuffle(_rng.Next(), !_queue.Shuffle, _queue);
         RefreshQueue();
+        AfterQueueEdit();
         Changed?.Invoke();
     }
     
@@ -159,12 +166,33 @@ internal sealed class PlaybackService
     private void PollCore()
     {
         var error = _engine.DrainEvents();
+        var ended = _engine.TakeEnded();
+
+        // mpv finished a track and went on into the entry we queued: follow it in our own state.
+        if (ended && _queuedNextId is not null)
+            OnEngineAdvanced();
+
         if (error.Length > 0)
         {
-            IsLoaded = false;
-            _sawActive = false;
-            _status.Text = "Error: " + error;
-            return;
+            if (!ended && _queuedNextId is { } queued && !_engine.Idle)
+            {
+                // The queued entry failed to open early while the current track plays on: drop it.
+                _prefetch.Forget(queued);
+                _queuedNextId = null;
+                _engine.ClearNext();
+                Log.Warn("playback", "queued stream failed to open: " + error);
+            }
+            else if (TryFallback())
+            {
+                return;
+            }
+            else
+            {
+                IsLoaded = false;
+                _sawActive = false;
+                _status.Text = "Error: " + error;
+                return;
+            }
         }
         
         Position = _engine.Position;
@@ -191,6 +219,13 @@ internal sealed class PlaybackService
         {
             OnTrackEnded();
         }
+
+        var version = _prefetch.Version;
+        if (version != _seenPrefetch)
+        {
+            _seenPrefetch = version;
+            SyncNext(); // a stream we were waiting for is ready
+        }
     }
     
     private void OnTrackEnded()
@@ -208,6 +243,52 @@ internal sealed class PlaybackService
         Position = 0;
         _status.Text = "Finished";
         PersistQueue();
+    }
+
+    /// <summary>The queued entry started by itself (gapless): the queue moves on, mpv is not touched.</summary>
+    private void OnEngineAdvanced()
+    {
+        _queuedNextId = null;
+
+        var next = PlayQueue.advance(_queue);
+        if (next is null || PlayQueue.current(next.Value) is not { } current)
+            return;
+
+        _queue = next.Value;
+        var t = current.Value;
+        SetCurrent(t);
+        _viaPrefetch = true;
+        _pendingSeek = 0;
+        Position = 0;
+        _status.Text = "Playing";
+        StartListening(t);
+        RefreshQueue();
+        AfterQueueEdit();
+    }
+
+    /// <summary>
+    /// A direct stream from the cache failed (expired, 403): play the same track once through the
+    /// yt-dlp route of mpv, which resolves it again. False when that is not what was playing.
+    /// </summary>
+    private bool TryFallback()
+    {
+        if (!_viaPrefetch || PlayQueue.current(_queue) is not { } current || TrackSource.IsDirect(current.Value.Id))
+            return false;
+
+        var t = current.Value;
+        Log.Warn("playback", "direct stream failed, using the yt-dlp route");
+        _prefetch.Forget(t.Id);
+        _viaPrefetch = false;
+        _queuedNextId = null;
+        _sawActive = false;
+        _pendingSeek = Position;
+        _status.Text = Loading;
+
+        _engine.Load(TrackSource.SourceOf(t), []);
+        _engine.SetVolume(Volume);
+        _engine.SetPaused(false);
+        SyncNext();
+        return true;
     }
     
     /// <summary>Feeds the listen tracker; when the track counts it goes to the history and the queue to Last.fm.</summary>
@@ -230,6 +311,63 @@ internal sealed class PlaybackService
             Log.Warn("playback", " history: ", ex);
         }
         _scrobble?.Submit(due.Value);
+    }
+
+    #endregion
+
+    #region Prefetch
+
+    /// <summary>The queue order or settings changed: resolve what plays next and line up mpv's queued entry.</summary>
+    private void AfterQueueEdit()
+    {
+        RequestPrefetch();
+        SyncNext();
+    }
+
+    private void RequestPrefetch()
+    {
+        string[] ids = [.. Prefetch.upcoming(_queue).Select(t => t.Id).Where(id => !TrackSource.IsDirect(id)).Distinct()];
+        _prefetch.Want(ids);
+    }
+
+    /// <summary>
+    /// Makes mpv's second playlist entry the track that plays after the current one, when its stream
+    /// is already resolved; otherwise leaves it empty (the normal end-of-track path then takes over).
+    /// </summary>
+    private void SyncNext()
+    {
+        if (!IsLoaded)
+            return;
+
+        var following = PlayQueue.advance(_queue);
+        var track = following is null ? null : PlayQueue.current(following.Value)?.Value;
+
+        if (track is null || TrackSource.IsDirect(track.Id))
+        {
+            ClearQueuedNext();
+            return;
+        }
+        if (_queuedNextId == track.Id)
+            return;
+
+        if (_prefetch.TryGet(track.Id) is { } stream)
+        {
+            _engine.QueueNext(stream.Url, stream.Headers);
+            _queuedNextId = track.Id;
+        }
+        else
+        {
+            ClearQueuedNext();
+        }
+    }
+
+    private void ClearQueuedNext()
+    {
+        if (_queuedNextId is null)
+            return;
+
+        _engine.ClearNext();
+        _queuedNextId = null;
     }
 
     #endregion
@@ -272,8 +410,9 @@ internal sealed class PlaybackService
     }
 
     /// <summary>
-    /// Brings back the last queue, position, volume, repeat and shuffle, paused. Nothing is loaded into
-    /// mpv until the user presses play, so opening the app never touches the network.
+    /// Brings back the last session, paused, as the "Al iniciar" setting says: queue and position, the
+    /// queue with the track from 0, or nothing (volume, repeat and shuffle always come back). Nothing is
+    /// loaded into mpv until the user presses play, so opening the app never touches the network.
     /// </summary>
     public void Restore()
     {
@@ -281,9 +420,11 @@ internal sealed class PlaybackService
             return;
 
         SavedQueue? saved;
+        StartupMode mode;
 
         try
         {
+            mode = Resume.parse(_db.GetSetting(Resume.settingKey));
             saved = _db.LoadQueueState();
         }
         catch (Exception ex)
@@ -296,8 +437,6 @@ internal sealed class PlaybackService
             return;
         
         SetVolume(saved.Volume);
-        if (saved.Items.Count == 0)
-            return;
 
         var repeat = saved.Repeat switch
         {
@@ -307,20 +446,21 @@ internal sealed class PlaybackService
         };
         
         var queue = PlayQueue.setShuffle(_rng.Next(), saved.Shuffle, PlayQueue.setRepeat(repeat, PlayQueue.empty));
+        var plan = Resume.plan(mode, saved.Seconds);
+
+        if (!plan.Queue || saved.Items.Count == 0)
+        {
+            _queue = queue;
+            return;
+        }
+
         _queue = PlayQueue.replace(_rng.Next(), saved.Items, Math.Clamp(saved.Index, 0, saved.Items.Count - 1), queue);
         RefreshQueue(persist: false);
 
         if (PlayQueue.current(_queue) is { } current)
-        {
-            var t = current.Value;
-            CurrentTitle = t.Title;
-            CurrentArtist = t.Artist;
-            CurrentArt = t.ArtUrl;
-            CurrentId = t.Id;
-            _knownDuration = t.DurationSeconds;
-            Duration = t.DurationSeconds;
-        }
-        _restoreSeek = Math.Max(0, saved.Seconds);
+            SetCurrent(current.Value);
+
+        _restoreSeek = plan.Seconds;
         Position = _restoreSeek;
         _status.Text = "Restored queue: press play to continue";
     }
@@ -421,6 +561,7 @@ internal sealed class PlaybackService
                     _ => Player.Core.Domain.RepeatMode.Off,
                 }, _queue);
                 PersistQueue();
+                AfterQueueEdit();
                 break;
         }
         Poll();
@@ -470,26 +611,47 @@ internal sealed class PlaybackService
         }
 
         var t = cur.Value;
-        CurrentTitle = t.Title;
-        CurrentArtist = t.Artist;
-        CurrentArt = t.ArtUrl;
-        CurrentId = t.Id;
-        _knownDuration = t.DurationSeconds;
+        SetCurrent(t);
         _sawActive = false;
         IsLoaded = true;
         _pendingSeek = _restoreSeek;
         _restoreSeek = 0;
         Position = _pendingSeek;
-        Duration = t.DurationSeconds;
         _status.Text = Loading;
-        
-        _engine.Load(TrackSource.SourceOf(t));
+        _queuedNextId = null; // loading replaces mpv's whole playlist
+
+        if (!TrackSource.IsDirect(t.Id) && _prefetch.TryGet(t.Id) is { } stream)
+        {
+            _engine.Load(stream.Url, stream.Headers);
+            _viaPrefetch = true;
+        }
+        else
+        {
+            _engine.Load(TrackSource.SourceOf(t), []);
+            _viaPrefetch = false;
+        }
         _engine.SetVolume(Volume);
         _engine.SetPaused(false);
         
+        StartListening(t);
+        RefreshQueue();
+        AfterQueueEdit();
+    }
+
+    private void SetCurrent(Track t)
+    {
+        CurrentTitle = t.Title;
+        CurrentArtist = t.Artist;
+        CurrentArt = t.ArtUrl;
+        CurrentId = t.Id;
+        _knownDuration = t.DurationSeconds;
+        Duration = t.DurationSeconds;
+    }
+
+    private void StartListening(Track t)
+    {
         _tracker = Listening.start(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), t);
         if (_tracker.Listen is { IsSome: true } listen) _scrobble?.NowPlaying(listen.Value);
-        RefreshQueue();
     }
     
     /// <summary>The queue content or its order changed: bump the revision so the queue panel rebuilds its rows.</summary>
@@ -508,6 +670,7 @@ internal sealed class PlaybackService
     private readonly IAudioEngine _engine;
     private readonly PlayerDatabase? _db;
     private readonly ScrobbleService? _scrobble;
+    private readonly PrefetchService _prefetch;
     private readonly StatusLine _status;
     private readonly Random _rng = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -521,9 +684,12 @@ internal sealed class PlaybackService
     private ListenTracker? _tracker;
     private double _knownDuration;
     private bool _sawActive;
+    private string? _queuedNextId; // the track queued after the current one inside mpv, if any
+    private bool _viaPrefetch;     // the current track plays from a resolved URL (not the yt-dlp hook)
+    private int _seenPrefetch;
 
-    public PlaybackService(IAudioEngine engine, PlayerDatabase? db, ScrobbleService? scrobble, StatusLine status) =>
-        (_engine, _db, _scrobble, _status) = (engine, db, scrobble, status);
+    public PlaybackService(IAudioEngine engine, PlayerDatabase? db, ScrobbleService? scrobble, PrefetchService prefetch, StatusLine status) =>
+        (_engine, _db, _scrobble, _prefetch, _status) = (engine, db, scrobble, prefetch, status);
     
     public event Action? Changed;
     

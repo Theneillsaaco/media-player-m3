@@ -1,19 +1,31 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 using Player.Core;
 using Player.Core.Contracts;
 using static Player.Audio.Mpv.Native;
 
 namespace Player.Audio.Mpv;
 
-/// <summary>libmpv through P/Invoke (see <see cref="Native"/>). Audio only, no window, no config files.</summary>
+/// <summary>
+/// libmpv through P/Invoke (see <see cref="Native"/>). Audio only, no window, no config files.
+/// The playlist never holds more than two entries: the current track and, when one is queued, the next.
+/// </summary>
 public class MpvEngine : IAudioEngine
 {
-    public void Load(string source)
+    public void Load(string source, string[] headers)
     {
         SetPaused(true);
-        Command("loadfile", source, "replace");
+        Command(LoadArgs("replace", source, headers));
     }
+
+    public void QueueNext(string source, string[] headers)
+    {
+        Command("playlist-clear"); // keeps only the entry that is playing
+        Command(LoadArgs("append", source, headers));
+    }
+
+    public void ClearNext() => Command("playlist-clear");
     
     public void SetPaused(bool paused) =>
         mpv_set_property_string(_h, "pause", paused ? "yes" : "no");
@@ -24,6 +36,13 @@ public class MpvEngine : IAudioEngine
     public void SetVolume(int percent) => 
         mpv_set_property_string(_h, "volume", Math.Clamp(percent, 0, 100).ToString(CultureInfo.InvariantCulture));
 
+    public bool TakeEnded()
+    {
+        var ended = _ended;
+        _ended = false;
+        return ended;
+    }
+    
     public string DrainEvents()
     {
         string? error = null;
@@ -80,6 +99,43 @@ public class MpvEngine : IAudioEngine
                     Marshal.FreeCoTaskMem(p);
         }
     }
+
+    /// <summary>loadfile with per-file options only when there are headers (the index argument needs mpv 0.38+).</summary>
+    private static string[] LoadArgs(string flag, string source, string[] headers)
+    {
+        var options = FileOptions(headers);
+        return options.Length == 0 ? ["loadfile", source, flag] : ["loadfile", source, flag, "-1", options];
+    }
+    
+    /// <summary>
+    /// user-agent and http-header-fields for one file. mpv quotes a value as %length%value; the list is
+    /// quoted per header and then once more as a whole, so commas inside a header survive both levels.
+    /// </summary>
+    private static string FileOptions(string[] headers)
+    {
+        List<string> options = [];
+        List<string> fields = [];
+
+        foreach (var header in headers)
+        {
+            var colon = header.IndexOf(':');
+            if (colon < 0)
+                continue;
+            
+            if (header[..colon].Trim().Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                options.Add("user-agent=" + Quote(header[(colon + 1)..].Trim()));
+            else
+                fields.Add(Quote(header));
+        }
+        
+        if (fields.Count > 0)
+            options.Add("http-header-fields=" + Quote(string.Join(",", fields)));
+        
+        return string.Join(",", options);
+    }
+    
+    private static string Quote(string value) =>
+        "%" + Encoding.UTF8.GetByteCount(value).ToString(CultureInfo.InvariantCulture) + "%" + value;
     
     private static string Describe(int code) => Marshal.PtrToStringUTF8(mpv_error_string(code)) ?? $"error {code}";
     
@@ -87,6 +143,7 @@ public class MpvEngine : IAudioEngine
 
     private readonly IntPtr _h;
     private bool _disposed;
+    private bool _ended;
     
     public double Position => GetDouble("time-pos");
     public double Duration => GetDouble("duration");

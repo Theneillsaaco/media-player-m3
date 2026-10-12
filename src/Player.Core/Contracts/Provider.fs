@@ -19,6 +19,15 @@ type AccountSession = {
     Name: string
 }
 
+/// A direct audio URL for a track. Headers are "Name: value" lines for the request;
+/// ExpiresAt is unix seconds (googlevideo URLs stop working after that).
+type ResolvedStream = {
+    Url: string
+    Headers: string[]
+    ExpiresAt: int64
+    Duration: float
+}
+
 /// Google rejected the session (missing, expired or signed out).
 type AuthExpiredException(message: string) =
     inherit Exception(message)
@@ -31,6 +40,8 @@ type IMusicProvider =
     abstract Search: query: string -> Task<IReadOnlyList<Track>>
     /// Metadata for one track id.
     abstract GetTrack: id: string -> Task<Track>
+    /// The direct stream of one track id, so the player does not wait for yt-dlp when it starts it.
+    abstract Resolve: id: string -> Task<ResolvedStream>
     
 /// The user's YouTube Music account. Methods run on any thread. Anything that needs the
 /// session fails with AuthExpiredException when Google no longer accepts it.

@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import "../Components"
 
-// Settings: the YouTube Music account and the Last.fm connection.
+// Settings: startup behaviour, the YouTube Music account and the Last.fm connection.
 // The dialog polls the view model while it is open so progress shows up.
 MDialog {
     id: dialog
@@ -22,6 +22,48 @@ MDialog {
         repeat: true
         running: dialog.visible
         onTriggered: dialog.vm.poll()
+    }
+
+    // ---- Al iniciar ----
+
+    Text {
+        text: "Al iniciar"
+        color: "#6750A4"
+        font.pixelSize: 14
+        font.weight: Font.Medium
+    }
+
+    Text {
+        Layout.fillWidth: true
+        text: "La cola siempre vuelve en pausa."
+        color: "#49454F"
+        font.pixelSize: 12
+        wrapMode: Text.Wrap
+    }
+
+    Flow {
+        Layout.fillWidth: true
+        spacing: 8
+
+        Repeater {
+            model: [
+                { key: "continue", label: "Continuar donde lo dejé" },
+                { key: "fromStart", label: "Cola, pista desde 0:00" },
+                { key: "none", label: "No restaurar nada" }
+            ]
+            MChip {
+                required property var modelData
+                text: modelData.label
+                selected: dialog.vm.startup === modelData.key
+                onClicked: dialog.vm.chooseStartup(modelData.key)
+            }
+        }
+    }
+
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: "#CAC4D0"
     }
 
     // ---- YouTube Music ----
@@ -182,7 +224,7 @@ MDialog {
         Layout.fillWidth: true
         visible: dialog.vm.scrobbleState === "signedIn"
         text: "Enviar scrobbles"
-        onToggled: dialog.vm.setScrobbleEnabled(checked)
+        onToggled: dialog.vm.enableScrobbling(checked)
 
         // A Binding keeps following the model after the user has toggled the switch.
         Binding {

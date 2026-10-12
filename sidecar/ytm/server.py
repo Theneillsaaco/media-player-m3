@@ -5,8 +5,12 @@
   reply:   {"id": 1, "ok": true,  "result": ...}
            {"id": 1, "ok": false, "error": "...", "code": "auth_expired"}   (code only for auth problems)
 
+Requests run concurrently on a small thread pool, so replies can come back in any order
+(the id matches them up). At most two resolves run at once, so searches never queue behind them.
+
 Methods:
   ping, search (songs only), song (metadata of one videoId)
+  resolve {id}                       direct audio stream: {url, headers, expires_at, duration}
   auth.set {cookie, authuser}        use this cookie header; replies {name}
   auth.import_browser {browser, profile}   read the session from a browser; replies {cookie, name}
   auth.status, auth.clear
@@ -15,7 +19,7 @@ Methods:
   rate_song {id, rating}             rating is LIKE or INDIFFERENT
 
 The cookie equals a password: it only ever arrives on stdin and is never printed or logged.
-Stream resolution is left to mpv's yt-dlp hook.
+resolve is anonymous (no cookie), the same as the yt-dlp hook inside mpv.
 
 Result normalisation (artwork upscaling, artist/album extraction) follows Sung's
 helper/catalog.py (MIT), rewritten for this protocol.
@@ -23,6 +27,9 @@ helper/catalog.py (MIT), rewritten for this protocol.
 import json
 import re
 import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 # Protocol output goes to the real stdout; anything a library prints goes to stderr.
 _out = sys.stdout
@@ -35,8 +42,14 @@ for _s in (sys.stdin, _out):
 
 VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 LIKED = "LM"
+WORKERS = 6
+RESOLVE_SLOTS = 2
 _api = None    # anonymous client: search and song metadata
 _auth = None   # signed-in client, set by auth.set / auth.import_browser
+_init = threading.Lock()        # guards the lazy creation of the shared client
+_write = threading.Lock()       # one reply line at a time
+_resolving = threading.BoundedSemaphore(RESOLVE_SLOTS)
+_local = threading.local()      # one YoutubeDL per worker thread, reused between calls
 
 
 class AuthError(Exception):
@@ -64,7 +77,9 @@ def _client(auth=None):
 def api():
     global _api
     if _api is None:
-        _api = _client()
+        with _init:
+            if _api is None:
+                _api = _client()
     return _api
 
 
@@ -101,11 +116,12 @@ def account_name(client):
 
 def signed_in(call):
     """Runs call(client) with the signed-in client and turns a 401/403 into auth_expired."""
-    if _auth is None:
+    client = _auth
+    if client is None:
         raise AuthError("auth_required", "No hay sesión de YouTube Music")
     from ytmusicapi.exceptions import YTMusicServerError
     try:
-        return call(_auth)
+        return call(client)
     except YTMusicServerError as exc:
         if _rejected(exc):
             raise AuthError("auth_expired", "La sesión de YouTube Music caducó") from exc
@@ -236,6 +252,55 @@ def song(params):
     }
 
 
+# ---- streams ----
+
+def _ydl():
+    ydl = getattr(_local, "ydl", None)
+    if ydl is None:
+        from yt_dlp import YoutubeDL
+        ydl = YoutubeDL({
+            "format": "bestaudio/best",
+            "noplaylist": True,
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "socket_timeout": 20,
+        })
+        _local.ydl = ydl
+    return ydl
+
+
+def _expires_at(url):
+    """googlevideo URLs carry their end of life as expire=<unix seconds> (or /expire/<n>/)."""
+    found = re.search(r"[?&]expire=(\d+)", url) or re.search(r"/expire/(\d+)", url)
+    return int(found.group(1)) if found else int(time.time()) + 3600
+
+
+def resolve(params):
+    video = str(params.get("id", ""))
+    if not VIDEO_ID.fullmatch(video):
+        raise ValueError("Invalid YouTube video ID")
+    with _resolving:
+        info = _ydl().extract_info("https://music.youtube.com/watch?v=" + video, download=False)
+    chosen = info
+    url = info.get("url")
+    if not url:  # a merged selection lists its parts; the audio one is what we want
+        parts = info.get("requested_formats") or []
+        chosen = next((f for f in parts if f.get("acodec") not in (None, "none")), None) or {}
+        url = chosen.get("url")
+    if not url:
+        raise ValueError("No playable stream")
+    headers = chosen.get("http_headers") or info.get("http_headers") or {}
+    lines = [f"{k}: {v}" for k, v in headers.items()
+             if k.lower() != "cookie" and "\n" not in f"{k}{v}"]  # a cookie must never travel from here
+    return {
+        "url": url,
+        "headers": lines,
+        "expires_at": _expires_at(url),
+        "duration": info.get("duration") or 0,
+    }
+
+
 # ---- library (needs a session) ----
 
 def _count(value):
@@ -287,6 +352,7 @@ METHODS = {
     "ping": lambda p: "pong",
     "search": search,
     "song": song,
+    "resolve": resolve,
     "auth.set": auth_set,
     "auth.import_browser": auth_import_browser,
     "auth.status": auth_status,
@@ -298,26 +364,32 @@ METHODS = {
 
 
 def reply(obj):
-    _out.write(json.dumps(obj, ensure_ascii=False) + "\n")
-    _out.flush()
+    line = json.dumps(obj, ensure_ascii=False) + "\n"
+    with _write:
+        _out.write(line)
+        _out.flush()
+
+
+def handle(line):
+    rid = None
+    try:
+        req = json.loads(line)
+        rid = req.get("id")
+        result = METHODS[req["method"]](req.get("params") or {})
+        reply({"id": rid, "ok": True, "result": result})
+    except Exception as exc:  # one bad request must never kill the process
+        payload = {"id": rid, "ok": False, "error": (str(exc) or type(exc).__name__)[-500:]}
+        if isinstance(exc, AuthError):
+            payload["code"] = exc.code
+        reply(payload)
 
 
 def main():
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        rid = None
-        try:
-            req = json.loads(line)
-            rid = req.get("id")
-            result = METHODS[req["method"]](req.get("params") or {})
-            reply({"id": rid, "ok": True, "result": result})
-        except Exception as exc:  # one bad request must never kill the process
-            payload = {"id": rid, "ok": False, "error": (str(exc) or type(exc).__name__)[-500:]}
-            if isinstance(exc, AuthError):
-                payload["code"] = exc.code
-            reply(payload)
+    with ThreadPoolExecutor(max_workers=WORKERS, thread_name_prefix="ytm") as pool:
+        for line in sys.stdin:
+            line = line.strip()
+            if line:
+                pool.submit(handle, line)
 
 
 if __name__ == "__main__":

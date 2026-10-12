@@ -32,6 +32,7 @@
     <Compile Include="Services\AccountView.cs" />
     <Compile Include="Services\BackgroundWork.cs" />
     <Compile Include="Services\PlaybackService.cs" />
+    <Compile Include="Services\PrefetchService.cs" />
     <Compile Include="Services\ScrobbleService.cs" />
     <Compile Include="Services\StatusLine.cs" />
     <Compile Include="Services\TimeFormat.cs" />

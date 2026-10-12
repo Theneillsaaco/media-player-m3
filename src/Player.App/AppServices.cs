@@ -51,7 +51,8 @@ internal static class AppServices
                 DatabaseError = "No se pudo abrir la base de datos: " + ex.Message;
             }
 
-            Playback = new PlaybackService(Engine, Db, Scrobble, Status);
+            Prefetcher = new PrefetchService(Provider);
+            Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status);
             Playback.Restore();
             Playback.StartMpris();
             
@@ -78,6 +79,7 @@ internal static class AppServices
     public static YtSidecarProvider? Provider { get; private set; }
     public static AccountService? Account { get; private set; }
     public static ScrobbleService? Scrobble { get; private set; }
+    public static PrefetchService Prefetcher { get; private set; } = null!;
     public static PlaybackService Playback { get; private set; } = null!;
     public static StatusLine Status { get; } = new();
     

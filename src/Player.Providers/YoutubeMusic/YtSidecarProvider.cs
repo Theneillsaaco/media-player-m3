@@ -23,6 +23,21 @@ public class YtSidecarProvider : IMusicProvider, IAccountProvider
 
     public async Task<Track> GetTrack(string id) => ToTrack(await CallAsync("song", new { id }));
 
+    public async Task<ResolvedStream> Resolve(string id)
+    {
+        var result = await CallAsync("resolve", new { id }, SidecarProtocol.ResolveTimeout);
+        var url = Text(result, "url");
+        if (url.Length == 0) 
+            throw new InvalidOperationException("The sidecar returned no stream URL");
+        
+        return new ResolvedStream(
+            url,
+            Strings(result, "headers"),
+            result.TryGetProperty("expires_at", out var expires) && expires.ValueKind == JsonValueKind.Number ? expires.GetInt64() : 0L,
+            result.TryGetProperty("duration", out var duration) && duration.ValueKind == JsonValueKind.Number ? duration.GetDouble() : 0.0
+        );
+    }
+
     public async Task<AccountSession> SignIn(string cookie)
     {
         lock (_gate) _cookie = cookie; // kept on a network failure so a later call can sign in again
