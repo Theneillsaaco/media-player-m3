@@ -17,6 +17,7 @@
     <ItemGroup>
       <Compile Include="LastFmTests.fs" />
       <Compile Include="ListeningTests.fs" />
+      <Compile Include="LyricsTests.fs" />
       <Compile Include="PrefetchTests.fs" />
       <Compile Include="ResumeTests.fs" />
       <Compile Include="QueueTests.fs" />

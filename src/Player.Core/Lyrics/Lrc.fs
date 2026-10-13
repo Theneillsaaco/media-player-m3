@@ -1,0 +1,85 @@
+namespace Player.Core.Lyrics
+
+open System
+open System.Globalization
+open System.Text.RegularExpressions
+
+/// One line of lyrics. Start is in seconds; it is -1 for lines of plain (untimed) lyrics.
+type LyricLine = {
+    Start: float
+    Text: string
+}
+
+/// The LRC format: "[mm:ss.xx]text", several marks per line, "[offset:ms]", metadata tags like "[ar:...]" and
+/// the optional per-word marks "<mm:ss.xx>" of enhanced LRC (those are dropped, the line keeps its own mark).
+module Lrc =
+    let private tags = Regex(@"^\s*((?:\[[^\]]*\]\s*)+)", RegexOptions.Compiled)
+    let private time = Regex(@"\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]", RegexOptions.Compiled)
+    let private offsetTag = Regex(@"\[offset:\s*([+-]?\d+)\s*\]", RegexOptions.Compiled ||| RegexOptions.IgnoreCase)
+    let private wordMark = Regex(@"<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>", RegexOptions.Compiled)
+
+    let private seconds (m: Match) =
+        let whole = float (int m.Groups[1].Value * 60 + int m.Groups[2].Value)
+        
+        if m.Groups[3].Success then
+            whole + Double.Parse("0." + m.Groups[3].Value, CultureInfo.InvariantCulture)
+        else
+            whole
+    
+    let private splitLines (text: string) =
+        (if isNull text then "" else text).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
+
+    /// The timed lines of an LRC text, in time order (lines that share a mark keep their written order).
+    /// "[offset:+500]" makes everything appear 500 ms sooner, as most players read it.
+    let parse (text: string) : LyricLine[] =
+        let mutable offset = 0.0
+        let entries = ResizeArray<LyricLine>()
+        
+        for line in splitLines text do
+            let lead = tags.Match line
+            
+            if lead.Success then
+                let marks = lead.Groups[1].Value
+                let found = offsetTag.Match marks
+                
+                if found.Success then
+                    offset <- float (int found.Groups[1].Value) / 1000.0
+                else
+                    let body = wordMark.Replace(line.Substring lead.Length, "").Trim()
+                    
+                    for m in time.Matches marks do
+                        entries.Add { Start = seconds m; Text = body }
+            
+        entries
+        |> Seq.map (fun l -> { l with Start = max 0.0 (l.Start - offset) })
+        |> List.ofSeq
+        |> List.sortBy (fun l -> l.Start)
+        |> List.toArray
+        
+    /// True when the text has at least one timed line.
+    let isSynced (text: string) =
+        (parse text).Length > 0
+        
+    /// Untimed lyrics as lines (Start = -1): trailing spaces dropped, long runs of blank lines squeezed to one.
+    let plain (text: string) : LyricLine[] =
+        let lines = splitLines text |> Array.map (fun l -> l.Trim())
+        let result = ResizeArray<LyricLine>()
+        let mutable blanks = 0
+        
+        for line in lines do
+            if line = "" then
+                blanks <- blanks + 1
+                if blanks = 1 && result.Count > 0 then result.Add { Start = -1.0; Text = "" }
+            else
+                blanks <- 0
+                result.Add { Start = -1.0; Text = line }
+                
+        while result.Count > 0 && result.[result.Count - 1].Text = "" do
+            result.RemoveAt(result.Count - 1)
+                
+        result.ToArray()
+    
+    
+    /// The lines to show for a stored text: timed when it is synced, plain otherwise.
+    let lines (synced: bool) (text: string) =
+        if synced then parse text else plain text

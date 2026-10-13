@@ -8,7 +8,7 @@ namespace Player.Storage.Database;
 /// The player's SQLite file: settings, scrobbles waiting to be sent, play history and the saved
 /// queue. One connection guarded by a lock, so any thread may call it; every call is short.
 /// </summary>
-public class PlayerDatabase : IDisposable
+public partial class PlayerDatabase : IDisposable
 {
     public string? GetSetting(string key)
     {

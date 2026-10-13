@@ -60,6 +60,15 @@ internal static class Migrations
             kind     TEXT NOT NULL,
             PRIMARY KEY (list_id, position)
         ) WITHOUT ROWID;
+        """,
+        """
+        CREATE TABLE lyrics_cache (
+            track_id   TEXT PRIMARY KEY,
+            kind       TEXT NOT NULL,
+            source     TEXT NOT NULL,
+            body       TEXT NOT NULL,
+            fetched_at INTEGER NOT NULL
+        ) WITHOUT ROWID;
         """
     ];
 }

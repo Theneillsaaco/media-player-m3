@@ -11,6 +11,7 @@ Requests run concurrently on a small thread pool, so replies can come back in an
 Methods:
   ping, search (songs only), song (metadata of one videoId)
   resolve {id}                       direct audio stream: {url, headers, expires_at, duration}
+  lyrics {id}                        {found, synced, text, source}; text is LRC ([mm:ss.xx]line) when synced
   auth.set {cookie, authuser}        use this cookie header; replies {name}
   auth.import_browser {browser, profile}   read the session from a browser; replies {cookie, name}
   auth.status, auth.clear
@@ -301,6 +302,43 @@ def resolve(params):
     }
 
 
+# ---- lyrics ----
+
+def _lrc_mark(milliseconds):
+    centis = max(0, round(int(milliseconds) / 10))
+    minutes, centis = divmod(centis, 6000)
+    return f"[{minutes:02d}:{centis // 100:02d}.{centis % 100:02d}]"
+
+
+def _field(item, name):
+    return item.get(name) if isinstance(item, dict) else getattr(item, name, None)
+
+
+def lyrics(params):
+    video = str(params.get("id", ""))
+    if not VIDEO_ID.fullmatch(video):
+        raise ValueError("Invalid YouTube video ID")
+    # The lyrics page is found through the watch playlist; no session is needed for either call.
+    browse = api().get_watch_playlist(video, limit=1).get("lyrics")
+    if not browse:
+        return {"found": False}
+    data = api().get_lyrics(browse, timestamps=True)
+    if not data:
+        return {"found": False}
+    source = str(data.get("source") or "")
+    body = data.get("lyrics")
+    if data.get("hasTimestamps") and isinstance(body, list):
+        lines = []
+        for line in body:
+            text = _field(line, "text")
+            start = _field(line, "start_time")
+            if text is not None and start is not None:
+                lines.append(_lrc_mark(start) + str(text).strip())
+        return {"found": bool(lines), "synced": True, "text": "\n".join(lines), "source": source}
+    text = body if isinstance(body, str) else ""
+    return {"found": bool(text.strip()), "synced": False, "text": text, "source": source}
+
+
 # ---- library (needs a session) ----
 
 def _count(value):
@@ -353,6 +391,7 @@ METHODS = {
     "search": search,
     "song": song,
     "resolve": resolve,
+    "lyrics": lyrics,
     "auth.set": auth_set,
     "auth.import_browser": auth_import_browser,
     "auth.status": auth_status,

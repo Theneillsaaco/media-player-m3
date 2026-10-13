@@ -11,6 +11,7 @@
     <Compile Include="Contracts/Audio.fs" />
     <Compile Include="Contracts/Provider.fs" />
     <Compile Include="Contracts/Scrobbler.fs" />
+    <Compile Include="Contracts\Lyrics.fs" />
     <Compile Include="Scrobbling/Scrobble.fs" />
     <Compile Include="Playback/Queue.fs" />
     <Compile Include="Playback/Listening.fs" />
@@ -19,6 +20,8 @@
     <Compile Include="Theme\Hct.fs" />
     <Compile Include="Theme\Scheme.fs" />
     <Compile Include="Theme\Appearance.fs" />
+    <Compile Include="Lyrics\Lrc.fs" />
+    <Compile Include="Lyrics\LyricsSync.fs" />
     <Compile Include="Logging.fs" />
   </ItemGroup>
 </Project>

@@ -702,6 +702,8 @@ internal sealed class PlaybackService
     public string CurrentTitle { get; private set; } = "";
     public string CurrentArtist { get; private set; } = "";
     public string CurrentArt { get; private set; } = "";
+    /// <summary>The queue's current track (the playing one, or the restored one while paused), null when the queue is empty.</summary>
+    public Track? CurrentTrack => PlayQueue.current(_queue)?.Value;
     
     /// <summary>Goes up whenever the queue's content or order changes (not when only the position moves).</summary>
     public int QueueRevision { get; private set; }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Player.Core;
 using Player.Core.Contracts;
 using Player.Core.Domain;
@@ -11,7 +12,7 @@ namespace Player.Providers.YoutubeMusic;
 /// <see cref="SidecarProtocol"/> for the wire format). This class holds the saved cookie and turns
 /// the sidecar's replies into domain types. Every method is safe to call from any thread.
 /// </summary>
-public class YtSidecarProvider : IMusicProvider, IAccountProvider
+public class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyricsSource
 {
     public static string FindScript() => SidecarProtocol.FindScript();
 
@@ -27,15 +28,30 @@ public class YtSidecarProvider : IMusicProvider, IAccountProvider
     {
         var result = await CallAsync("resolve", new { id }, SidecarProtocol.ResolveTimeout);
         var url = Text(result, "url");
-        if (url.Length == 0) 
+        if (url.Length == 0)
             throw new InvalidOperationException("The sidecar returned no stream URL");
-        
+
         return new ResolvedStream(
             url,
             Strings(result, "headers"),
             result.TryGetProperty("expires_at", out var expires) && expires.ValueKind == JsonValueKind.Number ? expires.GetInt64() : 0L,
-            result.TryGetProperty("duration", out var duration) && duration.ValueKind == JsonValueKind.Number ? duration.GetDouble() : 0.0
-        );
+            result.TryGetProperty("duration", out var duration) && duration.ValueKind == JsonValueKind.Number ? duration.GetDouble() : 0.0);
+    }
+
+    string ILyricsSource.Name => "YouTube Music";
+
+    /// <summary>Lyrics from YouTube Music, timed when it has them. Only real YouTube ids qualify (not links or paths).</summary>
+    public async Task<LyricsResult> Find(Track track)
+    {
+        if (!VideoId.IsMatch(track.Id))
+            return new LyricsResult(false, false, false, "", "YouTube Music");
+
+        var result = await CallAsync("lyrics", new { id = track.Id });
+        var text = Text(result, "text");
+        var found = result.TryGetProperty("found", out var f) && f.ValueKind == JsonValueKind.True && text.Trim().Length > 0;
+        var synced = found && result.TryGetProperty("synced", out var s) && s.ValueKind == JsonValueKind.True;
+
+        return new LyricsResult(found, false, synced, found ? text : "", "YouTube Music");
     }
 
     public async Task<AccountSession> SignIn(string cookie)
@@ -106,6 +122,8 @@ public class YtSidecarProvider : IMusicProvider, IAccountProvider
     }
     
     #region Fields
+
+    private static readonly Regex VideoId = new("^[A-Za-z0-9_-]{11}$", RegexOptions.Compiled);
 
     private readonly SidecarProcess _process;
     private readonly Lock _gate = new();

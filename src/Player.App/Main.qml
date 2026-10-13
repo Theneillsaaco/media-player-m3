@@ -20,6 +20,7 @@ ApplicationWindow {
 
     property bool queueOpen: true
     property bool libraryOpen: false
+    property bool lyricsOpen: false
 
     PlaybackViewModel { id: playback }
     QueueViewModel { id: queueVm }
@@ -27,6 +28,7 @@ ApplicationWindow {
     LibraryViewModel { id: libraryVm }
     SettingsViewModel { id: settingsVm }
     ThemeViewModel { id: themeVm }
+    LyricsViewModel { id: lyricsVm }
     Theme { id: appTheme; tokensJson: themeVm.tokensJson }
 
     SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; theme: appTheme }
@@ -35,15 +37,16 @@ ApplicationWindow {
         settingsVm.poll()
         searchVm.poll()
         libraryVm.poll()
+        lyricsVm.poll()
         playback.poll()
     }
 
     // Polls only while something is playing, searching or working in the background,
-    // so an idle player wakes nothing.
+    // so an idle player wakes nothing. It ticks faster while the lyrics are open, to follow the line.
     Timer {
-        interval: 250
+        interval: win.lyricsOpen ? 120 : 250
         repeat: true
-        running: (playback.isLoaded && !playback.paused) || searchVm.searching || libraryVm.working || settingsVm.busy
+        running: (playback.isLoaded && !playback.paused) || searchVm.searching || libraryVm.working || settingsVm.busy || lyricsVm.loading
         onTriggered: win.pollAll()
     }
 
@@ -65,6 +68,13 @@ ApplicationWindow {
 
     // Opening the library, or signing in while it is open, loads the playlists.
     onLibraryOpenChanged: if (libraryOpen) libraryVm.loadLibrary()
+
+    // The queue and the lyrics share the right-hand side: opening one closes the other.
+    onQueueOpenChanged: if (queueOpen) lyricsOpen = false
+    onLyricsOpenChanged: {
+        lyricsVm.panelShown(lyricsOpen)
+        if (lyricsOpen) queueOpen = false
+    }
     property string accountState: libraryVm.accountState
     onAccountStateChanged: if (libraryOpen) libraryVm.loadLibrary()
 
@@ -87,6 +97,11 @@ ApplicationWindow {
                 glyph: "library"
                 selected: win.libraryOpen
                 onClicked: win.libraryOpen = !win.libraryOpen
+            }
+            MIconButton {
+                glyph: "lyrics"
+                selected: win.lyricsOpen
+                onClicked: win.lyricsOpen = !win.lyricsOpen
             }
             MIconButton {
                 glyph: "queue"
@@ -124,6 +139,13 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 visible: win.queueOpen
                 vm: queueVm
+            }
+
+            LyricsPanel {
+                Layout.preferredWidth: 380
+                Layout.fillHeight: true
+                visible: win.lyricsOpen
+                vm: lyricsVm
             }
         }
 
