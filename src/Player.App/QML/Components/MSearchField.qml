@@ -5,10 +5,12 @@ import QtQuick.Controls.Basic
 TextField {
     id: field
 
-    property color cPrimary: "#6750A4"
-    property color cContainer: "#ECE6F0"
-    property color cOnSurface: "#1D1B20"
-    property color cOnSurfaceVariant: "#49454F"
+    readonly property var theme: Window.window ? Window.window.theme : null
+
+    property color cPrimary: theme ? theme.primary : "#6750A4"
+    property color cContainer: theme ? theme.surfaceContainerHigh : "#ECE6F0"
+    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
+    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
 
     implicitHeight: 56
     leftPadding: 56

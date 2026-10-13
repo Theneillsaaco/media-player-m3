@@ -10,8 +10,10 @@ Popup {
     id: dialog
 
     property string title: ""
-    property color cSurface: "#ECE6F0"
-    property color cOnSurface: "#1D1B20"
+    // The window's theme through the overlay it sits on; a dialog can also be given one explicitly.
+    property var theme: parent && parent.Window.window ? parent.Window.window.theme : null
+    property color cSurface: theme ? theme.surfaceContainerHigh : "#ECE6F0"
+    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
     default property alias content: body.data
 
     parent: Overlay.overlay

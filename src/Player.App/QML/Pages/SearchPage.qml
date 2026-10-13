@@ -7,6 +7,7 @@ Item {
     id: root
 
     required property var vm
+    readonly property var theme: Window.window ? Window.window.theme : null
 
     ListView {
         id: resultsView
@@ -35,7 +36,7 @@ Item {
         wrapMode: Text.Wrap
         visible: resultsView.count === 0
         text: root.vm.status
-        color: "#49454F"
+        color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
         font.pixelSize: 14
     }
 }

@@ -5,16 +5,18 @@ import QtQuick.Layouts
 Item {
     id: row
 
+    readonly property var theme: Window.window ? Window.window.theme : null
+
     property string heading: ""
     property string supporting: ""
     property string trailing: ""
     property string artUrl: ""
     property bool current: false
     property bool showAdd: false
-    property color cPrimary: "#6750A4"
-    property color cOnSurface: "#1D1B20"
-    property color cOnSurfaceVariant: "#49454F"
-    property color cSecondaryContainer: "#E8DEF8"
+    property color cPrimary: theme ? theme.primary : "#6750A4"
+    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
+    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
+    property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
     signal activated()
     signal addRequested()
 
@@ -51,7 +53,7 @@ Item {
         Rectangle { // cover (placeholder shows while it loads or if it fails)
             Layout.preferredWidth: 48
             Layout.preferredHeight: 48
-            color: "#E6E0E9"
+            color: theme ? theme.surfaceContainerHighest : "#E6E0E9"
             Icon { anchors.centerIn: parent; name: "music"; size: 24; tint: row.cOnSurfaceVariant; visible: img.status !== Image.Ready }
             Image {
                 id: img

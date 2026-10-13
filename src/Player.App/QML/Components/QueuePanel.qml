@@ -7,8 +7,9 @@ Rectangle {
     id: root
 
     required property var vm
+    readonly property var theme: Window.window ? Window.window.theme : null
 
-    color: "#F7F2FA"
+    color: theme ? theme.surfaceContainerLow : "#F7F2FA"
 
     ColumnLayout {
         anchors.fill: parent
@@ -16,7 +17,7 @@ Rectangle {
         Text {
             Layout.margins: 16
             text: "Cola" + (root.vm.count > 0 ? " · " + root.vm.count : "")
-            color: "#1D1B20"
+            color: root.theme ? root.theme.onSurface : "#1D1B20"
             font.pixelSize: 16
             font.weight: Font.Medium
         }
@@ -43,7 +44,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: queueView.count === 0
                 text: "La cola está vacía"
-                color: "#49454F"
+                color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
                 font.pixelSize: 14
             }
         }

@@ -3,9 +3,10 @@ import QtQuick.Shapes
 
 Item {
     id: root
+    readonly property var theme: Window.window ? Window.window.theme : null
     
     property string name: "play"
-    property color tint: "#1D1B20"
+    property color tint: theme ? theme.onSurface : "#1D1B20"
     property real size: 24
 
     implicitWidth: size

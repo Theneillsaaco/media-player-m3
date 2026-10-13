@@ -5,13 +5,15 @@ import QtQuick
 Item {
     id: root
 
+    readonly property var theme: Window.window ? Window.window.theme : null
+
     property real from: 0
     property real to: 1
     property real value: 0
     property bool live: false
-    property color cPrimary: "#6750A4"
-    property color cSecondaryContainer: "#E6E0E9"
-    property color cOnSurface: "#1D1B20"
+    property color cPrimary: theme ? theme.primary : "#6750A4"
+    property color cSecondaryContainer: theme ? theme.surfaceContainerHighest : "#E6E0E9"
+    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
     signal changedByUser(real v)
 
     readonly property bool pressed: area.pressed

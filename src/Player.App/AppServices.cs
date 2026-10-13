@@ -51,6 +51,10 @@ internal static class AppServices
                 DatabaseError = "No se pudo abrir la base de datos: " + ex.Message;
             }
 
+            Theme = new ThemeService(
+                key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "theme setting", ex); return null; } },
+                (key, value) => Db?.SetSetting(key, value));
+
             Prefetcher = new PrefetchService(Provider);
             Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status);
             Playback.Restore();
@@ -64,6 +68,7 @@ internal static class AppServices
     {
         Playback.Shutdown();
         Scrobble?.Dispose();
+        Theme.Dispose();
         Provider?.Dispose();
         Engine.Dispose();
         Db?.Dispose();
@@ -79,6 +84,7 @@ internal static class AppServices
     public static YtSidecarProvider? Provider { get; private set; }
     public static AccountService? Account { get; private set; }
     public static ScrobbleService? Scrobble { get; private set; }
+    public static ThemeService Theme { get; private set; } = null!;
     public static PrefetchService Prefetcher { get; private set; } = null!;
     public static PlaybackService Playback { get; private set; } = null!;
     public static StatusLine Status { get; } = new();

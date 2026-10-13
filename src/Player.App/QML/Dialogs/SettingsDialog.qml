@@ -9,6 +9,7 @@ MDialog {
     id: dialog
 
     required property var vm
+    required property var appearanceVm
     property string browser: "firefox"
     property bool pasteOpen: false
 
@@ -24,11 +25,25 @@ MDialog {
         onTriggered: dialog.vm.poll()
     }
 
+    // ---- Apariencia ----
+
+    AppearanceSection {
+        Layout.fillWidth: true
+        vm: dialog.appearanceVm
+        theme: dialog.theme
+    }
+
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: dialog.theme.outlineVariant
+    }
+
     // ---- Al iniciar ----
 
     Text {
         text: "Al iniciar"
-        color: "#6750A4"
+        color: dialog.theme.primary
         font.pixelSize: 14
         font.weight: Font.Medium
     }
@@ -36,7 +51,7 @@ MDialog {
     Text {
         Layout.fillWidth: true
         text: "La cola siempre vuelve en pausa."
-        color: "#49454F"
+        color: dialog.theme.onSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
     }
@@ -55,7 +70,7 @@ MDialog {
                 required property var modelData
                 text: modelData.label
                 selected: dialog.vm.startup === modelData.key
-                onClicked: dialog.vm.chooseStartup(modelData.key)
+                onClicked: dialog.vm.setStartup(modelData.key)
             }
         }
     }
@@ -63,14 +78,14 @@ MDialog {
     Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 1
-        color: "#CAC4D0"
+        color: dialog.theme.outlineVariant
     }
 
     // ---- YouTube Music ----
 
     Text {
         text: "YouTube Music"
-        color: "#6750A4"
+        color: dialog.theme.primary
         font.pixelSize: 14
         font.weight: Font.Medium
     }
@@ -78,7 +93,7 @@ MDialog {
     Text {
         Layout.fillWidth: true
         text: dialog.vm.accountStatus
-        color: "#49454F"
+        color: dialog.theme.onSurfaceVariant
         font.pixelSize: 14
         wrapMode: Text.Wrap
     }
@@ -87,7 +102,7 @@ MDialog {
         Layout.fillWidth: true
         visible: dialog.accountOut
         text: "Inicia sesión en music.youtube.com con ese navegador y elígelo aquí. La cookie equivale a tu contraseña: se guarda en el llavero (o en un archivo con permisos 600) y solo se envía a YouTube."
-        color: "#49454F"
+        color: dialog.theme.onSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
     }
@@ -113,9 +128,9 @@ MDialog {
         Layout.preferredHeight: 96
         visible: dialog.accountOut && dialog.pasteOpen
         radius: 12
-        color: "#F7F2FA"
+        color: dialog.theme.surfaceContainerLow
         border.width: pasteArea.activeFocus ? 2 : 1
-        border.color: pasteArea.activeFocus ? "#6750A4" : "#79747E"
+        border.color: pasteArea.activeFocus ? dialog.theme.primary : dialog.theme.outline
 
         ScrollView {
             anchors.fill: parent
@@ -126,9 +141,9 @@ MDialog {
                 wrapMode: TextArea.WrapAnywhere
                 selectByMouse: true
                 font.pixelSize: 12
-                color: "#1D1B20"
+                color: dialog.theme.onSurface
                 placeholderText: "Pega aquí la cabecera cookie de music.youtube.com…"
-                placeholderTextColor: "#49454F"
+                placeholderTextColor: dialog.theme.onSurfaceVariant
                 background: null
             }
         }
@@ -178,14 +193,14 @@ MDialog {
     Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 1
-        color: "#CAC4D0"
+        color: dialog.theme.outlineVariant
     }
 
     // ---- Last.fm ----
 
     Text {
         text: "Last.fm"
-        color: "#6750A4"
+        color: dialog.theme.primary
         font.pixelSize: 14
         font.weight: Font.Medium
     }
@@ -193,7 +208,7 @@ MDialog {
     Text {
         Layout.fillWidth: true
         text: dialog.vm.scrobbleStatus
-        color: "#49454F"
+        color: dialog.theme.onSurfaceVariant
         font.pixelSize: 14
         wrapMode: Text.Wrap
     }
@@ -202,7 +217,7 @@ MDialog {
         Layout.fillWidth: true
         visible: dialog.vm.scrobbleState === "unavailable"
         text: "Registra una app en last.fm/api y guarda la clave en ~/.config/player/lastfm.json como {\"apiKey\": \"...\", \"secret\": \"...\"}, o con las variables PLAYER_LASTFM_KEY y PLAYER_LASTFM_SECRET."
-        color: "#49454F"
+        color: dialog.theme.onSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
     }
@@ -215,7 +230,7 @@ MDialog {
         readOnly: true
         selectByMouse: true
         wrapMode: TextEdit.WrapAnywhere
-        color: "#49454F"
+        color: dialog.theme.onSurfaceVariant
         font.pixelSize: 12
     }
 
@@ -224,7 +239,7 @@ MDialog {
         Layout.fillWidth: true
         visible: dialog.vm.scrobbleState === "signedIn"
         text: "Enviar scrobbles"
-        onToggled: dialog.vm.enableScrobbling(checked)
+        onToggled: dialog.vm.setScrobbleEnabled(checked)
 
         // A Binding keeps following the model after the user has toggled the switch.
         Binding {

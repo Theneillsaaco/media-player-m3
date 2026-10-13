@@ -7,11 +7,13 @@ import QtQuick.Controls.Basic
 Switch {
     id: control
 
-    property color cPrimary: "#6750A4"
-    property color cOnPrimary: "#FFFFFF"
-    property color cTrackOff: "#E6E0E9"
-    property color cOutline: "#79747E"
-    property color cOnSurface: "#1D1B20"
+    readonly property var theme: Window.window ? Window.window.theme : null
+
+    property color cPrimary: theme ? theme.primary : "#6750A4"
+    property color cOnPrimary: theme ? theme.onPrimary : "#FFFFFF"
+    property color cTrackOff: theme ? theme.surfaceContainerHighest : "#E6E0E9"
+    property color cOutline: theme ? theme.outline : "#79747E"
+    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
 
     implicitHeight: 48
     implicitWidth: contentItem.implicitWidth + 16 + 52

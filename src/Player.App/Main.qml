@@ -13,7 +13,10 @@ ApplicationWindow {
     minimumHeight: 460
     visible: true
     title: "Player"
-    color: "#FEF7FF" // M3 baseline surface
+    color: appTheme.surface
+
+    // Leaf components find the theme through the window: Window.window.theme.
+    readonly property var theme: appTheme
 
     property bool queueOpen: true
     property bool libraryOpen: false
@@ -23,8 +26,10 @@ ApplicationWindow {
     SearchViewModel { id: searchVm }
     LibraryViewModel { id: libraryVm }
     SettingsViewModel { id: settingsVm }
+    ThemeViewModel { id: themeVm }
+    Theme { id: appTheme; tokensJson: themeVm.tokensJson }
 
-    SettingsDialog { id: settings; vm: settingsVm }
+    SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; theme: appTheme }
 
     function pollAll() {
         settingsVm.poll()
@@ -40,6 +45,14 @@ ApplicationWindow {
         repeat: true
         running: (playback.isLoaded && !playback.paused) || searchVm.searching || libraryVm.working || settingsVm.busy
         onTriggered: win.pollAll()
+    }
+
+    // Follows the desktop's light/dark setting, only while the mode is "system".
+    Timer {
+        interval: 1000
+        repeat: true
+        running: themeVm.mode === "system"
+        onTriggered: themeVm.poll()
     }
 
     // Runs what the desktop asked for (playerctl, media keys). Cheap: it only looks at a queue.
@@ -118,7 +131,7 @@ ApplicationWindow {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 104
-            color: "#F3EDF7"
+            color: appTheme.surfaceContainer
 
             ColumnLayout {
                 anchors.fill: parent
@@ -131,7 +144,7 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
-                    Text { text: playback.positionText; color: "#49454F"; font.pixelSize: 12 }
+                    Text { text: playback.positionText; color: appTheme.onSurfaceVariant; font.pixelSize: 12 }
                     MSlider {
                         Layout.fillWidth: true
                         from: 0
@@ -140,7 +153,7 @@ ApplicationWindow {
                         enabled: playback.isLoaded && playback.duration > 0
                         onChangedByUser: (v) => playback.seek(v)
                     }
-                    Text { text: playback.durationText; color: "#49454F"; font.pixelSize: 12 }
+                    Text { text: playback.durationText; color: appTheme.onSurfaceVariant; font.pixelSize: 12 }
                 }
 
                 RowLayout {
@@ -156,8 +169,8 @@ ApplicationWindow {
                         Rectangle {
                             Layout.preferredWidth: 48
                             Layout.preferredHeight: 48
-                            color: "#E6E0E9"
-                            Icon { anchors.centerIn: parent; name: "music"; tint: "#49454F"; visible: art.status !== Image.Ready }
+                            color: appTheme.surfaceContainerHighest
+                            Icon { anchors.centerIn: parent; name: "music"; tint: appTheme.onSurfaceVariant; visible: art.status !== Image.Ready }
                             Image {
                                 id: art
                                 anchors.fill: parent
@@ -174,7 +187,7 @@ ApplicationWindow {
                             Text {
                                 Layout.fillWidth: true
                                 text: playback.currentTitle
-                                color: "#1D1B20"
+                                color: appTheme.onSurface
                                 font.pixelSize: 14
                                 font.weight: Font.Medium
                                 elide: Text.ElideRight
@@ -182,7 +195,7 @@ ApplicationWindow {
                             Text {
                                 Layout.fillWidth: true
                                 text: playback.currentArtist
-                                color: "#49454F"
+                                color: appTheme.onSurfaceVariant
                                 font.pixelSize: 12
                                 elide: Text.ElideRight
                             }
@@ -235,7 +248,7 @@ ApplicationWindow {
                     RowLayout {
                         Layout.preferredWidth: 160
                         spacing: 8
-                        Icon { name: "volume"; tint: "#49454F"; size: 20 }
+                        Icon { name: "volume"; tint: appTheme.onSurfaceVariant; size: 20 }
                         MSlider {
                             Layout.fillWidth: true
                             from: 0

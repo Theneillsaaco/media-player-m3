@@ -7,12 +7,14 @@ import QtQuick.Controls.Basic
 Button {
     id: control
 
+    readonly property var theme: Window.window ? Window.window.theme : null
+
     property bool selected: false
-    property color cPrimary: "#6750A4"
-    property color cSecondaryContainer: "#E8DEF8"
-    property color cOnSecondaryContainer: "#1D192B"
-    property color cOutline: "#79747E"
-    property color cOnSurfaceVariant: "#49454F"
+    property color cPrimary: theme ? theme.primary : "#6750A4"
+    property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
+    property color cOnSecondaryContainer: theme ? theme.onSecondaryContainer : "#1D192B"
+    property color cOutline: theme ? theme.outline : "#79747E"
+    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
 
     readonly property color content: selected ? cOnSecondaryContainer : cOnSurfaceVariant
 

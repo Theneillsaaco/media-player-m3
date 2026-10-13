@@ -21,11 +21,17 @@
       <Compile Include="ResumeTests.fs" />
       <Compile Include="QueueTests.fs" />
       <Compile Include="ScrobbleTests.fs" />
+      <Compile Include="ThemeTests.fs" />
+      <Content Include="Data\m3color-oracle.json" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Player.Core\Player.Core.fsproj" />
       <ProjectReference Include="..\..\src\Player.Scrobble\Player.Scrobble.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="Data\m3color-oracle.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

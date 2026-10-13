@@ -16,6 +16,9 @@
     <Compile Include="Playback/Listening.fs" />
     <Compile Include="Playback\Prefetch.fs" />
     <Compile Include="Playback\Resume.fs" />
+    <Compile Include="Theme\Hct.fs" />
+    <Compile Include="Theme\Scheme.fs" />
+    <Compile Include="Theme\Appearance.fs" />
     <Compile Include="Logging.fs" />
   </ItemGroup>
 </Project>
