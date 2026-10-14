@@ -64,6 +64,11 @@ internal static class AppServices
                 (key, value) => Db?.SetSetting(key, value),
                 key => Db?.RemoveSetting(key));
 
+            Video = new VideoService(
+                Provider,
+                key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "video setting", ex); return null; } },
+                (key, value) => Db?.SetSetting(key, value));
+
             Prefetcher = new PrefetchService(Provider);
             Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status);
             Playback.Restore();
@@ -95,6 +100,7 @@ internal static class AppServices
     public static ScrobbleService? Scrobble { get; private set; }
     public static ThemeService Theme { get; private set; } = null!;
     public static LyricsService Lyrics { get; private set; } = null!;
+    public static VideoService Video { get; private set; } = null!;
     public static PrefetchService Prefetcher { get; private set; } = null!;
     public static PlaybackService Playback { get; private set; } = null!;
     public static StatusLine Status { get; } = new();

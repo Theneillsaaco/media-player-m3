@@ -12,11 +12,13 @@
     <Compile Include="Contracts/Provider.fs" />
     <Compile Include="Contracts/Scrobbler.fs" />
     <Compile Include="Contracts\Lyrics.fs" />
+    <Compile Include="Contracts\Video.fs" />
     <Compile Include="Scrobbling/Scrobble.fs" />
     <Compile Include="Playback/Queue.fs" />
     <Compile Include="Playback/Listening.fs" />
     <Compile Include="Playback\Prefetch.fs" />
     <Compile Include="Playback\Resume.fs" />
+    <Compile Include="Playback\Video.fs" />
     <Compile Include="Theme\Hct.fs" />
     <Compile Include="Theme\Scheme.fs" />
     <Compile Include="Theme\Appearance.fs" />

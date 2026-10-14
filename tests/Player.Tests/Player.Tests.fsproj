@@ -23,6 +23,7 @@
       <Compile Include="QueueTests.fs" />
       <Compile Include="ScrobbleTests.fs" />
       <Compile Include="ThemeTests.fs" />
+      <Compile Include="VideoTests.fs" />
       <Content Include="Data\m3color-oracle.json" />
     </ItemGroup>
 

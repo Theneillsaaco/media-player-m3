@@ -10,6 +10,7 @@ MDialog {
 
     required property var vm
     required property var appearanceVm
+    required property var videoVm
     property string browser: "firefox"
     property bool pasteOpen: false
 
@@ -72,6 +73,35 @@ MDialog {
                 selected: dialog.vm.startup === modelData.key
                 onClicked: dialog.vm.setStartup(modelData.key)
             }
+        }
+    }
+
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: dialog.theme.outlineVariant
+    }
+
+    // ---- Video ----
+
+    Text {
+        text: "Video"
+        color: dialog.theme.primary
+        font.pixelSize: 14
+        font.weight: Font.Medium
+    }
+
+    MSwitch {
+        id: autoVideo
+        Layout.fillWidth: true
+        text: "Video musical en vez de la carátula"
+        onToggled: dialog.videoVm.chooseAuto(checked)
+
+        // A Binding keeps following the model after the user has toggled the switch.
+        Binding {
+            target: autoVideo
+            property: "checked"
+            value: dialog.videoVm.auto
         }
     }
 

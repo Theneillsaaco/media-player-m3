@@ -12,6 +12,8 @@ Methods:
   ping, search (songs only), song (metadata of one videoId)
   resolve {id}                       direct audio stream: {url, headers, expires_at, duration}
   lyrics {id}                        {found, synced, text, source}; text is LRC ([mm:ss.xx]line) when synced
+  video_info {id}                    {id, type, counterpartId, counterpartType}: official video / studio audio / upload
+  video_stream {id}                  video-only stream (up to 720p): {url, expires_at, width, height}
   auth.set {cookie, authuser}        use this cookie header; replies {name}
   auth.import_browser {browser, profile}   read the session from a browser; replies {cookie, name}
   auth.status, auth.clear
@@ -43,6 +45,10 @@ for _s in (sys.stdin, _out):
 
 VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 LIKED = "LM"
+AUDIO_FORMAT = "bestaudio/best"
+# Video for the picture only (the sound comes from mpv): H.264 first, since it is the cheapest to decode.
+VIDEO_FORMAT = ("bestvideo[height<=720][vcodec^=avc1]/bestvideo[height<=720]/best[height<=720]"
+                "/bestvideo/best")
 WORKERS = 6
 RESOLVE_SLOTS = 2
 _api = None    # anonymous client: search and song metadata
@@ -255,19 +261,22 @@ def song(params):
 
 # ---- streams ----
 
-def _ydl():
-    ydl = getattr(_local, "ydl", None)
+def _ydl(fmt=AUDIO_FORMAT):
+    """One YoutubeDL per worker thread and format, reused between calls."""
+    cache = getattr(_local, "ydl", None)
+    if cache is None:
+        cache = _local.ydl = {}
+    ydl = cache.get(fmt)
     if ydl is None:
         from yt_dlp import YoutubeDL
-        ydl = YoutubeDL({
-            "format": "bestaudio/best",
+        ydl = cache[fmt] = YoutubeDL({
+            "format": fmt,
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
             "socket_timeout": 20,
         })
-        _local.ydl = ydl
     return ydl
 
 
@@ -277,20 +286,27 @@ def _expires_at(url):
     return int(found.group(1)) if found else int(time.time()) + 3600
 
 
+def _extract(video, fmt, codec="acodec"):
+    """yt-dlp's answer for a video id in a format: (info, the format entry that holds the URL).
+    `codec` says which part to take when the selection is a merge: acodec for audio, vcodec for video."""
+    with _resolving:
+        info = _ydl(fmt).extract_info("https://music.youtube.com/watch?v=" + video, download=False)
+    chosen = info
+    url = info.get("url")
+    if not url:  # a merged selection lists its parts
+        parts = info.get("requested_formats") or []
+        chosen = next((f for f in parts if f.get(codec) not in (None, "none")), None) or {}
+        url = chosen.get("url")
+    if not url:
+        raise ValueError("No playable stream")
+    return info, chosen, url
+
+
 def resolve(params):
     video = str(params.get("id", ""))
     if not VIDEO_ID.fullmatch(video):
         raise ValueError("Invalid YouTube video ID")
-    with _resolving:
-        info = _ydl().extract_info("https://music.youtube.com/watch?v=" + video, download=False)
-    chosen = info
-    url = info.get("url")
-    if not url:  # a merged selection lists its parts; the audio one is what we want
-        parts = info.get("requested_formats") or []
-        chosen = next((f for f in parts if f.get("acodec") not in (None, "none")), None) or {}
-        url = chosen.get("url")
-    if not url:
-        raise ValueError("No playable stream")
+    info, chosen, url = _extract(video, AUDIO_FORMAT)
     headers = chosen.get("http_headers") or info.get("http_headers") or {}
     lines = [f"{k}: {v}" for k, v in headers.items()
              if k.lower() != "cookie" and "\n" not in f"{k}{v}"]  # a cookie must never travel from here
@@ -299,6 +315,38 @@ def resolve(params):
         "headers": lines,
         "expires_at": _expires_at(url),
         "duration": info.get("duration") or 0,
+    }
+
+
+# ---- video ----
+
+def video_info(params):
+    video = str(params.get("id", ""))
+    if not VIDEO_ID.fullmatch(video):
+        raise ValueError("Invalid YouTube video ID")
+    # The watch playlist is what the song/video switch of YouTube Music is built from: the first track says
+    # what this one is and, when there is another version of the song, what that one is (its counterpart).
+    tracks = api().get_watch_playlist(video, limit=1).get("tracks") or []
+    first = tracks[0] if tracks and isinstance(tracks[0], dict) else {}
+    other = first.get("counterpart") or {}
+    return {
+        "id": video,
+        "type": first.get("videoType") or "",
+        "counterpartId": other.get("videoId") or "",
+        "counterpartType": other.get("videoType") or "",
+    }
+
+
+def video_stream(params):
+    video = str(params.get("id", ""))
+    if not VIDEO_ID.fullmatch(video):
+        raise ValueError("Invalid YouTube video ID")
+    info, chosen, url = _extract(video, VIDEO_FORMAT, codec="vcodec")
+    return {
+        "url": url,
+        "expires_at": _expires_at(url),
+        "width": int(chosen.get("width") or info.get("width") or 0),
+        "height": int(chosen.get("height") or info.get("height") or 0),
     }
 
 
@@ -392,6 +440,8 @@ METHODS = {
     "song": song,
     "resolve": resolve,
     "lyrics": lyrics,
+    "video_info": video_info,
+    "video_stream": video_stream,
     "auth.set": auth_set,
     "auth.import_browser": auth_import_browser,
     "auth.status": auth_status,

@@ -12,7 +12,7 @@ namespace Player.Providers.YoutubeMusic;
 /// <see cref="SidecarProtocol"/> for the wire format). This class holds the saved cookie and turns
 /// the sidecar's replies into domain types. Every method is safe to call from any thread.
 /// </summary>
-public class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyricsSource
+public class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyricsSource, IVideoSource
 {
     public static string FindScript() => SidecarProtocol.FindScript();
 
@@ -52,6 +52,28 @@ public class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyricsSource
         var synced = found && result.TryGetProperty("synced", out var s) && s.ValueKind == JsonValueKind.True;
 
         return new LyricsResult(found, false, synced, found ? text : "", "YouTube Music");
+    }
+
+    /// <summary>What YouTube Music says the track is (official video, studio audio, upload) and its counterpart.</summary>
+    public async Task<VideoInfo> GetVideoInfo(string id)
+    {
+        var result = await CallAsync("video_info", new { id });
+        return new VideoInfo(id, Text(result, "type"), Text(result, "counterpartId"), Text(result, "counterpartType"));
+    }
+
+    /// <summary>A video-only stream (up to 720p) of a video id.</summary>
+    public async Task<VideoStream> GetVideoStream(string id)
+    {
+        var result = await CallAsync("video_stream", new { id }, SidecarProtocol.ResolveTimeout);
+        var url = Text(result, "url");
+        if (url.Length == 0)
+            throw new InvalidOperationException("The sidecar returned no video URL");
+
+        return new VideoStream(
+            url,
+            result.TryGetProperty("expires_at", out var expires) && expires.ValueKind == JsonValueKind.Number ? expires.GetInt64() : 0L,
+            result.TryGetProperty("width", out var width) && width.ValueKind == JsonValueKind.Number ? width.GetInt32() : 0,
+            result.TryGetProperty("height", out var height) && height.ValueKind == JsonValueKind.Number ? height.GetInt32() : 0);
     }
 
     public async Task<AccountSession> SignIn(string cookie)

@@ -152,6 +152,31 @@ internal sealed class PlaybackService
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Plays the current track from another recording of it (the video version), from the same position, or
+    /// back from its own with null. Used when the user asks for the video of a studio track: the picture and
+    /// the sound must be the same performance. The queue, the track shown and the scrobble do not change.
+    /// </summary>
+    public void SwapAudio(string? videoId)
+    {
+        if (!IsLoaded || videoId == _audioOverride || PlayQueue.current(_queue) is not { } current)
+            return;
+
+        var wasPaused = Paused;
+        _audioOverride = videoId;
+        _pendingSeek = Position;
+        _sawActive = false;
+        _viaPrefetch = false;
+        _queuedNextId = null; // loading replaces mpv's whole playlist
+        _status.Text = Loading;
+
+        _engine.Load(SourceFor(current.Value), []);
+        _engine.SetVolume(Volume);
+        _engine.SetPaused(wasPaused);
+        AfterQueueEdit();
+        Poll();
+    }
+
     #endregion
 
     #region Polling
@@ -249,6 +274,7 @@ internal sealed class PlaybackService
     private void OnEngineAdvanced()
     {
         _queuedNextId = null;
+        _audioOverride = null;
 
         var next = PlayQueue.advance(_queue);
         if (next is null || PlayQueue.current(next.Value) is not { } current)
@@ -284,7 +310,7 @@ internal sealed class PlaybackService
         _pendingSeek = Position;
         _status.Text = Loading;
 
-        _engine.Load(TrackSource.SourceOf(t), []);
+        _engine.Load(SourceFor(t), []);
         _engine.SetVolume(Volume);
         _engine.SetPaused(false);
         SyncNext();
@@ -619,6 +645,7 @@ internal sealed class PlaybackService
         Position = _pendingSeek;
         _status.Text = Loading;
         _queuedNextId = null; // loading replaces mpv's whole playlist
+        _audioOverride = null;
 
         if (!TrackSource.IsDirect(t.Id) && _prefetch.TryGet(t.Id) is { } stream)
         {
@@ -637,6 +664,10 @@ internal sealed class PlaybackService
         RefreshQueue();
         AfterQueueEdit();
     }
+
+    /// <summary>What mpv loads for a track: its own source, or the video id whose audio replaces it.</summary>
+    private string SourceFor(Track t) =>
+        _audioOverride is { } video ? "https://music.youtube.com/watch?v=" + video : TrackSource.SourceOf(t);
 
     private void SetCurrent(Track t)
     {
@@ -686,6 +717,7 @@ internal sealed class PlaybackService
     private bool _sawActive;
     private string? _queuedNextId; // the track queued after the current one inside mpv, if any
     private bool _viaPrefetch;     // the current track plays from a resolved URL (not the yt-dlp hook)
+    private string? _audioOverride; // a video id whose own audio plays instead of the track's (see SwapAudio)
     private int _seenPrefetch;
 
     public PlaybackService(IAudioEngine engine, PlayerDatabase? db, ScrobbleService? scrobble, PrefetchService prefetch, StatusLine status) =>
@@ -704,6 +736,8 @@ internal sealed class PlaybackService
     public string CurrentArt { get; private set; } = "";
     /// <summary>The queue's current track (the playing one, or the restored one while paused), null when the queue is empty.</summary>
     public Track? CurrentTrack => PlayQueue.current(_queue)?.Value;
+    /// <summary>The video id whose audio plays instead of the current track's own, null when it is the track's own.</summary>
+    public string? AudioOverride => _audioOverride;
     
     /// <summary>Goes up whenever the queue's content or order changes (not when only the position moves).</summary>
     public int QueueRevision { get; private set; }

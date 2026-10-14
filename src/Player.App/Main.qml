@@ -21,6 +21,7 @@ ApplicationWindow {
     property bool queueOpen: true
     property bool libraryOpen: false
     property bool lyricsOpen: false
+    property bool nowPlayingOpen: false
 
     PlaybackViewModel { id: playback }
     QueueViewModel { id: queueVm }
@@ -29,15 +30,17 @@ ApplicationWindow {
     SettingsViewModel { id: settingsVm }
     ThemeViewModel { id: themeVm }
     LyricsViewModel { id: lyricsVm }
+    VideoViewModel { id: videoVm }
     Theme { id: appTheme; tokensJson: themeVm.tokensJson }
 
-    SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; theme: appTheme }
+    SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; theme: appTheme }
 
     function pollAll() {
         settingsVm.poll()
         searchVm.poll()
         libraryVm.poll()
         lyricsVm.poll()
+        videoVm.poll()
         playback.poll()
     }
 
@@ -46,7 +49,7 @@ ApplicationWindow {
     Timer {
         interval: win.lyricsOpen ? 120 : 250
         repeat: true
-        running: (playback.isLoaded && !playback.paused) || searchVm.searching || libraryVm.working || settingsVm.busy || lyricsVm.loading
+        running: (playback.isLoaded && !playback.paused) || searchVm.searching || libraryVm.working || settingsVm.busy || lyricsVm.loading || videoVm.loading
         onTriggered: win.pollAll()
     }
 
@@ -69,11 +72,15 @@ ApplicationWindow {
     // Opening the library, or signing in while it is open, loads the playlists.
     onLibraryOpenChanged: if (libraryOpen) libraryVm.loadLibrary()
 
-    // The queue and the lyrics share the right-hand side: opening one closes the other.
-    onQueueOpenChanged: if (queueOpen) lyricsOpen = false
+    // The queue, the lyrics and "Reproduciendo" share the right-hand side: opening one closes the others.
+    onQueueOpenChanged: if (queueOpen) { lyricsOpen = false; nowPlayingOpen = false }
     onLyricsOpenChanged: {
         lyricsVm.panelShown(lyricsOpen)
-        if (lyricsOpen) queueOpen = false
+        if (lyricsOpen) { queueOpen = false; nowPlayingOpen = false }
+    }
+    onNowPlayingOpenChanged: {
+        videoVm.panelShown(nowPlayingOpen)
+        if (nowPlayingOpen) { queueOpen = false; lyricsOpen = false }
     }
     property string accountState: libraryVm.accountState
     onAccountStateChanged: if (libraryOpen) libraryVm.loadLibrary()
@@ -97,6 +104,11 @@ ApplicationWindow {
                 glyph: "library"
                 selected: win.libraryOpen
                 onClicked: win.libraryOpen = !win.libraryOpen
+            }
+            MIconButton {
+                glyph: "album"
+                selected: win.nowPlayingOpen
+                onClicked: win.nowPlayingOpen = !win.nowPlayingOpen
             }
             MIconButton {
                 glyph: "lyrics"
@@ -146,6 +158,14 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 visible: win.lyricsOpen
                 vm: lyricsVm
+            }
+
+            NowPlayingPanel {
+                Layout.preferredWidth: 380
+                Layout.fillHeight: true
+                visible: win.nowPlayingOpen
+                vm: videoVm
+                playback: playback
             }
         }
 
@@ -220,6 +240,15 @@ ApplicationWindow {
                                 color: appTheme.onSurfaceVariant
                                 font.pixelSize: 12
                                 elide: Text.ElideRight
+                            }
+                        }
+                        MIconButton {
+                            visible: videoVm.available
+                            glyph: "video"
+                            selected: videoVm.showing
+                            onClicked: {
+                                videoVm.toggleVideo()
+                                if (videoVm.showing) win.nowPlayingOpen = true
                             }
                         }
                         MIconButton {
