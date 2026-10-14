@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PublishReadyToRun>true</PublishReadyToRun>
     <QtBridgePackagePrefix>QtGroup.Qt.Bridge.CSharp</QtBridgePackagePrefix>
     <QtBridgeTemplateArch Condition="'$(QtBridgeTemplateArch)' == ''">$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</QtBridgeTemplateArch>
     <QtBridgeTemplateArch Condition="'$(QtBridgeTemplateArch)' == 'X64'">x64</QtBridgeTemplateArch>
