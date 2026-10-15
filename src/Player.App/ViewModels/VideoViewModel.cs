@@ -8,14 +8,13 @@ namespace Player.App.ViewModels;
 /// <summary>
 /// The video of the current track, for the "Reproduciendo" panel and the MV button of the playback bar.
 /// Instantiated once from Main.qml as <c>VideoViewModel { id: videoVm }</c>. What the track is gets checked on
-/// every track change (it is cheap); the video stream is only fetched while the panel is open and the video is
-/// the thing to show. The sound never moves: mpv keeps playing it, and the picture follows its position. Only
+/// every track change (it is cheap); the video stream is only fetched while the video is the thing to show
+/// (in the playback bar or in the player). The sound never moves: mpv keeps playing it, and the picture follows its position. Only
 /// when the user asks for the video of a studio recording does the sound switch to the video's own audio, so
 /// both are the same performance. Method names avoid Set/Reset: the bridge reads those as property setters.
 /// </summary>
 public class VideoViewModel : INotifyPropertyChanged
 {
-    private bool _shown;
     private string _trackId = "";
     private VideoChoice _choice = VideoChoice.Unset;
     private VideoPlan _plan = Video.none;
@@ -33,7 +32,7 @@ public class VideoViewModel : INotifyPropertyChanged
     public bool Available { get; private set => Set(ref field, value); }
     /// <summary>The video, not the cover, is what to show now.</summary>
     public bool Showing { get; private set => Set(ref field, value); }
-    /// <summary>The stream to play while it is showing and the panel is open, "" otherwise.</summary>
+    /// <summary>The stream to play while the video is showing, "" otherwise.</summary>
     public string Url { get; private set => Set(ref field, value); } = "";
     /// <summary>Waiting for the stream.</summary>
     public bool Loading { get; private set => Set(ref field, value); }
@@ -41,13 +40,6 @@ public class VideoViewModel : INotifyPropertyChanged
     public string Message { get; private set => Set(ref field, value); } = "";
     /// <summary>The setting: official music videos replace the cover by themselves.</summary>
     public bool Auto { get; private set => Set(ref field, value); } = true;
-
-    /// <summary>QML tells the view model whether the panel that shows the video is open.</summary>
-    public void PanelShown(bool shown)
-    {
-        _shown = shown;
-        Poll();
-    }
 
     /// <summary>The MV button: video instead of cover, or back, for this track.</summary>
     public void ToggleVideo()
@@ -98,7 +90,7 @@ public class VideoViewModel : INotifyPropertyChanged
         _plan = snapshot.Plan;
 
         var showing = Video.showing(_plan, Auto, _choice);
-        var wantStream = showing && _shown;
+        var wantStream = showing;
         if (wantStream)
             AppServices.Video.EnsureStream();
 

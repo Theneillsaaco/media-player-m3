@@ -21,7 +21,11 @@ ApplicationWindow {
     property bool queueOpen: true
     property bool libraryOpen: false
     property bool lyricsOpen: false
-    property bool nowPlayingOpen: false
+
+    // The player: "mini" (the picture lives in the playback bar and the search or library page shows), "page" (the
+    // player takes the left area) or "full" (maximized: the playback bar floats over the picture).
+    property string playerMode: "mini"
+    readonly property bool playerOpen: playerMode !== "mini"
 
     PlaybackViewModel { id: playback }
     QueueViewModel { id: queueVm }
@@ -72,15 +76,18 @@ ApplicationWindow {
     // Opening the library, or signing in while it is open, loads the playlists.
     onLibraryOpenChanged: if (libraryOpen) libraryVm.loadLibrary()
 
-    // The queue, the lyrics and "Reproduciendo" share the right-hand side: opening one closes the others.
-    onQueueOpenChanged: if (queueOpen) { lyricsOpen = false; nowPlayingOpen = false }
+    // The queue and the lyrics share the right-hand side: opening one closes the other.
+    onQueueOpenChanged: if (queueOpen) lyricsOpen = false
     onLyricsOpenChanged: {
         lyricsVm.panelShown(lyricsOpen)
-        if (lyricsOpen) { queueOpen = false; nowPlayingOpen = false }
+        if (lyricsOpen) queueOpen = false
     }
-    onNowPlayingOpenChanged: {
-        videoVm.panelShown(nowPlayingOpen)
-        if (nowPlayingOpen) { queueOpen = false; lyricsOpen = false }
+
+    // Escape leaves the maximized player.
+    Shortcut {
+        sequence: "Esc"
+        enabled: win.playerMode === "full"
+        onActivated: win.playerMode = "page"
     }
     property string accountState: libraryVm.accountState
     onAccountStateChanged: if (libraryOpen) libraryVm.loadLibrary()
@@ -98,17 +105,20 @@ ApplicationWindow {
                 id: input
                 Layout.fillWidth: true
                 placeholderText: "Busca canciones, o pega un enlace o ruta"
-                onAccepted: { win.libraryOpen = false; searchVm.search(text) }
+                onAccepted: { win.libraryOpen = false; win.playerMode = "mini"; searchVm.search(text) }
             }
             MIconButton {
                 glyph: "library"
                 selected: win.libraryOpen
-                onClicked: win.libraryOpen = !win.libraryOpen
+                onClicked: {
+                    win.libraryOpen = !win.libraryOpen
+                    if (win.libraryOpen) win.playerMode = "mini"
+                }
             }
             MIconButton {
                 glyph: "album"
-                selected: win.nowPlayingOpen
-                onClicked: win.nowPlayingOpen = !win.nowPlayingOpen
+                selected: win.playerOpen
+                onClicked: win.playerMode = win.playerOpen ? "mini" : "page"
             }
             MIconButton {
                 glyph: "lyrics"
@@ -134,16 +144,32 @@ ApplicationWindow {
             SearchPage {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                visible: !win.libraryOpen
+                visible: !win.libraryOpen && !win.playerOpen
                 vm: searchVm
             }
 
             LibraryPage {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                visible: win.libraryOpen
+                visible: win.libraryOpen && !win.playerOpen
                 vm: libraryVm
                 onSettingsRequested: settings.open()
+            }
+
+            PlayerPage {
+                id: playerPage
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: win.playerOpen
+                mode: win.playerMode
+                playback: playback
+                video: videoVm
+                theme: appTheme
+                videoReady: videoLayer.ready
+                videoUnavailable: videoLayer.failed
+                onMinimizeRequested: win.playerMode = "mini"
+                onMaximizeRequested: win.playerMode = "full"
+                onRestoreRequested: win.playerMode = "page"
             }
 
             QueuePanel {
@@ -159,158 +185,42 @@ ApplicationWindow {
                 visible: win.lyricsOpen
                 vm: lyricsVm
             }
-
-            NowPlayingPanel {
-                Layout.preferredWidth: 380
-                Layout.fillHeight: true
-                visible: win.nowPlayingOpen
-                vm: videoVm
-                playback: playback
-            }
         }
 
-        // Now playing bar
-        Rectangle {
+        // Where the playback bar sits in the window (it moves onto the video in the maximized player).
+        Item {
+            id: barHost
             Layout.fillWidth: true
             Layout.preferredHeight: 104
-            color: appTheme.surfaceContainer
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 16
-                anchors.rightMargin: 16
-                anchors.topMargin: 8
-                anchors.bottomMargin: 8
-                spacing: 0
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 8
-                    Text { text: playback.positionText; color: appTheme.onSurfaceVariant; font.pixelSize: 12 }
-                    MSlider {
-                        Layout.fillWidth: true
-                        from: 0
-                        to: Math.max(1, playback.duration)
-                        value: playback.position
-                        enabled: playback.isLoaded && playback.duration > 0
-                        onChangedByUser: (v) => playback.seek(v)
-                    }
-                    Text { text: playback.durationText; color: appTheme.onSurfaceVariant; font.pixelSize: 12 }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    spacing: 8
-
-                    // Track info
-                    RowLayout {
-                        Layout.preferredWidth: 280
-                        Layout.maximumWidth: 280
-                        spacing: 12
-                        Rectangle {
-                            Layout.preferredWidth: 48
-                            Layout.preferredHeight: 48
-                            color: appTheme.surfaceContainerHighest
-                            Icon { anchors.centerIn: parent; name: "music"; tint: appTheme.onSurfaceVariant; visible: art.status !== Image.Ready }
-                            Image {
-                                id: art
-                                anchors.fill: parent
-                                source: playback.currentArt
-                                asynchronous: true
-                                fillMode: Image.PreserveAspectCrop
-                                sourceSize.width: 96
-                                sourceSize.height: 96
-                            }
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            Text {
-                                Layout.fillWidth: true
-                                text: playback.currentTitle
-                                color: appTheme.onSurface
-                                font.pixelSize: 14
-                                font.weight: Font.Medium
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: playback.currentArtist
-                                color: appTheme.onSurfaceVariant
-                                font.pixelSize: 12
-                                elide: Text.ElideRight
-                            }
-                        }
-                        MIconButton {
-                            visible: videoVm.available
-                            glyph: "video"
-                            selected: videoVm.showing
-                            onClicked: {
-                                videoVm.toggleVideo()
-                                if (videoVm.showing) win.nowPlayingOpen = true
-                            }
-                        }
-                        MIconButton {
-                            visible: libraryVm.canLike
-                            glyph: libraryVm.liked ? "favorite" : "favorite_border"
-                            selected: libraryVm.liked
-                            onClicked: libraryVm.toggleLike()
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Transport
-                    RowLayout {
-                        spacing: 4
-                        MIconButton {
-                            glyph: "shuffle"
-                            selected: playback.shuffle
-                            onClicked: playback.toggleShuffle()
-                        }
-                        MIconButton {
-                            glyph: "previous"
-                            enabled: playback.canPrevious
-                            onClicked: playback.previous()
-                        }
-                        MIconButton {
-                            glyph: playback.isLoaded && !playback.paused ? "pause" : "play"
-                            filled: true
-                            containerSize: 48
-                            enabled: queueVm.count > 0
-                            onClicked: playback.toggle()
-                        }
-                        MIconButton {
-                            glyph: "next"
-                            enabled: playback.canNext
-                            onClicked: playback.next()
-                        }
-                        MIconButton {
-                            glyph: playback.repeatMode === "one" ? "repeat_one" : "repeat"
-                            selected: playback.repeatMode !== "off"
-                            onClicked: playback.cycleRepeat()
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Volume
-                    RowLayout {
-                        Layout.preferredWidth: 160
-                        spacing: 8
-                        Icon { name: "volume"; tint: appTheme.onSurfaceVariant; size: 20 }
-                        MSlider {
-                            Layout.fillWidth: true
-                            from: 0
-                            to: 100
-                            value: playback.volume
-                            live: true
-                            onChangedByUser: (v) => playback.setVolume(Math.round(v))
-                        }
-                    }
-                }
-            }
+            visible: win.playerMode !== "full"
         }
+    }
+
+    PlaybackBar {
+        id: bar
+        parent: win.playerMode === "full" ? playerPage.dock : barHost
+        anchors.fill: parent
+        playback: playback
+        queue: queueVm
+        library: libraryVm
+        video: videoVm
+        theme: appTheme
+        docked: win.playerMode === "full"
+        videoInSlot: win.playerMode === "mini" && videoVm.showing
+        onVideoButtonClicked: {
+            videoVm.toggleVideo()
+            if (videoVm.showing && win.playerMode === "mini") win.playerMode = "page"
+        }
+        onCoverClicked: win.playerMode = win.playerOpen ? "mini" : "page"
+    }
+
+    // The one video of the app, moved into whichever slot is on screen so it never restarts.
+    VideoLayer {
+        id: videoLayer
+        parent: win.playerOpen ? playerPage.stage : bar.miniSlot
+        anchors.fill: parent
+        vm: videoVm
+        playback: playback
+        fit: win.playerMode === "full"
     }
 }

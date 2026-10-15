@@ -8,6 +8,7 @@ import QtMultimedia
 Item {
     id: root
 
+    property bool fit: false
     property var vm: null
     property var playback: null
 
@@ -70,7 +71,7 @@ Item {
     VideoOutput {
         id: output
         anchors.fill: parent
-        fillMode: VideoOutput.PreserveAspectCrop
+        fillMode: root.fit ? VideoOutput.PreserveAspectFit : VideoOutput.PreserveAspectCrop
     }
 
     // Only while it plays: a paused player needs no wake-ups.
