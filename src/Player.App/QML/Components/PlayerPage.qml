@@ -50,7 +50,7 @@ Rectangle {
         onPointChanged: root.touch()
     }
 
-    color: full ? "#000000" : theme.surface
+    color: full ? "#000000" : "transparent"
 
     // ---- the picture ----
 

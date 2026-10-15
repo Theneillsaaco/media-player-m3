@@ -32,6 +32,7 @@ import re
 import sys
 import threading
 import time
+import browse
 from concurrent.futures import ThreadPoolExecutor
 
 # Protocol output goes to the real stdout; anything a library prints goes to stderr.
@@ -451,6 +452,8 @@ METHODS = {
     "rate_song": rate_song,
 }
 
+METHODS.update(browse.build(api=api, signed_in=signed_in, get_auth=lambda: _auth,
+                            track=track, artwork=artwork, artist_names=artist_names))
 
 def reply(obj):
     line = json.dumps(obj, ensure_ascii=False) + "\n"

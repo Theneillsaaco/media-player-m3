@@ -74,7 +74,7 @@ let ``hex round trips`` () =
 let ``preferences fall back to their defaults`` () =
     Assert.Equal("system", Appearance.normalizeMode "")
     Assert.Equal("dark", Appearance.normalizeMode "dark")
-    Assert.Equal("#6750a4", Appearance.normalizeAccent "nope")
+    Assert.Equal("#00658e", Appearance.normalizeAccent "nope")
     Assert.Equal("#ff00aa", Appearance.normalizeAccent " #FF00aa ")
     Assert.Equal("tonalSpot", Appearance.normalizeVariant "junk")
     Assert.Equal("vibrant", Appearance.normalizeVariant "vibrant")

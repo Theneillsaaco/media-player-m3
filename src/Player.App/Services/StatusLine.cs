@@ -1,6 +1,6 @@
 namespace Player.App.Services;
 
-/// <summary>The one-line message under the search box ("Searching…", "Playing", errors). Written on the Qt thread only.</summary>
+/// <summary>The one-line message under the search box ("Buscando…", "Reproduciendo", errors). Written on the Qt thread only.</summary>
 internal sealed class StatusLine
 {
     public event Action? Changed;
@@ -16,5 +16,5 @@ internal sealed class StatusLine
             field = value;
             Changed?.Invoke();
         }
-    } = "Search for a song or paste a link or path";
+    } = "Busca una canción o pega un enlace o ruta";
 }

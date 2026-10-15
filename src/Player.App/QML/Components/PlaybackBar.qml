@@ -2,11 +2,11 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
-// The playback controls: seek bar, track info, transport and volume. It sits at the bottom of the window, and in
-// the maximized player Main.qml moves it onto the video as a floating card (docked), which drops the track info
-// because the player already shows it. While the video is minimized, its picture lives in miniSlot, next to the
-// title. vm properties: playback = PlaybackViewModel, queue = QueueViewModel, library = LibraryViewModel,
-// video = VideoViewModel.
+// The playback controls: seek bar, track info, transport and volume. It floats as a rounded card at the bottom
+// of the window, and in the maximized player Main.qml moves it onto the video (docked), which drops the track
+// info because the player already shows it. While the video is minimized, its picture lives in miniSlot, next to
+// the title. The title opens the album and the artist opens the artist page. vm properties: playback =
+// PlaybackViewModel, queue = QueueViewModel, library = LibraryViewModel, video = VideoViewModel.
 Rectangle {
     id: root
 
@@ -16,23 +16,26 @@ Rectangle {
     required property var video
     required property var theme
 
-    /// On top of the video in the maximized player: a rounded translucent card without the track info.
+    /// On top of the video in the maximized player: a translucent card without the track info.
     property bool docked: false
     /// The minimized video is on show: its slot is wider than a cover.
     property bool videoInSlot: false
+    /// Volume to come back to after a mute.
+    property int lastVolume: 60
 
     readonly property Item miniSlot: slot
+    readonly property bool linkable: root.playback.currentId !== "" && root.playback.isLoaded
 
     signal videoButtonClicked()
     signal coverClicked()
 
-    color: docked ? Qt.alpha(theme.surfaceContainer, 0.94) : theme.surfaceContainer
-    radius: docked ? 16 : 0
+    color: docked ? Qt.alpha(theme.surfaceContainerHigh, 0.94) : theme.surfaceContainer
+    radius: 20
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
+        anchors.leftMargin: 20
+        anchors.rightMargin: 20
         anchors.topMargin: 8
         anchors.bottomMargin: 8
         spacing: 0
@@ -63,47 +66,65 @@ Rectangle {
                 Layout.maximumWidth: 300
                 spacing: 12
 
-                Rectangle {
+                Item {
                     id: thumb
                     visible: !root.docked
                     Layout.preferredWidth: root.videoInSlot ? 85 : 48
                     Layout.preferredHeight: 48
-                    color: root.theme.surfaceContainerHighest
-                    clip: true
                     Behavior on Layout.preferredWidth { NumberAnimation { duration: 200 } }
 
-                    Icon { anchors.centerIn: parent; name: "music"; tint: root.theme.onSurfaceVariant; visible: art.status !== Image.Ready }
-                    Image {
-                        id: art
+                    Cover {
                         anchors.fill: parent
                         source: root.playback.currentArt
-                        asynchronous: true
-                        fillMode: Image.PreserveAspectCrop
-                        sourceSize.width: 96
-                        sourceSize.height: 96
+                        radius: 8
                     }
                     // The minimized video is drawn here (Main.qml parents the video layer to this item).
                     Item { id: slot; anchors.fill: parent }
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.coverClicked() }
                 }
+
                 ColumnLayout {
+                    id: info
                     visible: !root.docked
                     Layout.fillWidth: true
                     spacing: 2
+
                     Text {
-                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft
+                        Layout.maximumWidth: info.width
                         text: root.playback.currentTitle
-                        color: root.theme.onSurface
+                        color: titleLink.containsMouse && root.linkable ? root.theme.primary : root.theme.onSurface
                         font.pixelSize: 14
                         font.weight: Font.Medium
+                        font.underline: titleLink.containsMouse && root.linkable
                         elide: Text.ElideRight
+
+                        MouseArea {
+                            id: titleLink
+                            anchors.fill: parent
+                            enabled: root.linkable
+                            hoverEnabled: true
+                            cursorShape: root.linkable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: Window.window.openAlbumOf(root.playback.currentId)
+                        }
                     }
                     Text {
-                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft
+                        Layout.maximumWidth: info.width
                         text: root.playback.currentArtist
-                        color: root.theme.onSurfaceVariant
+                        color: artistLink.containsMouse && root.linkable ? root.theme.primary : root.theme.onSurfaceVariant
                         font.pixelSize: 12
+                        font.underline: artistLink.containsMouse && root.linkable
                         elide: Text.ElideRight
+
+                        MouseArea {
+                            id: artistLink
+                            anchors.fill: parent
+                            enabled: root.linkable
+                            hoverEnabled: true
+                            cursorShape: root.linkable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: Window.window.openArtistOf(root.playback.currentId)
+                        }
                     }
                 }
                 MIconButton {
@@ -158,9 +179,19 @@ Rectangle {
 
             // Volume
             RowLayout {
-                Layout.preferredWidth: 160
-                spacing: 8
-                Icon { name: "volume"; tint: root.theme.onSurfaceVariant; size: 20 }
+                Layout.preferredWidth: 176
+                spacing: 4
+                MIconButton {
+                    glyph: root.playback.volume > 0 ? "volume" : "volume_off"
+                    onClicked: {
+                        if (root.playback.volume > 0) {
+                            root.lastVolume = root.playback.volume
+                            root.playback.setVolume(0)
+                        } else {
+                            root.playback.setVolume(root.lastVolume > 0 ? root.lastVolume : 60)
+                        }
+                    }
+                }
                 MSlider {
                     Layout.fillWidth: true
                     from: 0

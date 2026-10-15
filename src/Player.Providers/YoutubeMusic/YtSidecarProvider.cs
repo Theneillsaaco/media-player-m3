@@ -12,7 +12,7 @@ namespace Player.Providers.YoutubeMusic;
 /// <see cref="SidecarProtocol"/> for the wire format). This class holds the saved cookie and turns
 /// the sidecar's replies into domain types. Every method is safe to call from any thread.
 /// </summary>
-public class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyricsSource, IVideoSource
+public partial class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyricsSource, IVideoSource
 {
     public static string FindScript() => SidecarProtocol.FindScript();
 

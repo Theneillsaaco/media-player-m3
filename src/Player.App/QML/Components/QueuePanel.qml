@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
-// The play queue. vm is the QueueViewModel.
+// The play queue. vm is the QueueViewModel. Main.qml gives it rounded corners (it is a card next to the pages).
 Rectangle {
     id: root
 
@@ -15,10 +15,11 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
         Text {
-            Layout.margins: 16
+            Layout.margins: 20
+            Layout.bottomMargin: 8
             text: "Cola" + (root.vm.count > 0 ? " · " + root.vm.count : "")
             color: root.theme ? root.theme.onSurface : "#1D1B20"
-            font.pixelSize: 16
+            font.pixelSize: 18
             font.weight: Font.Medium
         }
         ListView {
@@ -37,6 +38,7 @@ Rectangle {
                 supporting: model.artist
                 trailing: model.duration
                 artUrl: model.artUrl
+                videoId: model.videoId
                 current: index === root.vm.position
                 onActivated: root.vm.playItem(index)
             }

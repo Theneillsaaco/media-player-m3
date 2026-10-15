@@ -131,6 +131,7 @@ Item {
                 supporting: model.artist
                 trailing: model.duration
                 artUrl: model.artUrl
+                videoId: model.videoId
                 showAdd: true
                 onActivated: root.vm.playListItem(index)
                 onAddRequested: root.vm.addListItem(index)

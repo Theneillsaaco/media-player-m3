@@ -25,6 +25,8 @@ public class PlaybackViewModel : INotifyPropertyChanged
     public string DurationText { get; private set => Set(ref field, value); } = "0:00";
     public bool Paused { get; private set => Set(ref field, value); } = true;
     public bool IsLoaded { get; private set => Set(ref field, value); }
+    /// <summary>Id of the current track (a YouTube id, or the link or path when it was played directly).</summary>
+    public string CurrentId { get; private set => Set(ref field, value); } = "";
     public string CurrentTitle { get; private set => Set(ref field, value); } = "";
     public string CurrentArtist { get; private set => Set(ref field, value); } = "";
     public string CurrentArt { get; private set => Set(ref field, value); } = "";
@@ -67,6 +69,7 @@ public class PlaybackViewModel : INotifyPropertyChanged
         DurationText = TimeFormat.Clock(p.Duration, "0:00");
         Paused = p.Paused;
         IsLoaded = p.IsLoaded;
+        CurrentId = p.CurrentId;
         CurrentTitle = p.CurrentTitle;
         CurrentArtist = p.CurrentArtist;
         CurrentArt = p.CurrentArt;

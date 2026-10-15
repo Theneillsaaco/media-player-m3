@@ -56,3 +56,77 @@ type IAccountProvider =
     /// Every track of a playlist when limit is 0, otherwise the first `limit`.
     abstract GetPlaylist: id: string * limit: int -> Task<IReadOnlyList<Track>>
     abstract Rate: id: string * liked: bool -> Task
+    
+// browsing
+
+/// What an entry of a browse list points at (tracks are not here: they are Track).
+type EntityKind =
+    | Album = 0
+    | Artist = 1
+    | Playlist = 2
+    
+/// An album, artist or playlist in a list: a search result, a shelf of Home, a related artist.
+/// Id is the browse id (the playlist id for playlists, mixes included).
+type Entity = {
+    Kind: EntityKind
+    Id: string
+    Title: string
+    Subtitle: string
+    ArtUrl: string
+}
+
+/// One shelf of Home ("Quick picks", "Mixed for you"...).
+type Shelf = {
+    Title: string
+    Tracks: Track[]
+    Entities: Entity[]
+}
+
+/// An album or a playlist opened as a page. ArtistId is "" when there is no artist to open.
+type TrackCollection = {
+    Id: string
+    Title: string
+    Subtitle: string
+    ArtUrl: string
+    ArtistId: string
+    Tracks: Track[]
+}
+
+type ArtistPage = {
+    Id: string
+    Name: string
+    Description: string
+    ArtUrl: string
+    SongsId: string
+    Songs: Track[]
+    Albums: Entity[]
+    Singles: Entity[]
+    Related: Entity[]
+}
+
+/// What a typed search found: Tracks for the songs and videos filters, Entities for the rest.
+type SearchHits = {
+    Tracks: Track[]
+    Entities: Entity[]
+}
+
+/// The ids behind a track's artist and album, "" when it has none.
+type TrackLinks = {
+    ArtistId: string
+    ArtistName: string
+    AlbumId: string
+    AlbumName: string
+}
+
+/// Pages of the catalog. Methods run on any thread and fail the task on network trouble.
+type IBrowseProvider =
+    /// Personalized with a session, generic without one.
+    abstract Home: unit -> Task<Shelf[]>
+    abstract Album: id: string -> Task<TrackCollection>
+    /// A public playlist or a mix.
+    abstract Collection: id: string -> Task<TrackCollection>
+    abstract Artist: id: string -> Task<ArtistPage>
+    /// filter: songs, videos, albums, artists or playlists.
+    abstract SearchTyped: query: string * filter: string -> Task<SearchHits>
+    abstract Suggestions: query: string -> Task<string[]>
+    abstract Links: trackId: string -> Task<TrackLinks>

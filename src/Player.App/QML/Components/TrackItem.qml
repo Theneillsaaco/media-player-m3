@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Material 3 two-line list item with a 48dp cover. Click plays; the + button adds to the queue.
+// Material 3 two-line list item with a cover. Click plays or opens; the + button adds to the queue.
+// With a videoId the second line is a link to the artist's page. round: circular cover (artists).
 Item {
     id: row
 
@@ -11,12 +12,18 @@ Item {
     property string supporting: ""
     property string trailing: ""
     property string artUrl: ""
+    property string videoId: ""
     property bool current: false
     property bool showAdd: false
+    property bool round: false
     property color cPrimary: theme ? theme.primary : "#6750A4"
     property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
     property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
     property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
+    property color cOnSecondaryContainer: theme ? theme.onSecondaryContainer : "#1D192B"
+
+    readonly property bool linkable: videoId !== "" && supporting !== ""
+
     signal activated()
     signal addRequested()
 
@@ -24,15 +31,17 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        anchors.leftMargin: 4
-        anchors.rightMargin: 4
-        radius: 12
-        color: row.current ? Qt.alpha(row.cSecondaryContainer, 0.6) : "transparent"
+        anchors.leftMargin: 8
+        anchors.rightMargin: 8
+        anchors.topMargin: 2
+        anchors.bottomMargin: 2
+        radius: 14
+        color: row.current ? row.cSecondaryContainer : "transparent"
 
         Rectangle { // state layer
             anchors.fill: parent
             radius: parent.radius
-            color: row.cOnSurface
+            color: row.current ? row.cOnSecondaryContainer : row.cOnSurface
             opacity: area.pressed ? 0.10 : area.containsMouse ? 0.08 : 0
         }
     }
@@ -41,53 +50,68 @@ Item {
         id: area
         anchors.fill: parent
         hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
         onClicked: row.activated()
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 12
-        anchors.rightMargin: 8
+        anchors.leftMargin: 16
+        anchors.rightMargin: 12
         spacing: 12
 
-        Rectangle { // cover (placeholder shows while it loads or if it fails)
+        Cover {
             Layout.preferredWidth: 48
             Layout.preferredHeight: 48
-            color: theme ? theme.surfaceContainerHighest : "#E6E0E9"
-            Icon { anchors.centerIn: parent; name: "music"; size: 24; tint: row.cOnSurfaceVariant; visible: img.status !== Image.Ready }
-            Image {
-                id: img
-                anchors.fill: parent
-                source: row.artUrl
-                asynchronous: true
-                fillMode: Image.PreserveAspectCrop
-                sourceSize.width: 96
-                sourceSize.height: 96
-            }
+            radius: row.round ? 24 : 8
+            source: row.artUrl
         }
 
         ColumnLayout {
+            id: texts
             Layout.fillWidth: true
             spacing: 2
+
             Text {
                 Layout.fillWidth: true
                 text: row.heading
-                color: row.current ? row.cPrimary : row.cOnSurface
+                color: row.current ? row.cOnSecondaryContainer : row.cOnSurface
                 font.pixelSize: 16
+                font.weight: row.current ? Font.Medium : Font.Normal
                 elide: Text.ElideRight
             }
+
             Text {
-                Layout.fillWidth: true
+                id: sub
+                Layout.alignment: Qt.AlignLeft
+                Layout.maximumWidth: texts.width
                 text: row.supporting
-                color: row.cOnSurfaceVariant
+                color: row.linkable && link.containsMouse ? row.cPrimary
+                    : row.current ? row.cOnSecondaryContainer : row.cOnSurfaceVariant
                 font.pixelSize: 14
+                font.underline: row.linkable && link.containsMouse
                 elide: Text.ElideRight
+
+                MouseArea {
+                    id: link
+                    anchors.fill: parent
+                    enabled: row.linkable
+                    hoverEnabled: true
+                    cursorShape: row.linkable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: {
+                        if (Window.window && Window.window.openArtistOf)
+                            Window.window.openArtistOf(row.videoId)
+                    }
+                }
             }
         }
 
         Text {
+            visible: row.trailing !== ""
+            Layout.preferredWidth: 44
+            horizontalAlignment: Text.AlignRight
             text: row.trailing
-            color: row.cOnSurfaceVariant
+            color: row.current ? row.cOnSecondaryContainer : row.cOnSurfaceVariant
             font.pixelSize: 12
         }
 

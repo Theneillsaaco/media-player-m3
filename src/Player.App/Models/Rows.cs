@@ -24,4 +24,30 @@ internal static class Rows
         Artist = p.Count switch { 0 => "", 1 => "1 song", var n => $"{n} songs" },
         ArtUrl = p.ArtUrl
     };
+
+    public static EntityRow FromEntity(Entity e) => new()
+    {
+        Kind = e.Kind switch { EntityKind.Artist => "artist", EntityKind.Playlist => "playlist", _ => "album" },
+        EntityId = e.Id,
+        Title = e.Title,
+        Subtitle = e.Subtitle,
+        ArtUrl = e.ArtUrl
+    };
+
+    /// <summary>A song inside a shelf of Home.</summary>
+    public static EntityRow FromTrackEntity(Track t)
+    {
+        var duration = TimeFormat.Clock(t.DurationSeconds);
+
+        return new()
+        {
+            Kind = "track",
+            EntityId = t.Id,
+            Title = t.Title,
+            Subtitle = duration.Length > 0 ? t.Artist + " · " + duration : t.Artist,
+            ArtUrl = t.ArtUrl
+        };
+    }
+
+    public static EntityRow Header(string title) => new() { Kind = "header", Title = title };
 }

@@ -11,7 +11,7 @@ module Appearance =
     let contrastKey = "theme.contrast"
     
     /// Material baseline purple: with Tonal spot it gives the colors the UI was first drawn with.
-    let defaultAccent = "#6750a4"
+    let defaultAccent = "#00658e"
     
     /// "light", "dark" or "system" (the default).
     let normalizeMode (value: string) =
