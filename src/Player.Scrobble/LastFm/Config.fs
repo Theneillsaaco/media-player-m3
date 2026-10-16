@@ -37,7 +37,7 @@ module LastFmConfig =
                 ValueNone
         else
             ValueNone
-            
+
     /// Writes {"apiKey": ..., "secret": ...} to the file, readable by its owner only (the secret is as private as a
     /// password). The folder is created with mode 700 when it is new.
     let save (file: string) (credentials: LastFmCredentials) : unit =

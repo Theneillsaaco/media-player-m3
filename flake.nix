@@ -45,7 +45,7 @@
       ];
 
       pythonEnv = pkgs.python3.withPackages (ps: [ ps.ytmusicapi ps.yt-dlp ps.secretstorage ]);
-      runtimeBins = [ pythonEnv pkgs.deno pkgs.mpv pkgs.xdg-utils ];
+      runtimeBins = [ pythonEnv pkgs.deno pkgs.mpv pkgs.xdg-utils pkgs.libsecret ];
     in {
       devShells.${system}.default = pkgs.mkShell {
         inputsFrom = [ qt.qtbase qt.qtdeclarative ];
