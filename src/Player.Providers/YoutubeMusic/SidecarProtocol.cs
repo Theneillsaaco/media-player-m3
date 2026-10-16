@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.ComponentModel;
 using System.Text.Json;
 using Player.Core.Contracts;
 
@@ -15,13 +14,26 @@ internal static class SidecarProtocol
     public static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(45); // yt-dlp can be slow
     public static readonly TimeSpan ImportTimeout = TimeSpan.FromSeconds(60); // keyring prompts can be slow
     public static readonly TimeSpan ListTimeout = TimeSpan.FromMinutes(5);    // a big library paginates
-    
+
+    /// <summary>
+    /// PLAYER_SIDECAR (the script itself), then PLAYER_SIDECAR_DIR (the folder that holds ytm/server.py, which is
+    /// what the Nix package sets), then the sidecar folder of the repository found by walking up from the
+    /// executable and from the working directory.
+    /// </summary>
     public static string FindScript()
     {
         var env = Environment.GetEnvironmentVariable("PLAYER_SIDECAR");
-        if (!string.IsNullOrEmpty(env) && File.Exists(env)) 
+        if (!string.IsNullOrEmpty(env) && File.Exists(env))
             return env;
-        
+
+        var folder = Environment.GetEnvironmentVariable("PLAYER_SIDECAR_DIR");
+        if (!string.IsNullOrEmpty(folder))
+        {
+            var inFolder = Path.Combine(folder, "ytm", "server.py");
+            if (File.Exists(inFolder))
+                return inFolder;
+        }
+
         foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
             for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
             {
@@ -30,7 +42,7 @@ internal static class SidecarProtocol
                     return candidate;
             }
         
-        throw new FileNotFoundException("sidecar/ytm/server.py not found; set PLAYER_SIDECAR to its path");
+        throw new FileNotFoundException("sidecar/ytm/server.py not found; set PLAYER_SIDECAR to its path or PLAYER_SIDECAR_DIR to its folder");
     }
     
     public static string Request(long id, string method, object args) =>
