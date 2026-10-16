@@ -61,6 +61,8 @@ public class SettingsViewModel : INotifyPropertyChanged
     public void UseCookie(string text) { AppServices.Account?.SignInWithCookie(text); AccountChangedByUser(); }
     public void SignOutAccount() { AppServices.Account?.SignOut(); AccountChangedByUser(); }
 
+    /// <summary>Saves the Last.fm API key and secret from the dialog; the Conectar button appears right away.</summary>
+    public void SaveScrobbleKeys(string apiKey, string secret) { AppServices.Scrobble?.Configure(apiKey, secret); SyncScrobbler(); }
     public void ConnectScrobbler() { AppServices.Scrobble?.BeginSignIn(); SyncScrobbler(); }
     public void FinishScrobblerSignIn() { AppServices.Scrobble?.CompleteSignIn(); SyncScrobbler(); }
     public void CancelScrobblerSignIn() { AppServices.Scrobble?.CancelSignIn(); SyncScrobbler(); }

@@ -1,7 +1,8 @@
 import QtQuick
 
 // Material 3 style slider: 4dp track, 4x20dp handle, drag or click anywhere.
-// value is driven from outside. changedByUser(v) fires on release, or on every move when live.
+// The inactive track is the secondary container, as in Material 3: unlike the highest surface it stays visible on
+// the dark playback bar. value is driven from outside. changedByUser(v) fires on release, or on every move when live.
 Item {
     id: root
 
@@ -12,7 +13,7 @@ Item {
     property real value: 0
     property bool live: false
     property color cPrimary: theme ? theme.primary : "#6750A4"
-    property color cSecondaryContainer: theme ? theme.surfaceContainerHighest : "#E6E0E9"
+    property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
     property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
     signal changedByUser(real v)
 

@@ -3,13 +3,16 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import "../Components"
 
-// Home: the shelves of YouTube Music as one list, a title row before each shelf. Songs play (the queue becomes
-// their shelf), albums, artists and playlists open their page (entityActivated). nav is the NavigationViewModel.
+// Home, laid out like YouTube Music on the web: one block per shelf with its title and two arrows. A shelf of
+// songs only ("Quick picks") is a grid of four rows that scrolls sideways; every other shelf is a strip of cards.
+// Songs play (the queue becomes their shelf); albums, artists and playlists open their page (entityActivated).
+// nav is the NavigationViewModel; its homeJson is [{title, layout, items:[{kind, id, index, title, subtitle, art}]}].
 Item {
     id: root
 
     required property var nav
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var shelves: nav.homeJson.length > 0 ? JSON.parse(nav.homeJson) : []
 
     signal entityActivated(string kind, string entityId)
 
@@ -18,60 +21,133 @@ Item {
         anchors.fill: parent
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        model: root.nav.homeRows
+        topMargin: 8
+        bottomMargin: 24
+        model: root.shelves
         ScrollBar.vertical: ScrollBar {}
 
-        delegate: Loader {
-            id: del
+        delegate: Item {
+            id: shelf
 
             required property int index
-            required property var model
+            required property var modelData
+
+            readonly property bool isGrid: modelData.layout === "grid"
+            // The view that scrolls: the arrows move it.
+            readonly property Item view: isGrid ? gridView : strip
 
             width: ListView.view.width
-            height: item ? item.implicitHeight : 0
-            sourceComponent: model.kind === "header" ? headerRow : model.kind === "track" ? trackRow : entityRow
+            height: head.height + (isGrid ? gridView.height : strip.height) + 20
 
-            Component {
-                id: headerRow
-                Item {
-                    implicitHeight: 64
-                    Text {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        anchors.leftMargin: 20
-                        anchors.rightMargin: 20
-                        anchors.bottomMargin: 8
-                        text: del.model.title
-                        color: root.theme ? root.theme.onSurface : "#1D1B20"
-                        font.pixelSize: 20
-                        font.weight: Font.Medium
-                        elide: Text.ElideRight
+            function slide(dx) {
+                const v = shelf.view
+                const low = v.originX - v.leftMargin
+                const high = v.originX + v.contentWidth - v.width + v.rightMargin
+                scroller.stop()
+                scroller.from = v.contentX
+                scroller.to = Math.max(low, Math.min(high, v.contentX + dx))
+                scroller.start()
+            }
+
+            RowLayout {
+                id: head
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+                anchors.rightMargin: 12
+                height: 64
+                spacing: 4
+
+                Text {
+                    Layout.fillWidth: true
+                    text: shelf.modelData.title
+                    color: root.theme ? root.theme.onSurface : "#1D1B20"
+                    font.pixelSize: 24
+                    font.weight: Font.Medium
+                    elide: Text.ElideRight
+                }
+                MIconButton {
+                    glyph: "back"
+                    enabled: !shelf.view.atXBeginning
+                    onClicked: shelf.slide(-shelf.view.width * 0.8)
+                }
+                MIconButton {
+                    glyph: "back"
+                    rotation: 180
+                    enabled: !shelf.view.atXEnd
+                    onClicked: shelf.slide(shelf.view.width * 0.8)
+                }
+            }
+
+            // Strip of cards
+            ListView {
+                id: strip
+                visible: !shelf.isGrid
+                anchors.top: head.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 148 + 60
+                orientation: ListView.Horizontal
+                clip: true
+                spacing: 16
+                leftMargin: 20
+                rightMargin: 20
+                boundsBehavior: Flickable.StopAtBounds
+                model: shelf.isGrid ? [] : shelf.modelData.items
+
+                delegate: EntityCard {
+                    required property var modelData
+
+                    heading: modelData.title
+                    supporting: modelData.subtitle
+                    artUrl: modelData.art
+                    round: modelData.kind === "artist"
+                    onActivated: {
+                        if (modelData.kind === "track")
+                            root.nav.playHomeTrack(shelf.index, modelData.index)
+                        else
+                            root.entityActivated(modelData.kind, modelData.id)
                     }
                 }
             }
 
-            Component {
-                id: trackRow
-                TrackItem {
-                    width: del.width
-                    heading: del.model.title
-                    supporting: del.model.subtitle
-                    artUrl: del.model.artUrl
-                    onActivated: root.nav.playHomeRow(del.index)
+            // Grid of song rows: four rows, columns fill from the top and scroll sideways.
+            GridView {
+                id: gridView
+                visible: shelf.isGrid
+                anchors.top: head.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 4 * cellHeight
+                flow: GridView.FlowTopToBottom
+                cellWidth: Math.min(440, Math.max(300, (width - 40) / 2))
+                cellHeight: 64
+                leftMargin: 12
+                rightMargin: 12
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: shelf.isGrid ? shelf.modelData.items : []
+
+                delegate: TrackItem {
+                    required property var modelData
+
+                    width: gridView.cellWidth
+                    height: gridView.cellHeight
+                    heading: modelData.title
+                    supporting: modelData.subtitle
+                    artUrl: modelData.art
+                    videoId: modelData.id
+                    onActivated: root.nav.playHomeTrack(shelf.index, modelData.index)
                 }
             }
 
-            Component {
-                id: entityRow
-                TrackItem {
-                    width: del.width
-                    heading: del.model.title
-                    supporting: del.model.subtitle
-                    artUrl: del.model.artUrl
-                    round: del.model.kind === "artist"
-                    onActivated: root.entityActivated(del.model.kind, del.model.entityId)
-                }
+            NumberAnimation {
+                id: scroller
+                target: shelf.view
+                property: "contentX"
+                duration: 280
+                easing.type: Easing.OutCubic
             }
         }
     }

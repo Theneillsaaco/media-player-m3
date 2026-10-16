@@ -56,7 +56,7 @@ type IAccountProvider =
     /// Every track of a playlist when limit is 0, otherwise the first `limit`.
     abstract GetPlaylist: id: string * limit: int -> Task<IReadOnlyList<Track>>
     abstract Rate: id: string * liked: bool -> Task
-    
+
 // browsing
 
 /// What an entry of a browse list points at (tracks are not here: they are Track).
@@ -64,7 +64,7 @@ type EntityKind =
     | Album = 0
     | Artist = 1
     | Playlist = 2
-    
+
 /// An album, artist or playlist in a list: a search result, a shelf of Home, a related artist.
 /// Id is the browse id (the playlist id for playlists, mixes included).
 type Entity = {

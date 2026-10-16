@@ -22,7 +22,7 @@ Item {
         id: art
         width: 148
         height: 148
-        radius: card.round ? 74 : 14
+        radius: card.round ? 74 : 12
         source: card.artUrl
         pixels: 296
         icon: card.round ? "album" : "music"

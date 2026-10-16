@@ -1,7 +1,9 @@
 namespace Player.Scrobble.LastFm
 
 open System
+open System.Collections.Generic
 open System.IO
+open System.Text
 open System.Text.Json
 
 type LastFmCredentials = {
@@ -35,3 +37,34 @@ module LastFmConfig =
                 ValueNone
         else
             ValueNone
+            
+    /// Writes {"apiKey": ..., "secret": ...} to the file, readable by its owner only (the secret is as private as a
+    /// password). The folder is created with mode 700 when it is new.
+    let save (file: string) (credentials: LastFmCredentials) : unit =
+        match Path.GetDirectoryName file with
+        | null
+        | "" -> ()
+        | dir ->
+            Directory.CreateDirectory(
+                dir,
+                UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+            )
+            |> ignore
+
+        if File.Exists file then
+            File.Delete file
+
+        let values = Dictionary<string, string>()
+        values["apiKey"] <- credentials.ApiKey
+        values["secret"] <- credentials.Secret
+
+        let options =
+            FileStreamOptions(
+                Mode = FileMode.CreateNew,
+                Access = FileAccess.Write,
+                UnixCreateMode = Nullable(UnixFileMode.UserRead ||| UnixFileMode.UserWrite)
+            )
+
+        use stream = new FileStream(file, options)
+        let bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize values)
+        stream.Write(bytes, 0, bytes.Length)

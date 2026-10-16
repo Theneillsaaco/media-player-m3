@@ -81,20 +81,20 @@ public partial class YtSidecarProvider : IBrowseProvider
             Text(r, "art"),
             Text(r, "artistId"),
             [.. r.GetProperty("tracks").EnumerateArray().Select(ToTrack)]);
-    
+
     /// <summary>The tracks of a mixed list ({"type":"track","track":{...}} entries).</summary>
     private static Track[] ReadTracks(JsonElement list) =>
         [.. list.EnumerateArray().Where(i => i.TryGetProperty("track", out _)).Select(i => ToTrack(i.GetProperty("track")))];
-    
+
     private static Entity[] ReadEntities(JsonElement list) =>
         [.. list.EnumerateArray().Select(ToEntity).OfType<Entity>()];
-    
+
     /// <summary>Null for a track entry or a kind the player has no page for.</summary>
     private static Entity? ToEntity(JsonElement e)
     {
         if (e.TryGetProperty("track", out _))
             return null;
-        
+
         EntityKind kind;
         switch (Text(e, "type"))
         {

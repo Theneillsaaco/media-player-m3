@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
-// The player, in the left area where the search results are: the cover of the playing track, or its music video,
+// The player, in the left area where the pages are: the cover of the playing track, or its music video,
 // as YouTube Music's player page does it. mode is "page" (the picture centred with the title under it, the playback
 // bar stays at the bottom of the window) or "full" (the picture takes the whole area and the playback bar floats on
 // it as a card; the buttons and the card fade out after a few idle seconds while it plays). The right side stays
 // free for the queue and the lyrics. stage is where Main.qml puts the video; dock is where it puts the playback bar.
+// The window buttons (video on/off, maximize or restore, minimize) are in the top right corner of both modes.
 Rectangle {
     id: root
 
@@ -50,6 +51,7 @@ Rectangle {
         onPointChanged: root.touch()
     }
 
+    // Transparent in "page" mode: the rounded card of Main.qml is the background.
     color: full ? "#000000" : "transparent"
 
     // ---- the picture ----
@@ -166,7 +168,7 @@ Rectangle {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.leftMargin: 24
-            anchors.rightMargin: 160
+            anchors.rightMargin: 220
             anchors.topMargin: 16
             spacing: 2
             Text {
@@ -187,7 +189,7 @@ Rectangle {
         }
     }
 
-    // The window buttons: minimize to the playback bar, maximize or restore.
+    // The window buttons: video on or off, maximize or restore, minimize to the playback bar.
     Rectangle {
         anchors.top: parent.top
         anchors.right: parent.right
@@ -204,6 +206,12 @@ Rectangle {
             id: buttons
             anchors.centerIn: parent
             spacing: 0
+            MIconButton {
+                visible: root.video.available
+                glyph: "video"
+                selected: root.video.showing
+                onClicked: root.video.toggleVideo()
+            }
             MIconButton {
                 glyph: root.full ? "fullscreen_exit" : "fullscreen"
                 onClicked: root.full ? root.restoreRequested() : root.maximizeRequested()

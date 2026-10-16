@@ -29,8 +29,8 @@ Rectangle {
     signal videoButtonClicked()
     signal coverClicked()
 
-    color: docked ? Qt.alpha(theme.surfaceContainerHigh, 0.94) : theme.surfaceContainer
-    radius: 20
+    color: docked ? Qt.alpha(theme.surfaceContainerHighest, 0.94) : theme.surfaceContainerHigh
+    radius: 28
 
     ColumnLayout {
         anchors.fill: parent
@@ -62,6 +62,7 @@ Rectangle {
 
             // Track info
             RowLayout {
+                Layout.fillWidth: false
                 Layout.preferredWidth: root.docked ? -1 : 300
                 Layout.maximumWidth: 300
                 spacing: 12
@@ -179,7 +180,9 @@ Rectangle {
 
             // Volume
             RowLayout {
+                Layout.fillWidth: false
                 Layout.preferredWidth: 176
+                Layout.maximumWidth: 176
                 spacing: 4
                 MIconButton {
                     glyph: root.playback.volume > 0 ? "volume" : "volume_off"

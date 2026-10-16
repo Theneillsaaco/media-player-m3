@@ -1,14 +1,11 @@
 using System.Diagnostics;
-using Player.Core;
 using Player.Core.Contracts;
 using Player.Core.Domain;
-using Player.Scrobble;
 using Player.Scrobble.LastFm;
-using Player.Storage;
 using Player.Storage.Database;
 using Player.Storage.Secrets;
 
-namespace Player.App;
+namespace Player.App.Services;
 
 internal enum ScrobbleStage { Unavailable, SignedOut, Authorizing, SignedIn, Reconnect }
 
@@ -21,7 +18,7 @@ internal readonly record struct ScrobbleSnapshot(
 /// from its poll. Listens are queued first and removed only when the service took them, so a
 /// crash, a dead network or an expired session never loses one.
 /// </summary>
-internal sealed class ScrobbleService : IDisposable
+internal sealed partial class ScrobbleService : IDisposable
 {
     private const string Service = "lastfm";
     private const string SessionSecret = "lastfm-session";
@@ -31,7 +28,7 @@ internal sealed class ScrobbleService : IDisposable
     private const int BatchSize = 50;
     private static readonly TimeSpan MaxAge = TimeSpan.FromDays(14); // Last.fm ignores older timestamps
 
-    private readonly IScrobbler? _client;
+    private IScrobbler? _client;
     private readonly PlayerDatabase _db;
     private readonly SecretStore _secrets;
     private readonly Timer _retry;

@@ -15,6 +15,21 @@ ApplicationWindow {
     title: "Player"
     color: appTheme.surface
 
+    // The Basic style's own pieces (scroll bars, text cursors, selections) read the palette, which is light
+    // unless told otherwise: that is what made the dark mode look wrong.
+    palette.window: appTheme.surface
+    palette.windowText: appTheme.onSurface
+    palette.base: appTheme.surfaceContainer
+    palette.text: appTheme.onSurface
+    palette.button: appTheme.surfaceContainerHigh
+    palette.buttonText: appTheme.onSurface
+    palette.highlight: appTheme.primary
+    palette.highlightedText: appTheme.onPrimary
+    palette.light: appTheme.surfaceContainerHighest
+    palette.mid: appTheme.outlineVariant
+    palette.dark: appTheme.outline
+    palette.placeholderText: appTheme.onSurfaceVariant
+
     // Leaf components find the theme through the window: Window.window.theme.
     readonly property var theme: appTheme
 
@@ -196,42 +211,53 @@ ApplicationWindow {
                 id: stageCard
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: win.playerMode === "full" ? 0 : 20
+                radius: win.playerMode === "full" ? 0 : 28
                 clip: true
-                color: win.playerMode === "full" ? "#000000" : appTheme.surfaceContainerLow
+                color: win.playerMode === "full" ? "#000000" : appTheme.surfaceContainer
 
-                SearchPage {
-                    anchors.fill: parent
-                    visible: !win.playerOpen && navVm.page === "search"
-                    vm: searchVm
-                    onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                // Pages cross-fade (Material "fade through": the old one out, then the new one in).
+                FadePage {
+                    shown: !win.playerOpen && navVm.page === "search"
+                    SearchPage {
+                        anchors.fill: parent
+                        vm: searchVm
+                        onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                    }
                 }
 
-                HomePage {
-                    anchors.fill: parent
-                    visible: !win.playerOpen && navVm.page === "home"
-                    nav: navVm
-                    onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                FadePage {
+                    shown: !win.playerOpen && navVm.page === "home"
+                    HomePage {
+                        anchors.fill: parent
+                        nav: navVm
+                        onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                    }
                 }
 
-                LibraryPage {
-                    anchors.fill: parent
-                    visible: !win.playerOpen && navVm.page === "library"
-                    vm: libraryVm
-                    onSettingsRequested: settings.open()
+                FadePage {
+                    shown: !win.playerOpen && navVm.page === "library"
+                    LibraryPage {
+                        anchors.fill: parent
+                        vm: libraryVm
+                        onSettingsRequested: settings.open()
+                    }
                 }
 
-                CollectionPage {
-                    anchors.fill: parent
-                    visible: !win.playerOpen && (navVm.page === "album" || navVm.page === "collection")
-                    nav: navVm
+                FadePage {
+                    shown: !win.playerOpen && (navVm.page === "album" || navVm.page === "collection")
+                    CollectionPage {
+                        anchors.fill: parent
+                        nav: navVm
+                    }
                 }
 
-                ArtistPage {
-                    anchors.fill: parent
-                    visible: !win.playerOpen && navVm.page === "artist"
-                    nav: navVm
-                    onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                FadePage {
+                    shown: !win.playerOpen && navVm.page === "artist"
+                    ArtistPage {
+                        anchors.fill: parent
+                        nav: navVm
+                        onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                    }
                 }
 
                 PlayerPage {
@@ -254,7 +280,8 @@ ApplicationWindow {
                 Layout.preferredWidth: win.sideWidth
                 Layout.fillHeight: true
                 visible: win.queueOpen
-                radius: 20
+                radius: 28
+                color: appTheme.surfaceContainer
                 clip: true
                 vm: queueVm
             }
@@ -263,7 +290,8 @@ ApplicationWindow {
                 Layout.preferredWidth: win.sideWidth + 20
                 Layout.fillHeight: true
                 visible: win.lyricsOpen
-                radius: 20
+                radius: 28
+                color: appTheme.surfaceContainer
                 clip: true
                 vm: lyricsVm
             }

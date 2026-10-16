@@ -71,7 +71,7 @@ MDialog {
                 required property var modelData
                 text: modelData.label
                 selected: dialog.vm.startup === modelData.key
-                onClicked: dialog.vm.setStartup(modelData.key)
+                onClicked: dialog.vm.chooseStartup(modelData.key)
             }
         }
     }
@@ -243,13 +243,12 @@ MDialog {
         wrapMode: Text.Wrap
     }
 
-    Text {
+    // No API key yet: ask for it here instead of by environment variable.
+    LastFmKeys {
         Layout.fillWidth: true
         visible: dialog.vm.scrobbleState === "unavailable"
-        text: "Registra una app en last.fm/api y guarda la clave en ~/.config/player/lastfm.json como {\"apiKey\": \"...\", \"secret\": \"...\"}, o con las variables PLAYER_LASTFM_KEY y PLAYER_LASTFM_SECRET."
-        color: dialog.theme.onSurfaceVariant
-        font.pixelSize: 12
-        wrapMode: Text.Wrap
+        vm: dialog.vm
+        theme: dialog.theme
     }
 
     // Waiting for the browser authorisation: the link is shown in case the browser did not open.
@@ -269,7 +268,7 @@ MDialog {
         Layout.fillWidth: true
         visible: dialog.vm.scrobbleState === "signedIn"
         text: "Enviar scrobbles"
-        onToggled: dialog.vm.setScrobbleEnabled(checked)
+        onToggled: dialog.vm.enableScrobbling(checked)
 
         // A Binding keeps following the model after the user has toggled the switch.
         Binding {

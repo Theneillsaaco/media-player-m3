@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using System.Runtime.CompilerServices;
 using Player.App.Models;
 using Player.App.Services;
@@ -26,7 +27,7 @@ public class NavigationViewModel : INotifyPropertyChanged
     private readonly List<Entry> _stack = [new("search", "")];
     private readonly Dictionary<string, (long At, object Value)> _cache = [];
     private readonly Dictionary<string, TrackLinks> _links = [];
-    private readonly Dictionary<int, (IReadOnlyList<Track> List, int Index)> _homeSlots = [];
+    private Shelf[] _homeShelves = [];
     private IReadOnlyList<Track> _collection = [];
     private IReadOnlyList<Track> _artistSongs = [];
     private string _collectionArtistId = "";
@@ -52,8 +53,9 @@ public class NavigationViewModel : INotifyPropertyChanged
     /// <summary>A short message for the snackbar ("" when there is none).</summary>
     public string Message { get; private set => Set(ref field, value); } = "";
 
-    // Home: shelf titles and their entries in one flat list (Kind "header", "track", "album"...).
-    public EntityListModel HomeRows { get; } = new();
+    // Home: a JSON array of shelves, [{title, items:[{kind, id, index, title, subtitle, art}]}]. QML parses it
+    // for its rows of cards (a list inside a list does not go through the bridge as a model).
+    public string HomeJson { get; private set => Set(ref field, value); } = "[]";
 
     // Album, playlist or mix.
     public TrackListModel Collection { get; } = new();
@@ -125,10 +127,11 @@ public class NavigationViewModel : INotifyPropertyChanged
 
     // ---- playing from the pages ----
 
-    public void PlayHomeRow(int row)
+    /// <summary>Plays a song of a Home shelf: the queue becomes the songs of that shelf, starting there.</summary>
+    public void PlayHomeTrack(int shelf, int index)
     {
-        if (_homeSlots.TryGetValue(row, out var slot))
-            AppServices.Playback.PlayFrom(slot.List, slot.Index);
+        if (shelf >= 0 && shelf < _homeShelves.Length)
+            AppServices.Playback.PlayFrom(_homeShelves[shelf].Tracks, index);
     }
 
     public void PlayCollection(bool shuffle) => AppServices.Playback.PlayList(_collection, shuffle);
@@ -241,29 +244,26 @@ public class NavigationViewModel : INotifyPropertyChanged
 
     private void ApplyHome(Shelf[] shelves)
     {
-        List<EntityRow> rows = [];
-        _homeSlots.Clear();
+        _homeShelves = shelves;
 
-        foreach (var shelf in shelves)
+        var json = shelves.Select(shelf => new
         {
-            if (shelf.Tracks.Length + shelf.Entities.Length == 0)
-                continue;
+            title = shelf.Title,
+            // A shelf of songs only (Quick picks) is a grid of rows; the rest are strips of cards.
+            layout = shelf.Entities.Length == 0 && shelf.Tracks.Length >= 4 ? "grid" : "cards",
+            items = shelf.Tracks
+                .Select((t, i) => new { kind = "track", id = t.Id, index = i, title = t.Title, subtitle = t.Artist, art = t.ArtUrl })
+                .Concat(shelf.Entities.Select(e => new { kind = KindName(e.Kind), id = e.Id, index = -1, title = e.Title, subtitle = e.Subtitle, art = e.ArtUrl }))
+                .ToArray()
+        }).ToArray();
 
-            rows.Add(Rows.Header(shelf.Title));
-
-            for (var i = 0; i < shelf.Tracks.Length; i++)
-            {
-                _homeSlots[rows.Count] = (shelf.Tracks, i);
-                rows.Add(Rows.FromTrackEntity(shelf.Tracks[i]));
-            }
-
-            rows.AddRange(shelf.Entities.Select(Rows.FromEntity));
-        }
-
-        HomeRows.Replace(rows);
+        HomeJson = JsonSerializer.Serialize(json);
         Title = "Inicio";
-        Status = rows.Count == 0 ? "No hay recomendaciones por ahora." : "";
+        Status = json.Length == 0 ? "No hay recomendaciones por ahora." : "";
     }
+
+    private static string KindName(EntityKind kind) =>
+        kind switch { EntityKind.Artist => "artist", EntityKind.Playlist => "playlist", _ => "album" };
 
     private void ApplyCollection(TrackCollection collection)
     {
