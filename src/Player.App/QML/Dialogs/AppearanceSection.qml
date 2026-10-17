@@ -46,7 +46,7 @@ ColumnLayout {
 
     Text {
         text: "Color"
-        color: section.theme.onSurfaceVariant
+        color: section.theme.inkSurfaceVariant
         font.pixelSize: 12
     }
 
@@ -65,7 +65,7 @@ ColumnLayout {
                 radius: 20
                 color: seed
                 border.width: chosen ? 3 : 1
-                border.color: chosen ? section.theme.onSurface : section.theme.outlineVariant
+                border.color: chosen ? section.theme.inkSurface : section.theme.outlineVariant
 
                 Icon {
                     anchors.centerIn: parent
@@ -91,8 +91,8 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: 40
             placeholderText: "Otro color: #rrggbb"
-            placeholderTextColor: section.theme.onSurfaceVariant
-            color: section.theme.onSurface
+            placeholderTextColor: section.theme.inkSurfaceVariant
+            color: section.theme.inkSurface
             font.pixelSize: 14
             maximumLength: 7
             selectByMouse: true
@@ -117,7 +117,7 @@ ColumnLayout {
 
     Text {
         text: "Variante"
-        color: section.theme.onSurfaceVariant
+        color: section.theme.inkSurfaceVariant
         font.pixelSize: 12
     }
 
@@ -141,7 +141,7 @@ ColumnLayout {
 
     Text {
         text: "Contraste"
-        color: section.theme.onSurfaceVariant
+        color: section.theme.inkSurfaceVariant
         font.pixelSize: 12
     }
 

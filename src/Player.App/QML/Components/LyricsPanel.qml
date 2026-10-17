@@ -22,7 +22,7 @@ Rectangle {
             Layout.margins: 16
             Layout.bottomMargin: 4
             text: "Letra" + (root.vm.source.length > 0 ? " · " + root.vm.source : "")
-            color: root.theme ? root.theme.onSurface : "#1D1B20"
+            color: root.theme ? root.theme.inkSurface : "#1D1B20"
             font.pixelSize: 16
             font.weight: Font.Medium
             elide: Text.ElideRight
@@ -105,7 +105,7 @@ Rectangle {
                         wrapMode: Text.Wrap
                         font.pixelSize: root.vm.fontSize
                         font.weight: row.current ? Font.DemiBold : Font.Normal
-                        color: root.theme ? (row.current || !root.vm.synced ? root.theme.onSurface : root.theme.onSurfaceVariant) : "#1D1B20"
+                        color: root.theme ? (row.current || !root.vm.synced ? root.theme.inkSurface : root.theme.inkSurfaceVariant) : "#1D1B20"
                         opacity: row.current || !root.vm.synced ? 1 : 0.6
                         Behavior on opacity { NumberAnimation { duration: 200 } }
                     }
@@ -129,7 +129,7 @@ Rectangle {
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
                     text: root.vm.message
-                    color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+                    color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
                     font.pixelSize: 14
                 }
                 MButton {

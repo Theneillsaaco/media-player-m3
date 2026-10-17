@@ -94,7 +94,7 @@ Item {
                 wrapMode: Text.Wrap
                 visible: (root.vm.entityMode ? entitiesView.count : tracksView.count) === 0
                 text: root.vm.status
-                color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+                color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
                 font.pixelSize: 14
             }
         }

@@ -18,17 +18,17 @@ ApplicationWindow {
     // The Basic style's own pieces (scroll bars, text cursors, selections) read the palette, which is light
     // unless told otherwise: that is what made the dark mode look wrong.
     palette.window: appTheme.surface
-    palette.windowText: appTheme.onSurface
+    palette.windowText: appTheme.inkSurface
     palette.base: appTheme.surfaceContainer
-    palette.text: appTheme.onSurface
+    palette.text: appTheme.inkSurface
     palette.button: appTheme.surfaceContainerHigh
-    palette.buttonText: appTheme.onSurface
+    palette.buttonText: appTheme.inkSurface
     palette.highlight: appTheme.primary
-    palette.highlightedText: appTheme.onPrimary
+    palette.highlightedText: appTheme.inkPrimary
     palette.light: appTheme.surfaceContainerHighest
     palette.mid: appTheme.outlineVariant
     palette.dark: appTheme.outline
-    palette.placeholderText: appTheme.onSurfaceVariant
+    palette.placeholderText: appTheme.inkSurfaceVariant
 
     // Leaf components find the theme through the window: Window.window.theme.
     readonly property var theme: appTheme
@@ -321,10 +321,6 @@ ApplicationWindow {
         theme: appTheme
         docked: win.playerMode === "full"
         videoInSlot: win.playerMode === "mini" && videoVm.showing
-        onVideoButtonClicked: {
-            videoVm.toggleVideo()
-            if (videoVm.showing && win.playerMode === "mini") win.playerMode = "page"
-        }
         onCoverClicked: win.playerMode = win.playerOpen ? "mini" : "page"
     }
 

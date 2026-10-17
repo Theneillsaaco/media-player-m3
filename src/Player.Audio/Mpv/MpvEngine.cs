@@ -55,7 +55,9 @@ public class MpvEngine : IAudioEngine
             if (ev.Id == 7 && ev.Data != IntPtr.Zero) // MPV_EVENT_END_FILE
             {
                 var end = Marshal.PtrToStructure<MpvEndFile>(ev.Data);
-                if (end.Reason == 4)
+                if (end.Reason == 0)
+                    _ended = true; // MPV_END_FILE_REASON_EOF: the track played to its end (mpv may have gone on into the queued one)
+                else if (end.Reason == 4)
                     error = Describe(end.Error); // MPV_END_FILE_REASON_ERROR
             }
         }

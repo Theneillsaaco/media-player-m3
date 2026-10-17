@@ -16,7 +16,7 @@ Item {
     component SectionTitle: Text {
         Layout.leftMargin: 20
         Layout.topMargin: 12
-        color: root.theme ? root.theme.onSurface : "#1D1B20"
+        color: root.theme ? root.theme.inkSurface : "#1D1B20"
         font.pixelSize: 20
         font.weight: Font.Medium
     }
@@ -98,7 +98,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: root.nav.artistName
-                        color: root.theme ? root.theme.onSurface : "#1D1B20"
+                        color: root.theme ? root.theme.inkSurface : "#1D1B20"
                         font.pixelSize: 32
                         font.weight: Font.Medium
                         elide: Text.ElideRight
@@ -127,7 +127,7 @@ Item {
                 Layout.rightMargin: 20
                 visible: root.nav.artistDescription !== ""
                 text: root.nav.artistDescription
-                color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+                color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
                 font.pixelSize: 13
                 wrapMode: Text.Wrap
                 maximumLineCount: 3
@@ -186,7 +186,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
             text: root.nav.status
-            color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+            color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
             font.pixelSize: 14
         }
         MButton {

@@ -9,8 +9,8 @@ TextField {
 
     property color cPrimary: theme ? theme.primary : "#6750A4"
     property color cContainer: theme ? theme.surfaceContainerHigh : "#ECE6F0"
-    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
-    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
+    property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
+    property color cOnSurfaceVariant: theme ? theme.inkSurfaceVariant : "#49454F"
 
     implicitHeight: 56
     leftPadding: 56

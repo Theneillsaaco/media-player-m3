@@ -14,7 +14,7 @@ Item {
     property bool live: false
     property color cPrimary: theme ? theme.primary : "#6750A4"
     property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
-    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
+    property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
     signal changedByUser(real v)
 
     readonly property bool pressed: area.pressed

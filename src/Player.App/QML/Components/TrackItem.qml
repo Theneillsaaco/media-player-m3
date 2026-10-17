@@ -17,10 +17,10 @@ Item {
     property bool showAdd: false
     property bool round: false
     property color cPrimary: theme ? theme.primary : "#6750A4"
-    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
-    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
+    property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
+    property color cOnSurfaceVariant: theme ? theme.inkSurfaceVariant : "#49454F"
     property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
-    property color cOnSecondaryContainer: theme ? theme.onSecondaryContainer : "#1D192B"
+    property color cOnSecondaryContainer: theme ? theme.inkSecondaryContainer : "#1D192B"
 
     readonly property bool linkable: videoId !== "" && supporting !== ""
 
@@ -83,8 +83,7 @@ Item {
 
             Text {
                 id: sub
-                Layout.alignment: Qt.AlignLeft
-                Layout.maximumWidth: texts.width
+                Layout.fillWidth: true
                 text: row.supporting
                 color: row.linkable && link.containsMouse ? row.cPrimary
                     : row.current ? row.cOnSecondaryContainer : row.cOnSurfaceVariant
@@ -94,7 +93,8 @@ Item {
 
                 MouseArea {
                     id: link
-                    anchors.fill: parent
+                    width: Math.min(sub.implicitWidth, sub.width)
+                    height: sub.height
                     enabled: row.linkable
                     hoverEnabled: true
                     cursorShape: row.linkable ? Qt.PointingHandCursor : Qt.ArrowCursor

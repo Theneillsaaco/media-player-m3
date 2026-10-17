@@ -25,7 +25,7 @@ Item {
         anchors.centerIn: parent
         name: root.icon
         size: Math.max(16, Math.min(40, root.width * 0.4))
-        tint: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+        tint: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
         visible: img.status !== Image.Ready
     }
 

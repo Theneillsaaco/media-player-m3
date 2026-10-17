@@ -114,7 +114,7 @@ Rectangle {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 text: root.playback.currentTitle
-                color: root.theme.onSurface
+                color: root.theme.inkSurface
                 font.pixelSize: 20
                 font.weight: Font.Medium
                 elide: Text.ElideRight
@@ -123,7 +123,7 @@ Rectangle {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 text: root.playback.currentArtist
-                color: root.theme.onSurfaceVariant
+                color: root.theme.inkSurfaceVariant
                 font.pixelSize: 14
                 elide: Text.ElideRight
             }
@@ -141,7 +141,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignHCenter
                 visible: root.video.message.length > 0
                 text: root.video.message
-                color: root.theme.onSurfaceVariant
+                color: root.theme.inkSurfaceVariant
                 font.pixelSize: 12
             }
         }

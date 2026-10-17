@@ -18,7 +18,7 @@ Rectangle {
             Layout.margins: 20
             Layout.bottomMargin: 8
             text: "Cola" + (root.vm.count > 0 ? " · " + root.vm.count : "")
-            color: root.theme ? root.theme.onSurface : "#1D1B20"
+            color: root.theme ? root.theme.inkSurface : "#1D1B20"
             font.pixelSize: 18
             font.weight: Font.Medium
         }
@@ -46,7 +46,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: queueView.count === 0
                 text: "La cola está vacía"
-                color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+                color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
                 font.pixelSize: 14
             }
         }

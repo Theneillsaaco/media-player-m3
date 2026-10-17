@@ -26,7 +26,7 @@ Item {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
-            color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+            color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
             font.pixelSize: 14
             text: root.vm.accountBusy || root.vm.accountState === "unavailable" ? root.vm.accountStatus
                 : root.vm.accountState === "expired" ? "La sesión de YouTube Music caducó."
@@ -66,7 +66,7 @@ Item {
         wrapMode: Text.Wrap
         visible: root.signedIn && !root.inList && listsView.count === 0
         text: root.vm.libraryStatus
-        color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+        color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
         font.pixelSize: 14
     }
 
@@ -88,7 +88,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: root.vm.openListTitle + (root.vm.listCount > 0 ? " · " + root.vm.listCount : "")
-                color: root.theme ? root.theme.onSurface : "#1D1B20"
+                color: root.theme ? root.theme.inkSurface : "#1D1B20"
                 font.pixelSize: 16
                 font.weight: Font.Medium
                 elide: Text.ElideRight
@@ -111,7 +111,7 @@ Item {
             Layout.bottomMargin: 4
             visible: root.vm.listStatus !== "" && tracksView.count > 0
             text: root.vm.listStatus
-            color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+            color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
             font.pixelSize: 12
         }
 
@@ -143,7 +143,7 @@ Item {
                 wrapMode: Text.Wrap
                 visible: tracksView.count === 0
                 text: root.vm.listStatus
-                color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+                color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
                 font.pixelSize: 14
             }
         }

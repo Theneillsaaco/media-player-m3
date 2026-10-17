@@ -62,7 +62,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: shelf.modelData.title
-                    color: root.theme ? root.theme.onSurface : "#1D1B20"
+                    color: root.theme ? root.theme.inkSurface : "#1D1B20"
                     font.pixelSize: 24
                     font.weight: Font.Medium
                     elide: Text.ElideRight
@@ -163,7 +163,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
             text: root.nav.status
-            color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+            color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
             font.pixelSize: 14
         }
         MButton {

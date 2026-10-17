@@ -12,9 +12,9 @@ Button {
     property bool selected: false
     property color cPrimary: theme ? theme.primary : "#6750A4"
     property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
-    property color cOnSecondaryContainer: theme ? theme.onSecondaryContainer : "#1D192B"
+    property color cOnSecondaryContainer: theme ? theme.inkSecondaryContainer : "#1D192B"
     property color cOutline: theme ? theme.outline : "#79747E"
-    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
+    property color cOnSurfaceVariant: theme ? theme.inkSurfaceVariant : "#49454F"
 
     readonly property color content: selected ? cOnSecondaryContainer : cOnSurfaceVariant
 

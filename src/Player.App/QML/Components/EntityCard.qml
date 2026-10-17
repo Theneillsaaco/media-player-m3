@@ -10,8 +10,8 @@ Item {
     property string supporting: ""
     property string artUrl: ""
     property bool round: false
-    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
-    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
+    property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
+    property color cOnSurfaceVariant: theme ? theme.inkSurfaceVariant : "#49454F"
 
     signal activated()
 

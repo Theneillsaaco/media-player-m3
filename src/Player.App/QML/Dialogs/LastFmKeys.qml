@@ -16,8 +16,8 @@ ColumnLayout {
     component Field: TextField {
         Layout.fillWidth: true
         implicitHeight: 48
-        placeholderTextColor: root.theme.onSurfaceVariant
-        color: root.theme.onSurface
+        placeholderTextColor: root.theme.inkSurfaceVariant
+        color: root.theme.inkSurface
         font.pixelSize: 14
         selectByMouse: true
         leftPadding: 16
@@ -34,7 +34,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         text: "Crea una app en last.fm/api/account/create y pega aquí su clave de API y su secreto compartido. Se guardan en ~/.config/player/lastfm.json, que solo tú puedes leer."
-        color: root.theme.onSurfaceVariant
+        color: root.theme.inkSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
     }

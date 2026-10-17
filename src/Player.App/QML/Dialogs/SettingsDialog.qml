@@ -52,7 +52,7 @@ MDialog {
     Text {
         Layout.fillWidth: true
         text: "La cola siempre vuelve en pausa."
-        color: dialog.theme.onSurfaceVariant
+        color: dialog.theme.inkSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
     }
@@ -123,7 +123,7 @@ MDialog {
     Text {
         Layout.fillWidth: true
         text: dialog.vm.accountStatus
-        color: dialog.theme.onSurfaceVariant
+        color: dialog.theme.inkSurfaceVariant
         font.pixelSize: 14
         wrapMode: Text.Wrap
     }
@@ -132,7 +132,7 @@ MDialog {
         Layout.fillWidth: true
         visible: dialog.accountOut
         text: "Inicia sesión en music.youtube.com con ese navegador y elígelo aquí. La cookie equivale a tu contraseña: se guarda en el llavero (o en un archivo con permisos 600) y solo se envía a YouTube."
-        color: dialog.theme.onSurfaceVariant
+        color: dialog.theme.inkSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
     }
@@ -171,9 +171,9 @@ MDialog {
                 wrapMode: TextArea.WrapAnywhere
                 selectByMouse: true
                 font.pixelSize: 12
-                color: dialog.theme.onSurface
+                color: dialog.theme.inkSurface
                 placeholderText: "Pega aquí la cabecera cookie de music.youtube.com…"
-                placeholderTextColor: dialog.theme.onSurfaceVariant
+                placeholderTextColor: dialog.theme.inkSurfaceVariant
                 background: null
             }
         }
@@ -238,7 +238,7 @@ MDialog {
     Text {
         Layout.fillWidth: true
         text: dialog.vm.scrobbleStatus
-        color: dialog.theme.onSurfaceVariant
+        color: dialog.theme.inkSurfaceVariant
         font.pixelSize: 14
         wrapMode: Text.Wrap
     }
@@ -259,7 +259,7 @@ MDialog {
         readOnly: true
         selectByMouse: true
         wrapMode: TextEdit.WrapAnywhere
-        color: dialog.theme.onSurfaceVariant
+        color: dialog.theme.inkSurfaceVariant
         font.pixelSize: 12
     }
 

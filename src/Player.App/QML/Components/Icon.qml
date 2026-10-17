@@ -6,7 +6,7 @@ Item {
     readonly property var theme: Window.window ? Window.window.theme : null
     
     property string name: "play"
-    property color tint: theme ? theme.onSurface : "#1D1B20"
+    property color tint: theme ? theme.inkSurface : "#1D1B20"
     property real size: 24
 
     implicitWidth: size

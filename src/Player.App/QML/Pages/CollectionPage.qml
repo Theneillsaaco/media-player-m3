@@ -46,7 +46,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: root.nav.collectionTitle
-                        color: root.theme ? root.theme.onSurface : "#1D1B20"
+                        color: root.theme ? root.theme.inkSurface : "#1D1B20"
                         font.pixelSize: 28
                         font.weight: Font.Medium
                         wrapMode: Text.Wrap
@@ -60,7 +60,7 @@ Item {
                         text: root.nav.collectionSubtitle
                         color: subLink.containsMouse && root.nav.canOpenCollectionArtist
                             ? (root.theme ? root.theme.primary : "#6750A4")
-                            : (root.theme ? root.theme.onSurfaceVariant : "#49454F")
+                            : (root.theme ? root.theme.inkSurfaceVariant : "#49454F")
                         font.pixelSize: 14
                         font.underline: subLink.containsMouse && root.nav.canOpenCollectionArtist
                         elide: Text.ElideRight
@@ -121,7 +121,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
             text: root.nav.status
-            color: root.theme ? root.theme.onSurfaceVariant : "#49454F"
+            color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
             font.pixelSize: 14
         }
         MButton {

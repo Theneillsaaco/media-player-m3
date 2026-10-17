@@ -14,11 +14,11 @@ Button {
     property bool filled: false
     property real containerSize: 40
     property color cPrimary: theme ? theme.primary : "#6750A4"
-    property color cOnPrimary: theme ? theme.onPrimary : "#FFFFFF"
+    property color cOnPrimary: theme ? theme.inkPrimary : "#FFFFFF"
     property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
-    property color cOnSecondaryContainer: theme ? theme.onSecondaryContainer : "#1D192B"
-    property color cOnSurface: theme ? theme.onSurface : "#1D1B20"
-    property color cOnSurfaceVariant: theme ? theme.onSurfaceVariant : "#49454F"
+    property color cOnSecondaryContainer: theme ? theme.inkSecondaryContainer : "#1D192B"
+    property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
+    property color cOnSurfaceVariant: theme ? theme.inkSurfaceVariant : "#49454F"
 
     readonly property color content: filled ? cOnPrimary
         : selected ? cOnSecondaryContainer : cOnSurfaceVariant
