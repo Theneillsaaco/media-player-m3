@@ -1,18 +1,18 @@
 [
   {
     "pname": "FSharp.Core",
-    "version": "10.1.401",
-    "hash": "sha256-zx9OafwtE1Gvn6mSOskO1GYIhzCgCGfL4OsbOyxolj4="
+    "version": "10.1.402",
+    "hash": "sha256-2vDEOE7f5A9ofoVmKK1Sy1xV5aM4nYAZDcBEnHWLnfc="
   },
   {
     "pname": "Microsoft.Data.Sqlite",
-    "version": "10.0.12",
-    "hash": "sha256-JGZ52MbIP/z0yKSABm4/T8TgUclrcb7f2TL+elrx99Q="
+    "version": "10.0.13",
+    "hash": "sha256-FcV73lQnXtMNEnOslpG8bZt+R8+9YSeM6ldRIf96zTo="
   },
   {
     "pname": "Microsoft.Data.Sqlite.Core",
-    "version": "10.0.12",
-    "hash": "sha256-Xo7TUwBtrfVdXH9W0jcyHCC7EMeGJi5rJVJnVuEDYzI="
+    "version": "10.0.13",
+    "hash": "sha256-Zh5mlrNeiKXNzrGsIj2vowOlryfH34vuIhVsDdxe4Nc="
   },
   {
     "pname": "QtGroup.Qt.Bridge.CSharp.linux-x64",
@@ -21,23 +21,23 @@
   },
   {
     "pname": "SQLitePCLRaw.bundle_e_sqlite3",
-    "version": "2.1.12",
-    "hash": "sha256-qaBua1oxP27zZ1+RmX0BKt7/6KqeH/1p7Uak5oWwVOE="
+    "version": "2.1.13",
+    "hash": "sha256-iaIW+AWdCcq8tFq3WsLxgLczMjwn1Bz5qYHcX1tcbA8="
   },
   {
     "pname": "SQLitePCLRaw.core",
-    "version": "2.1.12",
-    "hash": "sha256-rwaQQTj/ptyVpZkTPWTSVHFtb6zHVDprO5EHk9rp3KU="
+    "version": "2.1.13",
+    "hash": "sha256-2T1ferP4ZMR3IqLZAEjDGhqsdD4VPYe59KB1ie4vna8="
   },
   {
     "pname": "SQLitePCLRaw.lib.e_sqlite3",
-    "version": "2.1.12",
-    "hash": "sha256-SiLAL/z0iXkpA88mPe+fzidzlxaIP5ZfC17v8WN0MKw="
+    "version": "2.1.13",
+    "hash": "sha256-0H0TtHeRI8+lazNItQTVeiq2/BDHZPtuLJ14eYfjkgE="
   },
   {
     "pname": "SQLitePCLRaw.provider.e_sqlite3",
-    "version": "2.1.12",
-    "hash": "sha256-3ysycZkuXXGRhsRnHjz0+GWAl8FUy81BSUq1lMWZdZU="
+    "version": "2.1.13",
+    "hash": "sha256-UT7yul0BwU0egDLZ0sosiYXffsfTUfDkCRdHYRSsH5w="
   },
   {
     "pname": "Tmds.DBus.Generator",
