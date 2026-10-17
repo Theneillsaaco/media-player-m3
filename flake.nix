@@ -110,6 +110,8 @@
         
           mkdir -p $out/share/player
           cp -r sidecar $out/share/player/
+          
+          ${pythonEnv.interpreter} -m compileall -O $out/share/player/sidecar
 
           mkdir -p $out/share/applications
           cat <<'EOF' > $out/share/applications/media-player.desktop

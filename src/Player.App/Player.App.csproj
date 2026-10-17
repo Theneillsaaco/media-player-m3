@@ -7,6 +7,8 @@
     <Nullable>enable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <PublishReadyToRun>true</PublishReadyToRun>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <QtBridgePackagePrefix>QtGroup.Qt.Bridge.CSharp</QtBridgePackagePrefix>
     <QtBridgeTemplateArch Condition="'$(QtBridgeTemplateArch)' == ''">$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</QtBridgeTemplateArch>
     <QtBridgeTemplateArch Condition="'$(QtBridgeTemplateArch)' == 'X64'">x64</QtBridgeTemplateArch>
@@ -48,7 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="10.1.401" />
+    <PackageReference Include="FSharp.Core" Version="10.1.402" />
   </ItemGroup>
 
 </Project>

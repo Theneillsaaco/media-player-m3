@@ -8,6 +8,6 @@
         <ProjectReference Include="..\Player.Core\Player.Core.fsproj" />
     </ItemGroup>
     <ItemGroup>
-      <PackageReference Include="FSharp.Core" Version="10.1.401" />
+      <PackageReference Include="FSharp.Core" Version="10.1.402" />
     </ItemGroup>
 </Project>
