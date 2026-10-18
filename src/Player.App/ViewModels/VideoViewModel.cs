@@ -62,7 +62,7 @@ public class VideoViewModel : INotifyPropertyChanged
     public void StreamFailed(string message)
     {
         if (_plan.Available)
-            AppServices.Video.ReportFailure(_plan.VideoId, string.IsNullOrWhiteSpace(message) ? "No se pudo reproducir el video." : message);
+            AppServices.Video.ReportFailure(_plan.VideoId, string.IsNullOrWhiteSpace(message) ? Tr.T("video.playFailed") : message);
 
         Poll();
     }
@@ -98,7 +98,7 @@ public class VideoViewModel : INotifyPropertyChanged
         Showing = showing;
         Url = wantStream && snapshot.Stream is { } stream ? stream.Url : "";
         Loading = wantStream && snapshot.Stream is null && snapshot.Error.Length == 0;
-        Message = !wantStream ? "" : snapshot.Error.Length > 0 ? snapshot.Error : Loading ? "Cargando video…" : "";
+        Message = !wantStream ? "" : snapshot.Error.Length > 0 ? snapshot.Error : Loading ? Tr.T("video.loading") : "";
 
         // Studio audio with its video asked for: the sound comes from the video's own recording.
         var audio = Video.audioFrom(_plan, _choice);

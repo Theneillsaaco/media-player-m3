@@ -12,9 +12,12 @@ Item {
 
     required property var nav
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
     readonly property var shelves: nav.homeJson.length > 0 ? JSON.parse(nav.homeJson) : []
 
     signal entityActivated(string kind, string entityId)
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     ListView {
         id: list
@@ -138,7 +141,10 @@ Item {
                     supporting: modelData.subtitle
                     artUrl: modelData.art
                     videoId: modelData.id
+                    showAdd: true
                     onActivated: root.nav.playHomeTrack(shelf.index, modelData.index)
+                    onAddRequested: root.nav.addHomeTrack(shelf.index, modelData.index)
+                    onPlayNextRequested: root.nav.playNextHomeTrack(shelf.index, modelData.index)
                 }
             }
 
@@ -170,7 +176,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             visible: root.nav.failed
             kind: "tonal"
-            text: "Reintentar"
+            text: root.tr("action.retry")
             onClicked: root.nav.retry()
         }
     }

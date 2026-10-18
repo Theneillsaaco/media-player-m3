@@ -5,9 +5,10 @@ internal sealed class StatusLine
 {
     public event Action? Changed;
 
+    /// <summary>The last message; the search hint while there is none.</summary>
     public string Text
     {
-        get;
+        get => field.Length > 0 ? field : Tr.T("search.hint");
         set
         {
             if (field == value)
@@ -16,5 +17,8 @@ internal sealed class StatusLine
             field = value;
             Changed?.Invoke();
         }
-    } = "Busca una canción o pega un enlace o ruta";
+    } = "";
+
+    /// <summary>The language changed: whoever shows the text reads it again.</summary>
+    public void Refresh() => Changed?.Invoke();
 }

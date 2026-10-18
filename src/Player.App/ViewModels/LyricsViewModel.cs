@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using Player.App.Models;
 using Player.App.Services;
+using Player.Core.Localization;
 using Player.Core.Lyrics;
 
 namespace Player.App.ViewModels;
@@ -26,6 +27,11 @@ public class LyricsViewModel : INotifyPropertyChanged
         FontSize = AppServices.Lyrics.FontSize;
         Message = MessageFor("idle");
         AppServices.Playback.Changed += Poll;
+        AppServices.LanguageChanged += () =>
+        {
+            Message = MessageFor(State);
+            ShowOffset(Offset);
+        };
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -154,7 +160,7 @@ public class LyricsViewModel : INotifyPropertyChanged
     private void ShowOffset(double seconds)
     {
         Offset = seconds;
-        OffsetText = seconds.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture).Replace('.', ',') + " s";
+        OffsetText = seconds.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture).Replace('.', I18n.decimalSeparator()) + " s";
     }
 
     private void ChangeFontSize(int step)
@@ -165,12 +171,12 @@ public class LyricsViewModel : INotifyPropertyChanged
 
     private static string MessageFor(string state) => state switch
     {
-        "loading" => "Buscando la letra…",
-        "none" => "No se encontró la letra de esta canción.",
-        "instrumental" => "Instrumental",
-        "error" => "No se pudo cargar la letra.",
-        "unavailable" => "Las letras no están disponibles para enlaces ni archivos.",
-        _ => "Reproduce una canción para ver su letra.",
+        "loading" => Tr.T("lyrics.loading"),
+        "none" => Tr.T("lyrics.none"),
+        "instrumental" => Tr.T("lyrics.instrumental"),
+        "error" => Tr.T("lyrics.error"),
+        "unavailable" => Tr.T("lyrics.unavailable"),
+        _ => Tr.T("lyrics.idle"),
     };
 
     private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)

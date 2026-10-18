@@ -28,6 +28,7 @@ public class LibraryViewModel : INotifyPropertyChanged
         _likedIds = [.. (SafeCache(() => AppServices.Db?.LoadTracks(LikedList)) ?? []).Select(t => t.Id)];
         AppServices.Playback.Changed += UpdateLikeState;
         AppServices.AccountChanged += SyncAccount;
+        AppServices.LanguageChanged += RefreshLibrary;
         SyncAccount();
     }
 
@@ -68,14 +69,14 @@ public class LibraryViewModel : INotifyPropertyChanged
     public void LoadLibrary()
     {
         if (AppServices.Account is not { } account || AccountState != "signedIn" || _libraryLoaded) return;
-        LibraryStatus = "Cargando biblioteca…";
+        LibraryStatus = Tr.T("library.loading");
         Run(Task.Run(() => account.GetLibraryAsync()),
             lists =>
             {
                 _libraryLoaded = true;
                 _playlists = lists;
                 Library.Replace(lists.Select(Rows.FromPlaylist));
-                LibraryStatus = lists.Count == 0 ? "No hay listas en tu biblioteca" : "";
+                LibraryStatus = lists.Count == 0 ? Tr.T("library.empty") : "";
             },
             e => LibraryStatus = ErrorText(e));
     }
@@ -91,7 +92,7 @@ public class LibraryViewModel : INotifyPropertyChanged
 
         var cached = SafeCache(() => AppServices.Db?.LoadTracks(id)) ?? [];
         SetListTracks(cached);
-        ListStatus = cached.Count == 0 ? "Cargando…" : "Actualizando…";
+        ListStatus = Tr.T(cached.Count == 0 ? "status.loading" : "list.updating");
 
         Run(Task.Run(async () =>
             {
@@ -104,12 +105,12 @@ public class LibraryViewModel : INotifyPropertyChanged
                 if (id == LikedList) ReplaceLiked(tracks);
                 if (OpenListId != id) return; // the user moved on
                 SetListTracks(tracks);
-                ListStatus = tracks.Count == 0 ? "Esta lista está vacía" : "";
+                ListStatus = tracks.Count == 0 ? Tr.T("list.empty") : "";
             },
             e =>
             {
                 if (OpenListId != id) return;
-                ListStatus = cached.Count == 0 ? ErrorText(e) : "No se pudo actualizar: " + e.Message;
+                ListStatus = cached.Count == 0 ? ErrorText(e) : Tr.F("list.updateFailed", e.Message);
             });
     }
 
@@ -128,6 +129,8 @@ public class LibraryViewModel : INotifyPropertyChanged
 
     public void AddListItem(int index) => AppServices.Playback.AddFrom(_listTracks, index);
 
+    public void PlayNextListItem(int index) => AppServices.Playback.PlayNextFrom(_listTracks, index);
+
     /// <summary>Likes or unlikes the playing track on YouTube Music.</summary>
     public void ToggleLike()
     {
@@ -141,7 +144,7 @@ public class LibraryViewModel : INotifyPropertyChanged
             e =>
             {
                 SetLiked(id, !like); // it did not go through: put the heart back
-                AppServices.Status.Text = "No se pudo cambiar el Me gusta: " + e.Message;
+                AppServices.Status.Text = Tr.F("like.failed", e.Message);
             });
     }
 
@@ -185,6 +188,13 @@ public class LibraryViewModel : INotifyPropertyChanged
         ListCount = tracks.Count;
     }
 
+    /// <summary>The language changed: the rows that carry a text ("12 songs") are built again.</summary>
+    private void RefreshLibrary()
+    {
+        Library.Replace(_playlists.Select(Rows.FromPlaylist));
+        SyncAccount();
+    }
+
     private void SyncAccount()
     {
         if (AppServices.Account is not { } account) return;
@@ -219,7 +229,7 @@ public class LibraryViewModel : INotifyPropertyChanged
     }
 
     private static string ErrorText(Exception e) =>
-        e is AuthExpiredException ? "La sesión caducó: vuelve a importarla en Ajustes" : "Error: " + e.Message;
+        e is AuthExpiredException ? Tr.T("auth.reimport") : Tr.F("status.error", e.Message);
 
     private static T? SafeCache<T>(Func<T?> read)
     {

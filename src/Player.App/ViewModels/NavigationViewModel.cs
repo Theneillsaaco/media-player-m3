@@ -10,9 +10,9 @@ namespace Player.App.ViewModels;
 
 /// <summary>
 /// Where the user is: one of the three root sections (home, search, library) and, on top of it, a stack of
-/// detail pages (album, playlist or mix, artist) with back. Instantiated once from Main.qml as
-/// <c>NavigationViewModel { id: navVm }</c>. Pages load on the thread pool and are kept in memory for a few
-/// minutes, so going back is instant; <see cref="Poll"/> applies what arrived, on the Qt thread.
+/// detail pages (album, playlist or mix, artist) with back. The app opens on Home. Instantiated once from
+/// Main.qml as <c>NavigationViewModel { id: navVm }</c>. Pages load on the thread pool and are kept in memory
+/// for a few minutes, so going back is instant; <see cref="Poll"/> applies what arrived, on the Qt thread.
 /// Method names avoid Set/Reset: the bridge reads those as property setters.
 /// </summary>
 public class NavigationViewModel : INotifyPropertyChanged
@@ -24,7 +24,7 @@ public class NavigationViewModel : INotifyPropertyChanged
     private const int MaxCached = 40;
 
     private readonly BackgroundWork _work = new();
-    private readonly List<Entry> _stack = [new("search", "")];
+    private readonly List<Entry> _stack = [new("home", "")];
     private readonly Dictionary<string, (long At, object Value)> _cache = [];
     private readonly Dictionary<string, TrackLinks> _links = [];
     private Shelf[] _homeShelves = [];
@@ -35,14 +35,15 @@ public class NavigationViewModel : INotifyPropertyChanged
     public NavigationViewModel()
     {
         AppServices.EnsureStarted();
+        Show(); // starts on Home
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The root section ("home", "search" or "library") the current page belongs to.</summary>
-    public string Section { get; private set => Set(ref field, value); } = "search";
+    public string Section { get; private set => Set(ref field, value); } = "home";
     /// <summary>What is on screen: home, search, library, album, collection (playlist or mix) or artist.</summary>
-    public string Page { get; private set => Set(ref field, value); } = "search";
+    public string Page { get; private set => Set(ref field, value); } = "home";
     public bool CanBack { get; private set => Set(ref field, value); }
     public string Title { get; private set => Set(ref field, value); } = "";
     /// <summary>Loading note or error of the page, "" when there is nothing to say.</summary>
@@ -125,6 +126,9 @@ public class NavigationViewModel : INotifyPropertyChanged
 
     public void DismissMessage() => Message = "";
 
+    /// <summary>Shows a short note in the snackbar.</summary>
+    public void Notify(string text) => Message = text;
+
     // ---- playing from the pages ----
 
     /// <summary>Plays a song of a Home shelf: the queue becomes the songs of that shelf, starting there.</summary>
@@ -134,17 +138,33 @@ public class NavigationViewModel : INotifyPropertyChanged
             AppServices.Playback.PlayFrom(_homeShelves[shelf].Tracks, index);
     }
 
+    public void AddHomeTrack(int shelf, int index)
+    {
+        if (shelf >= 0 && shelf < _homeShelves.Length)
+            AppServices.Playback.AddFrom(_homeShelves[shelf].Tracks, index);
+    }
+
+    public void PlayNextHomeTrack(int shelf, int index)
+    {
+        if (shelf >= 0 && shelf < _homeShelves.Length)
+            AppServices.Playback.PlayNextFrom(_homeShelves[shelf].Tracks, index);
+    }
+
     public void PlayCollection(bool shuffle) => AppServices.Playback.PlayList(_collection, shuffle);
 
     public void PlayCollectionItem(int index) => AppServices.Playback.PlayFrom(_collection, index);
 
     public void AddCollectionItem(int index) => AppServices.Playback.AddFrom(_collection, index);
 
+    public void PlayNextCollectionItem(int index) => AppServices.Playback.PlayNextFrom(_collection, index);
+
     public void PlayArtist(bool shuffle) => AppServices.Playback.PlayList(_artistSongs, shuffle);
 
     public void PlayArtistSong(int index) => AppServices.Playback.PlayFrom(_artistSongs, index);
 
     public void AddArtistSong(int index) => AppServices.Playback.AddFrom(_artistSongs, index);
+
+    public void PlayNextArtistSong(int index) => AppServices.Playback.PlayNextFrom(_artistSongs, index);
 
     /// <summary>Applies finished background work. QML calls it from a Timer while something loads.</summary>
     public void Poll()
@@ -181,7 +201,7 @@ public class NavigationViewModel : INotifyPropertyChanged
 
         if (AppServices.Provider is not { } provider)
         {
-            Status = "La búsqueda no está disponible.";
+            Status = Tr.T("nav.unavailable");
             Failed = true;
             return;
         }
@@ -191,7 +211,7 @@ public class NavigationViewModel : INotifyPropertyChanged
         else if (entry.Page == "artist")
             ApplyArtist(new ArtistPage("", "", "", "", "", [], [], [], []));
 
-        Status = "Cargando…";
+        Status = Tr.T("status.loading");
 
         switch (entry.Page)
         {
@@ -221,8 +241,8 @@ public class NavigationViewModel : INotifyPropertyChanged
                     return;
 
                 Status = error is AuthExpiredException
-                    ? "La sesión caducó: vuelve a importarla en Ajustes"
-                    : "Error: " + error.Message;
+                    ? Tr.T("auth.reimport")
+                    : Tr.F("status.error", error.Message);
                 Failed = true;
             });
 
@@ -258,8 +278,8 @@ public class NavigationViewModel : INotifyPropertyChanged
         }).ToArray();
 
         HomeJson = JsonSerializer.Serialize(json);
-        Title = "Inicio";
-        Status = json.Length == 0 ? "No hay recomendaciones por ahora." : "";
+        Title = Tr.T("nav.home");
+        Status = json.Length == 0 ? Tr.T("nav.noRecs") : "";
     }
 
     private static string KindName(EntityKind kind) =>
@@ -278,7 +298,7 @@ public class NavigationViewModel : INotifyPropertyChanged
         Title = collection.Title;
 
         if (collection.Title.Length > 0 && collection.Tracks.Length == 0)
-            Status = "Esta lista está vacía.";
+            Status = Tr.T("list.empty");
     }
 
     private void ApplyArtist(ArtistPage artist)
@@ -312,7 +332,7 @@ public class NavigationViewModel : INotifyPropertyChanged
                 _links[videoId] = links;
                 OpenLink(links, artist);
             },
-            error => Message = "No se pudo abrir la página: " + error.Message);
+            error => Message = Tr.F("nav.openFailed", error.Message));
 
         Working = true;
     }
@@ -322,7 +342,7 @@ public class NavigationViewModel : INotifyPropertyChanged
         var id = artist ? links.ArtistId : links.AlbumId;
 
         if (id.Length == 0)
-            Message = artist ? "Esta canción no tiene página de artista." : "Esta canción no tiene álbum.";
+            Message = Tr.T(artist ? "nav.noArtist" : "nav.noAlbum");
         else
             OpenEntity(artist ? "artist" : "album", id);
     }

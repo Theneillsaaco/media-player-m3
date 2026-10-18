@@ -10,8 +10,11 @@ Item {
 
     required property var vm
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
 
     signal entityActivated(string kind, string entityId)
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     ColumnLayout {
         anchors.fill: parent
@@ -25,15 +28,15 @@ Item {
 
             Repeater {
                 model: [
-                    { key: "songs", label: "Canciones" },
-                    { key: "videos", label: "Videos" },
-                    { key: "albums", label: "Álbumes" },
-                    { key: "artists", label: "Artistas" },
-                    { key: "playlists", label: "Listas" }
+                    { key: "songs", label: "filter.songs" },
+                    { key: "videos", label: "filter.videos" },
+                    { key: "albums", label: "filter.albums" },
+                    { key: "artists", label: "filter.artists" },
+                    { key: "playlists", label: "filter.playlists" }
                 ]
                 MChip {
                     required property var modelData
-                    text: modelData.label
+                    text: root.tr(modelData.label)
                     selected: root.vm.filter === modelData.key
                     onClicked: root.vm.chooseFilter(modelData.key)
                 }
@@ -64,6 +67,7 @@ Item {
                     showAdd: true
                     onActivated: root.vm.playResult(index)
                     onAddRequested: root.vm.addResult(index)
+                    onPlayNextRequested: root.vm.playNextResult(index)
                 }
             }
 

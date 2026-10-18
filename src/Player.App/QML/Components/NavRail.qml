@@ -8,6 +8,7 @@ Item {
     id: rail
 
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
 
     property string current: ""
     property color cActive: theme ? theme.secondaryContainer : "#E8DEF8"
@@ -18,12 +19,14 @@ Item {
 
     signal chosen(string key)
 
+    function tr(key) { return i18n ? i18n.t(key) : key }
+
     implicitWidth: 80
 
     readonly property var destinations: [
-        { key: "home", glyph: "home", label: "Inicio" },
-        { key: "search", glyph: "search", label: "Buscar" },
-        { key: "library", glyph: "library", label: "Biblioteca" }
+        { key: "home", glyph: "home", label: "nav.home" },
+        { key: "search", glyph: "search", label: "nav.search" },
+        { key: "library", glyph: "library", label: "nav.library" }
     ]
 
     ColumnLayout {
@@ -76,7 +79,7 @@ Item {
 
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: dest.modelData.label
+                        text: rail.tr(dest.modelData.label)
                         font.pixelSize: 12
                         font.weight: dest.active ? Font.DemiBold : Font.Medium
                         color: dest.active ? rail.cOnSurface : rail.cOnSurfaceVariant

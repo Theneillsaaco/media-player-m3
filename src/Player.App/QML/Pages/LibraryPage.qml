@@ -10,10 +10,13 @@ Item {
 
     required property var vm
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
     signal settingsRequested()
 
     readonly property bool signedIn: vm.accountState === "signedIn"
     readonly property bool inList: signedIn && vm.openListId !== ""
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     // No account connected
     ColumnLayout {
@@ -29,13 +32,13 @@ Item {
             color: root.theme ? root.theme.inkSurfaceVariant : "#49454F"
             font.pixelSize: 14
             text: root.vm.accountBusy || root.vm.accountState === "unavailable" ? root.vm.accountStatus
-                : root.vm.accountState === "expired" ? "La sesión de YouTube Music caducó."
-                    : "Conecta tu cuenta de YouTube Music para ver tu biblioteca y tus Me gusta."
+                : root.vm.accountState === "expired" ? root.tr("library.expired")
+                    : root.tr("library.connect")
         }
         MButton {
             Layout.alignment: Qt.AlignHCenter
             visible: root.vm.accountState !== "unavailable" && !root.vm.accountBusy
-            text: "Abrir ajustes"
+            text: root.tr("action.openSettings")
             onClicked: root.settingsRequested()
         }
     }
@@ -83,6 +86,7 @@ Item {
 
             MIconButton {
                 glyph: "back"
+                tip: root.tr("tip.back")
                 onClicked: root.vm.closeList()
             }
             Text {
@@ -95,12 +99,12 @@ Item {
             }
             MButton {
                 kind: "tonal"
-                text: "Aleatorio"
+                text: root.tr("action.shuffle")
                 enabled: root.vm.listCount > 0
                 onClicked: root.vm.playList(true)
             }
             MButton {
-                text: "Reproducir"
+                text: root.tr("action.play")
                 enabled: root.vm.listCount > 0
                 onClicked: root.vm.playList(false)
             }
@@ -135,6 +139,7 @@ Item {
                 showAdd: true
                 onActivated: root.vm.playListItem(index)
                 onAddRequested: root.vm.addListItem(index)
+                onPlayNextRequested: root.vm.playNextListItem(index)
             }
             Text {
                 anchors.centerIn: parent

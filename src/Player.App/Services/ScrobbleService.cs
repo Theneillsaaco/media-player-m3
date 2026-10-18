@@ -99,7 +99,7 @@ internal sealed partial class ScrobbleService : IDisposable
         {
             if (_client is null || _busy) return;
             _busy = true;
-            _note = "Pidiendo autorización a Last.fm…";
+            _note = Tr.T("scrobble.asking");
         }
 
         _ = Task.Run(async () =>
@@ -110,11 +110,11 @@ internal sealed partial class ScrobbleService : IDisposable
                 lock (_gate)
                 {
                     _request = request;
-                    _note = "Autoriza a Player en Last.fm y vuelve aquí para continuar.";
+                    _note = Tr.T("scrobble.authorize");
                 }
                 OpenBrowser(request.Url);
             }
-            catch (Exception e) { Fail("No se pudo contactar con Last.fm", e); }
+            catch (Exception e) { Fail(Tr.T("scrobble.contactFailed"), e); }
             finally { lock (_gate) _busy = false; }
         });
     }
@@ -127,7 +127,7 @@ internal sealed partial class ScrobbleService : IDisposable
             if (_client is null || _busy || _request is null) return;
             request = _request;
             _busy = true;
-            _note = "Comprobando la autorización…";
+            _note = Tr.T("scrobble.checking");
         }
 
         _ = Task.Run(async () =>
@@ -148,17 +148,17 @@ internal sealed partial class ScrobbleService : IDisposable
             }
             catch (LastFmException e) when (e.Code == 14)
             {
-                lock (_gate) _note = "Todavía no has autorizado a Player en Last.fm. Abre el enlace y vuelve a pulsar Continuar.";
+                lock (_gate) _note = Tr.T("scrobble.notAuthorized");
             }
             catch (LastFmException e) when (e.Code == 15)
             {
                 lock (_gate)
                 {
                     _request = null;
-                    _note = "La autorización caducó. Pulsa Conectar para empezar de nuevo.";
+                    _note = Tr.T("scrobble.authExpired");
                 }
             }
-            catch (Exception e) { Fail("No se pudo completar la conexión", e); }
+            catch (Exception e) { Fail(Tr.T("scrobble.completeFailed"), e); }
             finally { lock (_gate) _busy = false; }
             Flush();
         });
@@ -313,14 +313,14 @@ internal sealed partial class ScrobbleService : IDisposable
                     lock (_gate)
                     {
                         (_account, _needsReconnect) = (null, true);
-                        _note = "La sesión de Last.fm ya no es válida. Vuelve a conectar; lo pendiente se enviará entonces.";
+                        _note = Tr.T("scrobble.sessionLost");
                     }
                     try { await _secrets.Delete(SessionSecret); }
                     catch (Exception e) { Log("could not delete the session", e); }
                     return;
 
                 default: // Fatal
-                    lock (_gate) _note = "Last.fm rechazó la configuración: " + result.Message;
+                    lock (_gate) _note = Tr.F("scrobble.rejected", result.Message);
                     return;
             }
         }
@@ -333,7 +333,8 @@ internal sealed partial class ScrobbleService : IDisposable
         {
             _attempt++;
             delay = TimeSpan.FromSeconds(Math.Min(60 * Math.Pow(2, _attempt - 1), 900)); // 1, 2, 4 … 15 min
-            _note = $"No se pudo enviar a Last.fm ({reason}). Reintentando en {(delay.TotalMinutes >= 1 ? $"{delay.TotalMinutes:0} min" : $"{delay.TotalSeconds:0} s")}.";
+            var wait = delay.TotalMinutes >= 1 ? $"{delay.TotalMinutes:0} min" : $"{delay.TotalSeconds:0} s";
+            _note = Tr.F("scrobble.retrying", reason, wait);
         }
         _retry.Change(delay, Timeout.InfiniteTimeSpan);
     }
@@ -349,14 +350,14 @@ internal sealed partial class ScrobbleService : IDisposable
     private string StatusText(ScrobbleStage stage)
     {
         if (_note.Length > 0) return _note;
-        var waiting = _pending switch { 0 => "", 1 => " · 1 pendiente", var n => $" · {n} pendientes" };
+        var waiting = _pending switch { 0 => "", 1 => Tr.T("scrobble.pending.one"), var n => Tr.F("scrobble.pending.many", n) };
         return stage switch
         {
-            ScrobbleStage.Unavailable => "Falta la clave de API de Last.fm.",
-            ScrobbleStage.SignedIn when _account is null => "Conectando…",
-            ScrobbleStage.SignedIn => (_enabled ? $"Conectado como {_user}" : $"Conectado como {_user} · envío desactivado") + waiting,
-            ScrobbleStage.Reconnect => "Hay que volver a conectar con Last.fm" + waiting,
-            _ => "Sin conectar" + waiting,
+            ScrobbleStage.Unavailable => Tr.T("scrobble.missingKey"),
+            ScrobbleStage.SignedIn when _account is null => Tr.T("status.connecting"),
+            ScrobbleStage.SignedIn => (_enabled ? Tr.F("account.connectedAs", _user) : Tr.F("scrobble.connectedOff", _user)) + waiting,
+            ScrobbleStage.Reconnect => Tr.T("scrobble.reconnect") + waiting,
+            _ => Tr.T("account.signedOut") + waiting,
         };
     }
 

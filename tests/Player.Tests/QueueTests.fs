@@ -15,6 +15,8 @@ let idOf (q: QueueState option) = q |> Option.bind PlayQueue.current |> Option.m
 
 let loaded n start = PlayQueue.replace 1 (tracks n) start PlayQueue.empty
 
+let order q = PlayQueue.ordered q |> Array.map (fun t -> t.Id) |> Array.toList
+
 [<Fact>]
 let ``replace starts at the chosen item`` () =
     Assert.Equal(Some "2", idAt (loaded 5 2))
@@ -121,4 +123,114 @@ let ``unshuffle restores order and keeps the current track`` () =
 let ``replace while shuffled starts at the chosen item`` () =
     let q = PlayQueue.setShuffle 3 true PlayQueue.empty |> PlayQueue.replace 8 (tracks 10) 6
     Assert.Equal(Some "6", idAt q)
+    Assert.True(q.Shuffle)
+
+[<Fact>]
+let ``addNext inserts right after the current track`` () =
+    let q = PlayQueue.addNext [ track "x" ] (loaded 4 1)
+    Assert.Equal<string list>([ "0"; "1"; "x"; "2"; "3" ], order q)
+    Assert.Equal(Some "1", idAt q)
+    Assert.Equal(Some "x", idAt (PlayQueue.next q))
+
+[<Fact>]
+let ``addNext while shuffled inserts after the current one in play order`` () =
+    let q = loaded 8 3 |> PlayQueue.setShuffle 11 true
+    let after = PlayQueue.addNext [ track "x" ] q
+    Assert.Equal(Some "3", idAt after)
+    Assert.Equal(Some "x", idAt (PlayQueue.next after))
+    Assert.Equal(9, PlayQueue.count after)
+    Assert.Equal<int list>([ 0 .. 8 ], after.Order |> Array.toList |> List.sort)
+
+[<Fact>]
+let ``addNext to an empty queue leaves nothing current`` () =
+    let q = PlayQueue.addNext [ track "x" ] PlayQueue.empty
+    Assert.Equal(1, PlayQueue.count q)
+    Assert.Equal(None, idAt q)
+
+[<Fact>]
+let ``move keeps the current track current`` () =
+    let q = loaded 5 2
+    Assert.Equal<string list>([ "0"; "2"; "1"; "3"; "4" ], order (PlayQueue.move 2 1 q))
+    Assert.Equal(Some "2", idAt (PlayQueue.move 2 1 q))
+    Assert.Equal(Some "2", idAt (PlayQueue.move 0 4 q))
+    Assert.Equal(Some "2", idAt (PlayQueue.move 4 0 q))
+    Assert.Equal(Some "2", idAt (PlayQueue.move 1 3 q))
+
+[<Fact>]
+let ``move puts the entry at the target position`` () =
+    let q = loaded 5 0
+    Assert.Equal<string list>([ "1"; "2"; "3"; "0"; "4" ], order (PlayQueue.move 0 3 q))
+    Assert.Equal<string list>([ "4"; "0"; "1"; "2"; "3" ], order (PlayQueue.move 4 0 q))
+
+[<Fact>]
+let ``move ignores bad positions`` () =
+    let q = loaded 3 1
+    Assert.Equal<string list>([ "0"; "1"; "2" ], order (PlayQueue.move -1 2 q))
+    Assert.Equal<string list>([ "0"; "1"; "2" ], order (PlayQueue.move 0 9 q))
+    Assert.Equal<string list>([ "0"; "1"; "2" ], order (PlayQueue.move 1 1 q))
+
+[<Fact>]
+let ``move while shuffled changes the play order only`` () =
+    let q = loaded 6 2 |> PlayQueue.setShuffle 4 true
+    let before = order q
+    let after = PlayQueue.move 0 3 q
+    Assert.Equal(idAt q, idAt after)
+    Assert.Equal<string list>(List.sort before, List.sort (order after))
+    Assert.Equal(before[1], (order after)[0])
+
+[<Fact>]
+let ``a moved queue survives turning shuffle on and off`` () =
+    let q = PlayQueue.move 0 2 (loaded 4 3)
+    let again = q |> PlayQueue.setShuffle 1 true |> PlayQueue.setShuffle 0 false
+    Assert.Equal<string list>(order q, order again)
+    Assert.Equal(idAt q, idAt again)
+
+[<Fact>]
+let ``remove before the current track keeps it current`` () =
+    let q = PlayQueue.remove 0 (loaded 4 2)
+    Assert.Equal<string list>([ "1"; "2"; "3" ], order q)
+    Assert.Equal(Some "2", idAt q)
+
+[<Fact>]
+let ``remove after the current track keeps it current`` () =
+    let q = PlayQueue.remove 3 (loaded 4 1)
+    Assert.Equal<string list>([ "0"; "1"; "2" ], order q)
+    Assert.Equal(Some "1", idAt q)
+
+[<Fact>]
+let ``removing the current track makes the next one current`` () =
+    let q = PlayQueue.remove 1 (loaded 4 1)
+    Assert.Equal<string list>([ "0"; "2"; "3" ], order q)
+    Assert.Equal(Some "2", idAt q)
+
+[<Fact>]
+let ``removing the last current track falls back to the new last one`` () =
+    let q = PlayQueue.remove 2 (loaded 3 2)
+    Assert.Equal<string list>([ "0"; "1" ], order q)
+    Assert.Equal(Some "1", idAt q)
+
+[<Fact>]
+let ``removing the only track empties the queue`` () =
+    let q = PlayQueue.remove 0 (loaded 1 0)
+    Assert.Equal(0, PlayQueue.count q)
+    Assert.Equal(None, idAt q)
+
+[<Fact>]
+let ``remove while shuffled keeps a valid permutation`` () =
+    let q = loaded 8 5 |> PlayQueue.setShuffle 6 true
+    let after = PlayQueue.remove 3 q
+    Assert.Equal(7, PlayQueue.count after)
+    Assert.Equal<int list>([ 0 .. 6 ], after.Order |> Array.toList |> List.sort)
+    Assert.Equal(Some "5", idAt after)
+
+[<Fact>]
+let ``remove ignores bad positions`` () =
+    Assert.Equal<string list>([ "0"; "1" ], order (PlayQueue.remove 5 (loaded 2 0)))
+    Assert.Equal<string list>([ "0"; "1" ], order (PlayQueue.remove -1 (loaded 2 0)))
+
+[<Fact>]
+let ``clear drops the tracks and keeps repeat and shuffle`` () =
+    let q = loaded 3 1 |> PlayQueue.setRepeat All |> PlayQueue.setShuffle 2 true |> PlayQueue.clear
+    Assert.Equal(0, PlayQueue.count q)
+    Assert.Equal(All, q.Repeat)
     Assert.True(q.Shuffle)

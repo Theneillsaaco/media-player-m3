@@ -22,6 +22,8 @@ type IAudioEngine =
     abstract QueueNext: source: string * headers: string[] -> unit
     /// Drops the entry queued after the current track.
     abstract ClearNext: unit -> unit
+    /// Stops playback and unloads everything (the engine goes idle).
+    abstract Stop: unit -> unit
     abstract SetPaused: paused: bool -> unit
     abstract Seek: seconds: float -> unit
     abstract SetVolume: percent: int -> unit
@@ -29,5 +31,3 @@ type IAudioEngine =
     abstract TakeEnded: unit -> bool
     /// Drains pending engine events. Returns the error message if playback failed, otherwise "".
     abstract DrainEvents: unit -> string
-    
-

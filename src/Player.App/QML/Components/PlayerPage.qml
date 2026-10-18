@@ -14,6 +14,7 @@ Rectangle {
     required property var playback
     required property var video
     required property var theme
+    readonly property var i18n: Window.window ? Window.window.i18n : null
 
     property string mode: "page"
     /// The video layer could not load QtMultimedia.
@@ -28,6 +29,8 @@ Rectangle {
     signal minimizeRequested()
     signal maximizeRequested()
     signal restoreRequested()
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     // Maximized: the buttons and the card go away when the mouse has been still for a while, unless it is paused.
     property bool chrome: true
@@ -131,7 +134,7 @@ Rectangle {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 visible: root.videoUnavailable
-                text: "El video necesita QtMultimedia, que esta instalación de Qt no tiene."
+                text: root.tr("video.needsQt")
                 color: root.theme.error
                 font.pixelSize: 12
                 wrapMode: Text.Wrap
@@ -209,15 +212,18 @@ Rectangle {
             MIconButton {
                 visible: root.video.available
                 glyph: "video"
+                tip: root.tr("tip.video")
                 selected: root.video.showing
                 onClicked: root.video.toggleVideo()
             }
             MIconButton {
                 glyph: root.full ? "fullscreen_exit" : "fullscreen"
+                tip: root.full ? root.tr("tip.restore") : root.tr("tip.maximize")
                 onClicked: root.full ? root.restoreRequested() : root.maximizeRequested()
             }
             MIconButton {
                 glyph: "expand_more"
+                tip: root.tr("tip.minimize")
                 onClicked: root.minimizeRequested()
             }
         }

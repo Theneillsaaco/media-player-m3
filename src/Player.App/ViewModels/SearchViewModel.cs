@@ -80,6 +80,8 @@ public class SearchViewModel : INotifyPropertyChanged
 
     public void AddResult(int index) => AppServices.Playback.AddFrom(_results, index);
 
+    public void PlayNextResult(int index) => AppServices.Playback.PlayNextFrom(_results, index);
+
     /// <summary>Picks up a finished search. QML calls it from a Timer while searching.</summary>
     public void Poll()
     {
@@ -100,7 +102,7 @@ public class SearchViewModel : INotifyPropertyChanged
         Searching = false;
         if (error != null || hits is null)
         {
-            AppServices.Status.Text = "Error: " + (error ?? "sin respuesta");
+            AppServices.Status.Text = Tr.F("status.error", error ?? Tr.T("search.noResponse"));
             return;
         }
 
@@ -110,7 +112,7 @@ public class SearchViewModel : INotifyPropertyChanged
         Entities.Replace(hits.Entities.Select(Rows.FromEntity));
 
         var count = EntityMode ? hits.Entities.Length : hits.Tracks.Length;
-        AppServices.Status.Text = count == 0 ? "Sin resultados" : count + " resultados";
+        AppServices.Status.Text = count == 0 ? Tr.T("search.noResults") : Tr.F("search.results", count);
     }
 
     private void RunSearch(string query)
@@ -120,7 +122,7 @@ public class SearchViewModel : INotifyPropertyChanged
         var filter = Filter;
         var ticket = Interlocked.Increment(ref _searchTicket);
         Searching = true;
-        AppServices.Status.Text = "Buscando…";
+        AppServices.Status.Text = Tr.T("search.searching");
 
         _ = Task.Run(async () =>
         {

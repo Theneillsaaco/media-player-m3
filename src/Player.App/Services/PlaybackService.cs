@@ -53,6 +53,7 @@ internal sealed class PlaybackService
         PlayFrom(tracks, shuffle ? _rng.Next(tracks.Count) : 0);
     }
     
+    /// <summary>Adds a track at the end of the queue.</summary>
     public void AddFrom(IReadOnlyList<Track> tracks, int index)
     {
         if (index < 0 || index >= tracks.Count)
@@ -60,6 +61,22 @@ internal sealed class PlaybackService
         
         var wasEmpty = PlayQueue.count(_queue) == 0;
         _queue = PlayQueue.add([tracks[index]], _queue);
+        AfterAdd(wasEmpty);
+    }
+
+    /// <summary>Adds a track right after the one that plays now.</summary>
+    public void PlayNextFrom(IReadOnlyList<Track> tracks, int index)
+    {
+        if (index < 0 || index >= tracks.Count)
+            return;
+
+        var wasEmpty = PlayQueue.count(_queue) == 0;
+        _queue = PlayQueue.addNext([tracks[index]], _queue);
+        AfterAdd(wasEmpty);
+    }
+
+    private void AfterAdd(bool wasEmpty)
+    {
         RefreshQueue();
         if (wasEmpty)
         {
@@ -78,6 +95,103 @@ internal sealed class PlaybackService
         _queue = PlayQueue.jumpTo(position, _queue);
         PlayCurrent();
         Poll();
+    }
+
+    /// <summary>Drags an entry of the queue (play-order positions). The current track keeps playing.</summary>
+    public void MoveQueueItem(int source, int target)
+    {
+        var moved = PlayQueue.move(source, target, _queue);
+        if (ReferenceEquals(moved, _queue) || moved.Equals(_queue))
+            return;
+
+        _queue = moved;
+        RefreshQueue();
+        AfterQueueEdit();
+        Poll();
+    }
+
+    /// <summary>Takes an entry out of the queue. Removing the playing one goes on with the next.</summary>
+    public void RemoveQueueItem(int position)
+    {
+        if (position < 0 || position >= PlayQueue.count(_queue))
+            return;
+
+        var wasCurrent = position == _queue.Position;
+        _queue = PlayQueue.remove(position, _queue);
+        RefreshQueue();
+
+        if (wasCurrent)
+            AfterRemovingCurrent(position);
+        else
+            AfterQueueEdit();
+
+        Poll();
+    }
+
+    /// <summary>Empties the queue and stops.</summary>
+    public void ClearQueue()
+    {
+        if (PlayQueue.count(_queue) == 0)
+            return;
+
+        _queue = PlayQueue.clear(_queue);
+        StopPlayback();
+        ClearCurrent();
+        RefreshQueue();
+        _status.Text = "";
+        Poll();
+    }
+
+    private void AfterRemovingCurrent(int position)
+    {
+        _restoreSeek = 0;
+        var current = PlayQueue.current(_queue);
+        var nothingFollows = PlayQueue.count(_queue) == 0 || position >= PlayQueue.count(_queue);
+
+        if (current is null)
+        {
+            StopPlayback();
+            ClearCurrent();
+        }
+        else if (nothingFollows)
+        {
+            StopPlayback();
+            SetCurrent(current.Value);
+        }
+        else if (IsLoaded)
+        {
+            PlayCurrent();
+        }
+        else
+        {
+            SetCurrent(current.Value); // restored and paused: just show the track that took its place
+            Position = 0;
+        }
+    }
+
+    /// <summary>Unloads mpv. The queue is left as it is.</summary>
+    private void StopPlayback()
+    {
+        if (IsLoaded)
+            _engine.Stop();
+
+        IsLoaded = false;
+        _sawActive = false;
+        _viaPrefetch = false;
+        _queuedNextId = null;
+        _audioOverride = null;
+        _pendingSeek = 0;
+        _restoreSeek = 0;
+        _tracker = null;
+        Position = 0;
+        Paused = true;
+    }
+
+    private void ClearCurrent()
+    {
+        CurrentTitle = CurrentArtist = CurrentArt = CurrentId = "";
+        _knownDuration = 0;
+        Duration = 0;
     }
     
     public void Toggle()
@@ -215,7 +329,7 @@ internal sealed class PlaybackService
             {
                 IsLoaded = false;
                 _sawActive = false;
-                _status.Text = "Error: " + error;
+                _status.Text = Tr.F("status.error", error);
                 return;
             }
         }
@@ -230,7 +344,7 @@ internal sealed class PlaybackService
         {
             _sawActive = true;
             if (d > 0 && _status.Text == Loading)
-                _status.Text = "Playing";
+                _status.Text = Tr.T("status.playing");
             if (_pendingSeek > 0 && d > 0)
             {
                 _engine.Seek(_pendingSeek); // a restored track resumes where it was left
@@ -266,7 +380,7 @@ internal sealed class PlaybackService
         _sawActive = false;
         IsLoaded = false;
         Position = 0;
-        _status.Text = "Finished";
+        _status.Text = Tr.T("status.finished");
         PersistQueue();
     }
 
@@ -286,7 +400,7 @@ internal sealed class PlaybackService
         _viaPrefetch = true;
         _pendingSeek = 0;
         Position = 0;
-        _status.Text = "Playing";
+        _status.Text = Tr.T("status.playing");
         StartListening(t);
         RefreshQueue();
         AfterQueueEdit();
@@ -488,7 +602,7 @@ internal sealed class PlaybackService
 
         _restoreSeek = plan.Seconds;
         Position = _restoreSeek;
-        _status.Text = "Restored queue: press play to continue";
+        _status.Text = Tr.T("status.restored");
     }
     
     public void Shutdown()
@@ -696,7 +810,7 @@ internal sealed class PlaybackService
     
     #region Fields
 
-    private const string Loading = "Loading…";
+    private static string Loading => Tr.T("status.loading");
 
     private readonly IAudioEngine _engine;
     private readonly PlayerDatabase? _db;

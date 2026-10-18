@@ -18,6 +18,7 @@ Rectangle {
     required property var library
     required property var video
     required property var theme
+    readonly property var i18n: Window.window ? Window.window.i18n : null
 
     /// On top of the video in the maximized player: a translucent card without the cover and the title.
     property bool docked: false
@@ -30,6 +31,8 @@ Rectangle {
     readonly property bool linkable: root.playback.currentId !== "" && root.playback.isLoaded
 
     signal coverClicked()
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     color: docked ? Qt.alpha(theme.surfaceContainerHighest, 0.94) : theme.surfaceContainerHigh
     radius: 28
@@ -143,6 +146,7 @@ Rectangle {
                     MIconButton {
                         visible: root.library.canLike
                         glyph: root.library.liked ? "favorite" : "favorite_border"
+                        tip: root.tr("tip.like")
                         selected: root.library.liked
                         onClicked: root.library.toggleLike()
                     }
@@ -154,16 +158,19 @@ Rectangle {
                 spacing: 4
                 MIconButton {
                     glyph: "shuffle"
+                    tip: root.tr("tip.shuffle")
                     selected: root.playback.shuffle
                     onClicked: root.playback.toggleShuffle()
                 }
                 MIconButton {
                     glyph: "previous"
+                    tip: root.tr("tip.previous")
                     enabled: root.playback.canPrevious
                     onClicked: root.playback.previous()
                 }
                 MIconButton {
                     glyph: root.playback.isLoaded && !root.playback.paused ? "pause" : "play"
+                    tip: root.playback.isLoaded && !root.playback.paused ? root.tr("tip.pause") : root.tr("tip.play")
                     filled: true
                     containerSize: 48
                     enabled: root.queue.count > 0
@@ -171,11 +178,13 @@ Rectangle {
                 }
                 MIconButton {
                     glyph: "next"
+                    tip: root.tr("tip.next")
                     enabled: root.playback.canNext
                     onClicked: root.playback.next()
                 }
                 MIconButton {
                     glyph: root.playback.repeatMode === "one" ? "repeat_one" : "repeat"
+                    tip: root.tr("tip.repeat")
                     selected: root.playback.repeatMode !== "off"
                     onClicked: root.playback.cycleRepeat()
                 }
@@ -195,6 +204,7 @@ Rectangle {
 
                     MIconButton {
                         glyph: root.playback.volume > 0 ? "volume" : "volume_off"
+                        tip: root.playback.volume > 0 ? root.tr("tip.mute") : root.tr("tip.unmute")
                         onClicked: {
                             if (root.playback.volume > 0) {
                                 root.lastVolume = root.playback.volume

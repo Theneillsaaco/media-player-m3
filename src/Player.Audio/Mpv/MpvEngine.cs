@@ -26,6 +26,8 @@ public class MpvEngine : IAudioEngine
     }
 
     public void ClearNext() => Command("playlist-clear");
+
+    public void Stop() => Command("stop");
     
     public void SetPaused(bool paused) =>
         mpv_set_property_string(_h, "pause", paused ? "yes" : "no");

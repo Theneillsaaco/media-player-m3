@@ -21,7 +21,7 @@ internal static class Rows
     {
         VideoId = p.Id,
         Title = p.Title,
-        Artist = p.Count switch { 0 => "", 1 => "1 song", var n => $"{n} songs" },
+        Artist = p.Count switch { 0 => "", 1 => Tr.T("playlist.songs.one"), var n => Tr.F("playlist.songs.many", n) },
         ArtUrl = p.ArtUrl
     };
 

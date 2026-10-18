@@ -3,13 +3,14 @@ import QtQuick.Controls.Basic
 
 // Material 3 icon button: 40dp container, 24dp icon. State layers: hover 8%, focus/pressed 10%.
 // filled: primary container (play/pause). selected: tonal container (toggle that is on).
-// Imports the Basic style explicitly so no system style can change it.
+// tip: the tooltip (and the accessible name). Imports the Basic style explicitly so no system style can change it.
 Button {
     id: control
 
     readonly property var theme: Window.window ? Window.window.theme : null
 
     property string glyph: "play"
+    property string tip: ""
     property bool selected: false
     property bool filled: false
     property real containerSize: 40
@@ -28,6 +29,11 @@ Button {
     padding: 0
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
+
+    Accessible.name: tip
+    ToolTip.visible: hovered && tip.length > 0
+    ToolTip.text: tip
+    ToolTip.delay: 600
 
     contentItem: Item {
         Icon {

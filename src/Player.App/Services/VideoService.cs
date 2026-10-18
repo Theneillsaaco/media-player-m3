@@ -178,7 +178,7 @@ internal sealed class VideoService(
         catch (Exception ex)
         {
             Log.Warn("video", "info for " + id, ex);
-            lock (_gate) Finish("i:" + id, "No se pudo comprobar si hay video.");
+            lock (_gate) Finish("i:" + id, Tr.T("video.checkFailed"));
         }
     }
 
@@ -206,7 +206,7 @@ internal sealed class VideoService(
         catch (Exception ex)
         {
             Log.Warn("video", "stream for " + videoId, ex);
-            lock (_gate) Finish("s:" + videoId, "No se pudo cargar el video.");
+            lock (_gate) Finish("s:" + videoId, Tr.T("video.loadFailed"));
         }
     }
 

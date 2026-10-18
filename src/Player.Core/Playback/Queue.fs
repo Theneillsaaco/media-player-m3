@@ -15,12 +15,13 @@ type QueueState = {
     
 /// Pure functions over QueueState. Anything random takes a seed so tests are deterministic.
 module PlayQueue =
-    let empty =
-        { Items = [||]
-          Order = [||]
-          Position = -1
-          Repeat = Off
-          Shuffle = false }
+    let empty = {
+        Items = [||]
+        Order = [||]
+        Position = -1
+        Repeat = Off
+        Shuffle = false
+    }
     
     let count (q: QueueState) = q.Items.Length
     
@@ -62,6 +63,7 @@ module PlayQueue =
             if current >= 0 then
                 Array.append [| current |] rest, 0
             else rest, -1
+            
     /// New queue from tracks, starting at item `start`. Keeps repeat and shuffle settings.
     let replace (seed: int) (tracks: Track seq) (start: int) (q: QueueState)  =
         let items = Seq.toArray tracks
@@ -86,6 +88,84 @@ module PlayQueue =
             { q with
                 Items = Array.append q.Items extra
                 Order = Array.append q.Order (Array.init extra.Length (fun i -> n + i)) }
+          
+    /// Inserts right after the current track in the play order. The current track does not change.
+    /// Without a current track it behaves like `add`.
+    let addNext (track: Track seq) (q: QueueState) =
+        let extra = Seq.toArray track
+        
+        if extra.Length = 0 then
+            q
+        else
+            let at = min q.Order.Length (q.Position + 1)
+            
+            if q.Shuffle then
+                let n = q.Items.Length
+                let added = Array.init extra.Length (fun i -> n + i)
+                
+                { q with
+                    Items = Array.append q.Items extra
+                    Order = Array.concat [ Array.take at q.Order; added; Array.skip at q.Order ] }
+            else
+                // Not shuffled: play order is item order, so the items themselves move.
+                let items = Array.concat [ Array.take at q.Items; extra; Array.skip at q.Items ]
+                { q with Items = items; Order = Array.init items.Length id }
+          
+    let private moveInArray (source: int) (target: int) (a: 'T[]) =
+        let list = ResizeArray<'T>(a)
+        let item = list[source]
+        list.RemoveAt source
+        list.Insert(target, item)
+        list.ToArray()
+          
+    /// Moves the entry at play-order position `source` so it ends up at `target`. The current track stays current.
+    let move (source: int) (target: int) (q: QueueState) =
+        let n = q.Order.Length
+        
+        if source < 0 || source >= n || target < 0 || target >= n || source = target then
+            q
+        else
+            let position =
+                if q.Position = source then target
+                elif source < q.Position && target >= q.Position then q.Position - 1
+                elif source > q.Position && target <= q.Position then q.Position + 1
+                else q.Position
+                
+            if q.Shuffle then
+                { q with Order = moveInArray source target q.Order; Position = position }
+            else
+                { q with Items = moveInArray source target q.Items; Position = position }
+
+    
+    /// Removes the entry at play-order position `position`. When it was the current one, the entry that
+    /// followed it becomes current (the last one when nothing follows); callers decide what to play.
+    let remove (position: int) (q: QueueState) =
+        if position < 0 || position >= q.Order.Length then
+            q
+        else
+            let item = q.Order[position]
+            
+            let items =
+                q.Items |> Array.indexed |> Array.filter (fun (i, _) -> i <> item) |> Array.map snd
+            
+            let order =
+                q.Order
+                |> Array.indexed
+                |> Array.filter (fun (p, _) -> p <> position)
+                |> Array.map (fun (_, i) -> if i > item then i - 1 else i)
+                
+            let current =
+                if items.Length = 0 then -1
+                elif position < q.Position then q.Position - 1
+                elif position = q.Position then min q.Position (items.Length - 1)
+                else q.Position
+                
+            { q with Items = items; Order = order; Position = current }
+            
+    /// Drops every entry; repeat and shuffle stay.
+    let clear (q: QueueState) = {
+        empty with Repeat = q.Repeat; Shuffle = q.Shuffle
+    }
         
     /// Jump to a position in the play order.
     let jumpTo (position: int) (q: QueueState) =

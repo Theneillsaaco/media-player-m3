@@ -41,10 +41,10 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
                 var status = _note.Length > 0 ? _note
                     : stage switch
                     {
-                        AccountStage.Unavailable => "La búsqueda no está disponible, así que tampoco la cuenta.",
-                        AccountStage.SignedIn => $"Conectado como {_name}",
-                        AccountStage.Expired => "La sesión caducó. Vuelve a importarla.",
-                        _ => "Sin conectar",
+                        AccountStage.Unavailable => Tr.T("account.unavailable"),
+                        AccountStage.SignedIn => Tr.F("account.connectedAs", _name),
+                        AccountStage.Expired => Tr.T("account.expired"),
+                        _ => Tr.T("account.signedOut"),
                     };
                 return new(stage, _name, status, _busy);
             }
@@ -55,7 +55,7 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
     public void Start()
     {
         if (provider is null || _name.Length == 0) return; // never signed in
-        if (!Begin("Conectando…")) return;
+        if (!Begin(Tr.T("status.connecting"))) return;
 
         _ = Task.Run(async () =>
         {
@@ -72,10 +72,10 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
                 catch (Exception e) // no network: keep the session, calls will retry later
                 {
                     Log("could not check the session", e);
-                    lock (_gate) (_signedIn, _note) = (true, "Sin conexión con YouTube Music");
+                    lock (_gate) (_signedIn, _note) = (true, Tr.T("account.offline"));
                 }
             }
-            catch (Exception e) { Fail("No se pudo leer la sesión guardada", e); }
+            catch (Exception e) { Fail(Tr.T("account.readFailed"), e); }
             finally { End(); }
         });
     }
@@ -83,7 +83,7 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
     /// <summary>Reads the session of a browser profile (yt-dlp's cookie extractor in the sidecar).</summary>
     public void ImportBrowser(string browser)
     {
-        if (provider is null || !Begin($"Leyendo la sesión de {browser}…")) return;
+        if (provider is null || !Begin(Tr.F("account.reading", browser))) return;
 
         _ = Task.Run(async () =>
         {
@@ -92,7 +92,7 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
                 var session = await provider.ImportBrowser(browser, "");
                 await StoreAsync(session, browser, "");
             }
-            catch (Exception e) { Fail("No se pudo importar la sesión", e); }
+            catch (Exception e) { Fail(Tr.T("account.importFailed"), e); }
             finally { End(); }
         });
     }
@@ -103,10 +103,10 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
         if (provider is null) return;
         if (ExtractCookie(text) is not { } cookie)
         {
-            lock (_gate) _note = "Eso no parece una cookie de YouTube Music: debe incluir __Secure-3PAPISID.";
+            lock (_gate) _note = Tr.T("account.notCookie");
             return;
         }
-        if (!Begin("Comprobando la cookie…")) return;
+        if (!Begin(Tr.T("account.checkingCookie"))) return;
 
         _ = Task.Run(async () =>
         {
@@ -115,7 +115,7 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
                 var session = await provider.SignIn(cookie);
                 await StoreAsync(session, "", "");
             }
-            catch (Exception e) { Fail("No se pudo iniciar sesión", e); }
+            catch (Exception e) { Fail(Tr.T("account.signInFailed"), e); }
             finally { End(); }
         });
     }
@@ -161,7 +161,7 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
         catch (AuthExpiredException) { }
 
         MarkExpired();
-        throw new AuthExpiredException("La sesión de YouTube Music caducó. Vuelve a importarla en Ajustes.");
+        throw new AuthExpiredException(Tr.T("account.expiredReimport"));
     }
 
     /// <summary>Silently repeats the last browser import. False when the session did not come from a browser.</summary>

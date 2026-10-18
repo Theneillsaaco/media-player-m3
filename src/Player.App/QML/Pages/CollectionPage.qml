@@ -10,6 +10,9 @@ Item {
 
     required property var nav
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     ListView {
         id: list
@@ -80,13 +83,13 @@ Item {
                         spacing: 8
 
                         MButton {
-                            text: "Reproducir"
+                            text: root.tr("action.play")
                             enabled: root.nav.collectionCount > 0
                             onClicked: root.nav.playCollection(false)
                         }
                         MButton {
                             kind: "tonal"
-                            text: "Aleatorio"
+                            text: root.tr("action.shuffle")
                             enabled: root.nav.collectionCount > 0
                             onClicked: root.nav.playCollection(true)
                         }
@@ -107,6 +110,7 @@ Item {
             showAdd: true
             onActivated: root.nav.playCollectionItem(index)
             onAddRequested: root.nav.addCollectionItem(index)
+            onPlayNextRequested: root.nav.playNextCollectionItem(index)
         }
     }
 
@@ -128,7 +132,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             visible: root.nav.failed
             kind: "tonal"
-            text: "Reintentar"
+            text: root.tr("action.retry")
             onClicked: root.nav.retry()
         }
     }

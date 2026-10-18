@@ -10,8 +10,11 @@ Item {
 
     required property var nav
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
 
     signal entityActivated(string kind, string entityId)
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     component SectionTitle: Text {
         Layout.leftMargin: 20
@@ -107,13 +110,13 @@ Item {
                     RowLayout {
                         spacing: 8
                         MButton {
-                            text: "Reproducir"
+                            text: root.tr("action.play")
                             enabled: songs.count > 0
                             onClicked: root.nav.playArtist(false)
                         }
                         MButton {
                             kind: "tonal"
-                            text: "Aleatorio"
+                            text: root.tr("action.shuffle")
                             enabled: songs.count > 0
                             onClicked: root.nav.playArtist(true)
                         }
@@ -134,7 +137,7 @@ Item {
                 elide: Text.ElideRight
             }
 
-            SectionTitle { visible: songs.count > 0; text: "Canciones" }
+            SectionTitle { visible: songs.count > 0; text: root.tr("artist.songs") }
 
             Repeater {
                 id: songs
@@ -152,21 +155,22 @@ Item {
                     showAdd: true
                     onActivated: root.nav.playArtistSong(index)
                     onAddRequested: root.nav.addArtistSong(index)
+                    onPlayNextRequested: root.nav.playNextArtistSong(index)
                 }
             }
 
             Shelf {
-                heading: "Álbumes"
+                heading: root.tr("artist.albums")
                 shelfModel: root.nav.artistAlbums
                 onActivated: (kind, entityId) => root.entityActivated(kind, entityId)
             }
             Shelf {
-                heading: "Sencillos y EP"
+                heading: root.tr("artist.singles")
                 shelfModel: root.nav.artistSingles
                 onActivated: (kind, entityId) => root.entityActivated(kind, entityId)
             }
             Shelf {
-                heading: "Artistas similares"
+                heading: root.tr("artist.related")
                 shelfModel: root.nav.artistRelated
                 round: true
                 onActivated: (kind, entityId) => root.entityActivated(kind, entityId)
@@ -193,7 +197,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             visible: root.nav.failed
             kind: "tonal"
-            text: "Reintentar"
+            text: root.tr("action.retry")
             onClicked: root.nav.retry()
         }
     }

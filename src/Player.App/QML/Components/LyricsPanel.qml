@@ -9,9 +9,12 @@ Rectangle {
 
     required property var vm
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
     readonly property bool hasLines: vm.state === "synced" || vm.state === "plain"
 
     color: theme ? theme.surfaceContainerLow : "#F7F2FA"
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     ColumnLayout {
         anchors.fill: parent
@@ -21,7 +24,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.margins: 16
             Layout.bottomMargin: 4
-            text: "Letra" + (root.vm.source.length > 0 ? " · " + root.vm.source : "")
+            text: root.tr("lyrics.title") + (root.vm.source.length > 0 ? " · " + root.vm.source : "")
             color: root.theme ? root.theme.inkSurface : "#1D1B20"
             font.pixelSize: 16
             font.weight: Font.Medium
@@ -36,17 +39,19 @@ Rectangle {
             visible: root.hasLines
             spacing: 0
 
-            MButton { kind: "text"; text: "A−"; onClicked: root.vm.shrinkText() }
-            MButton { kind: "text"; text: "A+"; onClicked: root.vm.growText() }
+            MButton { kind: "text"; text: "A−"; ToolTip.visible: hovered; ToolTip.text: root.tr("tip.smaller"); onClicked: root.vm.shrinkText() }
+            MButton { kind: "text"; text: "A+"; ToolTip.visible: hovered; ToolTip.text: root.tr("tip.bigger"); onClicked: root.vm.growText() }
             Item { Layout.fillWidth: true }
-            MButton { visible: root.vm.synced; kind: "text"; text: "−0,5"; onClicked: root.vm.nudgeOffset(-0.5) }
+            MButton { visible: root.vm.synced; kind: "text"; text: "−0,5"; ToolTip.visible: hovered; ToolTip.text: root.tr("tip.sooner"); onClicked: root.vm.nudgeOffset(-0.5) }
             MButton {
                 visible: root.vm.synced
                 kind: "text"
                 text: root.vm.offsetText
+                ToolTip.visible: hovered
+                ToolTip.text: root.tr("tip.resetDelay")
                 onClicked: root.vm.clearOffset()
             }
-            MButton { visible: root.vm.synced; kind: "text"; text: "+0,5"; onClicked: root.vm.nudgeOffset(0.5) }
+            MButton { visible: root.vm.synced; kind: "text"; text: "+0,5"; ToolTip.visible: hovered; ToolTip.text: root.tr("tip.later"); onClicked: root.vm.nudgeOffset(0.5) }
         }
 
         Item {
@@ -136,7 +141,7 @@ Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     visible: root.vm.state === "error"
                     kind: "tonal"
-                    text: "Reintentar"
+                    text: root.tr("action.retry")
                     onClicked: root.vm.retry()
                 }
             }

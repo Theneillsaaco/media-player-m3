@@ -2,6 +2,7 @@ using Player.App.Services;
 using Player.Audio.Mpv;
 using Player.Core;
 using Player.Core.Contracts;
+using Player.Core.Localization;
 using Player.Providers.Lyrics;
 using Player.Providers.YoutubeMusic;
 using Player.Scrobble.LastFm;
@@ -30,11 +31,12 @@ internal static class AppServices
             Engine = new MpvEngine();
             
             try { Provider = new YtSidecarProvider(); }
-            catch (Exception ex) { Status.Text = "Search unavailable: " + ex.Message; }
+            catch (Exception ex) { Status.Text = Tr.F("app.searchUnavailable", ex.Message); }
 
             try
             {
                 Db = new PlayerDatabase(PlayerDatabase.DefaultPath);
+                I18n.select(Db.GetSetting(I18n.settingKey) ?? "es"); // before any text is built
                 var secrets = new SecretStore();
                 Account = new AccountService(Provider, Db, secrets);
                 
@@ -49,7 +51,7 @@ internal static class AppServices
             catch (Exception ex)
             {
                 Log.Error("app", "storage unavailable", ex);
-                DatabaseError = "No se pudo abrir la base de datos: " + ex.Message;
+                DatabaseError = Tr.F("app.dbFailed", ex.Message);
             }
 
             Theme = new ThemeService(
@@ -76,6 +78,19 @@ internal static class AppServices
             
             AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();
         }
+    }
+
+    /// <summary>Switches the interface language, remembers it and tells whoever shows built texts.</summary>
+    public static void ChooseLanguage(string language)
+    {
+        var value = I18n.normalize(language);
+        I18n.select(value);
+
+        try { Db?.SetSetting(I18n.settingKey, value); }
+        catch (Exception ex) { Log.Warn("app", "language setting", ex); }
+
+        Status.Refresh();
+        LanguageChanged?.Invoke();
     }
     
     private static void Shutdown()
@@ -111,6 +126,9 @@ internal static class AppServices
     /// <summary>Raised on the Qt thread after the settings dialog changed the account (sign-in or sign-out).</summary>
     public static event Action? AccountChanged;
     public static void RaiseAccountChanged() => AccountChanged?.Invoke();
+
+    /// <summary>Raised on the Qt thread after the interface language changed.</summary>
+    public static event Action? LanguageChanged;
 
     #endregion
 }

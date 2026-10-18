@@ -24,6 +24,8 @@
     <Compile Include="Theme\Appearance.fs" />
     <Compile Include="Lyrics\Lrc.fs" />
     <Compile Include="Lyrics\LyricsSync.fs" />
+    <Compile Include="Localization\Translations.fs" />
+    <Compile Include="Localization\I18n.fs" />
     <Compile Include="Logging.fs" />
   </ItemGroup>
 </Project>

@@ -30,8 +30,14 @@ ApplicationWindow {
     palette.dark: appTheme.outline
     palette.placeholderText: appTheme.inkSurfaceVariant
 
-    // Leaf components find the theme through the window: Window.window.theme.
+    // Leaf components find the theme and the texts through the window: Window.window.theme, Window.window.i18n.
     readonly property var theme: appTheme
+    readonly property var i18n: appTr
+
+    function tr(key) { return appTr.t(key) }
+
+    // A short note in the snackbar.
+    function toast(text) { navVm.notify(text) }
 
     property bool queueOpen: true
     property bool lyricsOpen: false
@@ -44,18 +50,23 @@ ApplicationWindow {
     // Width of the queue and lyrics side panels: they give way on narrow windows.
     readonly property int sideWidth: Math.round(Math.min(380, Math.max(280, width * 0.28)))
 
+    // A text field has the keyboard: the single-key shortcuts (space) must not take it.
+    readonly property bool typing: activeFocusItem !== null && activeFocusItem.selectByMouse !== undefined
+
     PlaybackViewModel { id: playback }
     QueueViewModel { id: queueVm }
     SearchViewModel { id: searchVm }
     LibraryViewModel { id: libraryVm }
     SettingsViewModel { id: settingsVm }
     ThemeViewModel { id: themeVm }
+    LocaleViewModel { id: localeVm }
     LyricsViewModel { id: lyricsVm }
     VideoViewModel { id: videoVm }
     NavigationViewModel { id: navVm }
     Theme { id: appTheme; tokensJson: themeVm.tokensJson }
+    Tr { id: appTr; json: localeVm.stringsJson }
 
-    SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; theme: appTheme }
+    SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; localeVm: localeVm; theme: appTheme }
 
     // Called by the lists and the playback bar: a name opens its page, from wherever the user is.
     function openEntity(kind, entityId) {
@@ -126,6 +137,8 @@ ApplicationWindow {
         if (lyricsOpen) queueOpen = false
     }
 
+    // ---- keyboard ----
+
     // Escape leaves the maximized player.
     Shortcut {
         sequence: "Esc"
@@ -135,6 +148,31 @@ ApplicationWindow {
     Shortcut {
         sequence: "Alt+Left"
         onActivated: navVm.goBack()
+    }
+    Shortcut {
+        sequence: "Space"
+        enabled: !win.typing && !settings.visible
+        onActivated: playback.toggle()
+    }
+    Shortcut {
+        sequence: "Ctrl+Right"
+        onActivated: playback.next()
+    }
+    Shortcut {
+        sequence: "Ctrl+Left"
+        onActivated: playback.previous()
+    }
+    Shortcut {
+        sequence: "Ctrl+F"
+        onActivated: { input.forceActiveFocus(); input.selectAll() }
+    }
+    Shortcut {
+        sequence: "Ctrl+L"
+        onActivated: win.queueOpen = !win.queueOpen
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+L"
+        onActivated: win.lyricsOpen = !win.lyricsOpen
     }
 
     ColumnLayout {
@@ -152,6 +190,7 @@ ApplicationWindow {
 
             MIconButton {
                 glyph: "back"
+                tip: win.tr("tip.back")
                 enabled: win.playerOpen || navVm.canBack
                 onClicked: {
                     if (win.playerOpen) win.playerMode = "mini"
@@ -161,7 +200,8 @@ ApplicationWindow {
             MSearchField {
                 id: input
                 Layout.fillWidth: true
-                placeholderText: "Busca canciones, o pega un enlace o ruta"
+                placeholderText: win.tr("search.placeholder")
+                clearTip: win.tr("tip.clearSearch")
                 onAccepted: {
                     win.playerMode = "mini"
                     navVm.goRoot("search")
@@ -170,21 +210,25 @@ ApplicationWindow {
             }
             MIconButton {
                 glyph: "album"
+                tip: win.tr("tip.player")
                 selected: win.playerOpen
                 onClicked: win.playerMode = win.playerOpen ? "mini" : "page"
             }
             MIconButton {
                 glyph: "lyrics"
+                tip: win.tr("tip.lyrics")
                 selected: win.lyricsOpen
                 onClicked: win.lyricsOpen = !win.lyricsOpen
             }
             MIconButton {
                 glyph: "queue"
+                tip: win.tr("tip.queue")
                 selected: win.queueOpen
                 onClicked: win.queueOpen = !win.queueOpen
             }
             MIconButton {
                 glyph: "settings"
+                tip: win.tr("tip.settings")
                 onClicked: settings.open()
             }
         }
@@ -334,7 +378,7 @@ ApplicationWindow {
         fit: win.playerMode === "full"
     }
 
-    // Snackbar: short messages ("this track has no album"...).
+    // Snackbar: short messages ("added to the queue", "this track has no album"...).
     Rectangle {
         id: snack
         anchors.horizontalCenter: parent.horizontalCenter

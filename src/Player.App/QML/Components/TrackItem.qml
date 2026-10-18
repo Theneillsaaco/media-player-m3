@@ -1,12 +1,16 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls.Basic
 
-// Material 3 two-line list item with a cover. Click plays or opens; the + button adds to the queue.
+// Material 3 two-line list item with a cover. Click plays or opens; right click or the ⋮ button opens a menu.
+// showAdd: the item can be added to the queue (a + button and "play next" / "add to queue" in the menu).
+// showRemove: the menu also offers "remove from queue". draggable: a grip on the left that reorders (the queue).
 // With a videoId the second line is a link to the artist's page. round: circular cover (artists).
 Item {
     id: row
 
     readonly property var theme: Window.window ? Window.window.theme : null
+    readonly property var i18n: Window.window ? Window.window.i18n : null
 
     property string heading: ""
     property string supporting: ""
@@ -15,6 +19,9 @@ Item {
     property string videoId: ""
     property bool current: false
     property bool showAdd: false
+    property bool showRemove: false
+    property bool draggable: false
+    property bool dimmed: false
     property bool round: false
     property color cPrimary: theme ? theme.primary : "#6750A4"
     property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
@@ -23,11 +30,25 @@ Item {
     property color cOnSecondaryContainer: theme ? theme.inkSecondaryContainer : "#1D192B"
 
     readonly property bool linkable: videoId !== "" && supporting !== ""
+    readonly property bool hasMenu: showAdd || showRemove
 
     signal activated()
     signal addRequested()
+    signal playNextRequested()
+    signal removeRequested()
+    // The grip of a draggable item: positions are in window coordinates.
+    signal gripPressed()
+    signal gripMoved(real sceneX, real sceneY)
+    signal gripReleased(bool dropped)
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
+    function toast(key) {
+        if (Window.window && Window.window.toast)
+            Window.window.toast(row.tr(key))
+    }
 
     implicitHeight: 64
+    opacity: dimmed ? 0.4 : 1
 
     Rectangle {
         anchors.fill: parent
@@ -50,15 +71,52 @@ Item {
         id: area
         anchors.fill: parent
         hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
-        onClicked: row.activated()
+        onClicked: (mouse) => {
+            if (mouse.button === Qt.RightButton && row.hasMenu)
+                menu.popup()
+            else if (mouse.button === Qt.LeftButton)
+                row.activated()
+        }
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 16
+        anchors.leftMargin: row.draggable ? 8 : 16
         anchors.rightMargin: 12
         spacing: 12
+
+        Item { // grip
+            visible: row.draggable
+            Layout.preferredWidth: 28
+            Layout.fillHeight: true
+
+            Icon {
+                anchors.centerIn: parent
+                name: "drag"
+                size: 20
+                tint: row.cOnSurfaceVariant
+            }
+            MouseArea {
+                id: grip
+                anchors.fill: parent
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                preventStealing: true
+                hoverEnabled: true
+                ToolTip.visible: containsMouse && !pressed
+                ToolTip.text: row.tr("tip.drag")
+                ToolTip.delay: 600
+                onPressed: row.gripPressed()
+                onPositionChanged: (mouse) => {
+                    if (!pressed) return
+                    const p = grip.mapToItem(null, mouse.x, mouse.y)
+                    row.gripMoved(p.x, p.y)
+                }
+                onReleased: row.gripReleased(true)
+                onCanceled: row.gripReleased(false)
+            }
+        }
 
         Cover {
             Layout.preferredWidth: 48
@@ -118,7 +176,39 @@ Item {
         MIconButton {
             visible: row.showAdd
             glyph: "add"
-            onClicked: row.addRequested()
+            tip: row.tr("tip.add")
+            onClicked: { row.addRequested(); row.toast("queue.added") }
+        }
+
+        MIconButton {
+            id: more
+            visible: row.hasMenu
+            glyph: "more"
+            tip: row.tr("tip.more")
+            onClicked: menu.popup(more, 0, more.height)
+        }
+    }
+
+    MMenu {
+        id: menu
+
+        MMenuItem {
+            visible: row.showAdd
+            glyph: "playlist_add"
+            text: row.tr("menu.playNext")
+            onTriggered: { row.playNextRequested(); row.toast("queue.addedNext") }
+        }
+        MMenuItem {
+            visible: row.showAdd
+            glyph: "add"
+            text: row.tr("menu.addToQueue")
+            onTriggered: { row.addRequested(); row.toast("queue.added") }
+        }
+        MMenuItem {
+            visible: row.showRemove
+            glyph: "delete"
+            text: row.tr("menu.removeFromQueue")
+            onTriggered: row.removeRequested()
         }
     }
 }

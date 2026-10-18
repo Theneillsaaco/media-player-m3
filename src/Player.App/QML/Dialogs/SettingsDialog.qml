@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import "../Components"
 
-// Settings: startup behaviour, the YouTube Music account and the Last.fm connection.
+// Settings: language, appearance, startup behaviour, the YouTube Music account and the Last.fm connection.
 // The dialog polls the view model while it is open so progress shows up.
 MDialog {
     id: dialog
@@ -11,19 +11,53 @@ MDialog {
     required property var vm
     required property var appearanceVm
     required property var videoVm
+    required property var localeVm
     property string browser: "firefox"
     property bool pasteOpen: false
 
     readonly property bool accountIn: vm.accountState === "signedIn"
     readonly property bool accountOut: vm.accountState === "signedOut" || vm.accountState === "expired"
 
-    title: "Ajustes"
+    title: dialog.tr("settings.title")
 
     Timer {
         interval: 500
         repeat: true
         running: dialog.visible
         onTriggered: dialog.vm.poll()
+    }
+
+    // ---- Idioma ----
+
+    Text {
+        text: dialog.tr("settings.language")
+        color: dialog.theme.primary
+        font.pixelSize: 14
+        font.weight: Font.Medium
+    }
+
+    Flow {
+        Layout.fillWidth: true
+        spacing: 8
+
+        Repeater {
+            model: [
+                { key: "es", label: "language.es" },
+                { key: "en", label: "language.en" }
+            ]
+            MChip {
+                required property var modelData
+                text: dialog.tr(modelData.label)
+                selected: dialog.localeVm.language === modelData.key
+                onClicked: dialog.localeVm.chooseLanguage(modelData.key)
+            }
+        }
+    }
+
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: dialog.theme.outlineVariant
     }
 
     // ---- Apariencia ----
@@ -43,7 +77,7 @@ MDialog {
     // ---- Al iniciar ----
 
     Text {
-        text: "Al iniciar"
+        text: dialog.tr("settings.startup")
         color: dialog.theme.primary
         font.pixelSize: 14
         font.weight: Font.Medium
@@ -51,7 +85,7 @@ MDialog {
 
     Text {
         Layout.fillWidth: true
-        text: "La cola siempre vuelve en pausa."
+        text: dialog.tr("settings.startupNote")
         color: dialog.theme.inkSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
@@ -63,13 +97,13 @@ MDialog {
 
         Repeater {
             model: [
-                { key: "continue", label: "Continuar donde lo dejé" },
-                { key: "fromStart", label: "Cola, pista desde 0:00" },
-                { key: "none", label: "No restaurar nada" }
+                { key: "continue", label: "startup.continue" },
+                { key: "fromStart", label: "startup.fromStart" },
+                { key: "none", label: "startup.none" }
             ]
             MChip {
                 required property var modelData
-                text: modelData.label
+                text: dialog.tr(modelData.label)
                 selected: dialog.vm.startup === modelData.key
                 onClicked: dialog.vm.chooseStartup(modelData.key)
             }
@@ -85,7 +119,7 @@ MDialog {
     // ---- Video ----
 
     Text {
-        text: "Video"
+        text: dialog.tr("settings.video")
         color: dialog.theme.primary
         font.pixelSize: 14
         font.weight: Font.Medium
@@ -94,7 +128,7 @@ MDialog {
     MSwitch {
         id: autoVideo
         Layout.fillWidth: true
-        text: "Video musical en vez de la carátula"
+        text: dialog.tr("settings.videoAuto")
         onToggled: dialog.videoVm.chooseAuto(checked)
 
         // A Binding keeps following the model after the user has toggled the switch.
@@ -131,7 +165,7 @@ MDialog {
     Text {
         Layout.fillWidth: true
         visible: dialog.accountOut
-        text: "Inicia sesión en music.youtube.com con ese navegador y elígelo aquí. La cookie equivale a tu contraseña: se guarda en el llavero (o en un archivo con permisos 600) y solo se envía a YouTube."
+        text: dialog.tr("ytm.help")
         color: dialog.theme.inkSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
@@ -172,7 +206,7 @@ MDialog {
                 selectByMouse: true
                 font.pixelSize: 12
                 color: dialog.theme.inkSurface
-                placeholderText: "Pega aquí la cabecera cookie de music.youtube.com…"
+                placeholderText: dialog.tr("ytm.cookiePlaceholder")
                 placeholderTextColor: dialog.theme.inkSurfaceVariant
                 background: null
             }
@@ -188,7 +222,7 @@ MDialog {
 
         MButton {
             kind: "text"
-            text: dialog.pasteOpen ? "Usar cookie" : "Pegar cookie"
+            text: dialog.pasteOpen ? dialog.tr("action.useCookie") : dialog.tr("action.pasteCookie")
             enabled: !dialog.vm.accountBusy && (!dialog.pasteOpen || pasteArea.text.length > 0)
             onClicked: {
                 if (!dialog.pasteOpen) {
@@ -201,7 +235,7 @@ MDialog {
             }
         }
         MButton {
-            text: "Importar"
+            text: dialog.tr("action.import")
             enabled: !dialog.vm.accountBusy
             onClicked: dialog.vm.importBrowserSession(dialog.browser)
         }
@@ -215,7 +249,7 @@ MDialog {
 
         MButton {
             kind: "outlined"
-            text: "Cerrar sesión"
+            text: dialog.tr("action.signOut")
             onClicked: dialog.vm.signOutAccount()
         }
     }
@@ -267,7 +301,7 @@ MDialog {
         id: sendSwitch
         Layout.fillWidth: true
         visible: dialog.vm.scrobbleState === "signedIn"
-        text: "Enviar scrobbles"
+        text: dialog.tr("lastfm.send")
         onToggled: dialog.vm.enableScrobbling(checked)
 
         // A Binding keeps following the model after the user has toggled the switch.
@@ -287,32 +321,32 @@ MDialog {
         MButton {
             visible: dialog.vm.scrobbleState === "authorizing"
             kind: "text"
-            text: "Cancelar"
+            text: dialog.tr("action.cancel")
             enabled: !dialog.vm.scrobbleBusy
             onClicked: dialog.vm.cancelScrobblerSignIn()
         }
         MButton {
             visible: dialog.vm.scrobbleState === "authorizing"
-            text: "Continuar"
+            text: dialog.tr("action.continue")
             enabled: !dialog.vm.scrobbleBusy
             onClicked: dialog.vm.finishScrobblerSignIn()
         }
         MButton {
             visible: dialog.vm.scrobbleState === "signedOut" || dialog.vm.scrobbleState === "reconnect"
-            text: "Conectar"
+            text: dialog.tr("action.connect")
             enabled: !dialog.vm.scrobbleBusy
             onClicked: dialog.vm.connectScrobbler()
         }
         MButton {
             visible: dialog.vm.scrobbleState === "signedIn" && dialog.vm.scrobblePending > 0
             kind: "tonal"
-            text: "Reintentar"
+            text: dialog.tr("action.retry")
             onClicked: dialog.vm.retryScrobbles()
         }
         MButton {
             visible: dialog.vm.scrobbleState === "signedIn"
             kind: "outlined"
-            text: "Desconectar"
+            text: dialog.tr("action.disconnect")
             onClicked: dialog.vm.disconnectScrobbler()
         }
     }
@@ -322,7 +356,7 @@ MDialog {
         Item { Layout.fillWidth: true }
         MButton {
             kind: "text"
-            text: "Cerrar"
+            text: dialog.tr("action.close")
             onClicked: dialog.close()
         }
     }

@@ -10,8 +10,11 @@ ColumnLayout {
 
     required property var vm
     required property var theme
+    readonly property var i18n: Window.window ? Window.window.i18n : null
 
     readonly property var accents: ["#6750a4", "#386a20", "#00658e", "#8f4c38", "#7d5260", "#6b5f00"]
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     spacing: 12
 
@@ -26,18 +29,18 @@ ColumnLayout {
         spacing: 8
     }
 
-    Heading { text: "Apariencia" }
+    Heading { text: section.tr("appearance.title") }
 
     Choices {
         Repeater {
             model: [
-                { key: "system", label: "Sistema" },
-                { key: "light", label: "Claro" },
-                { key: "dark", label: "Oscuro" }
+                { key: "system", label: "mode.system" },
+                { key: "light", label: "mode.light" },
+                { key: "dark", label: "mode.dark" }
             ]
             MChip {
                 required property var modelData
-                text: modelData.label
+                text: section.tr(modelData.label)
                 selected: section.vm.mode === modelData.key
                 onClicked: section.vm.chooseMode(modelData.key)
             }
@@ -45,7 +48,7 @@ ColumnLayout {
     }
 
     Text {
-        text: "Color"
+        text: section.tr("appearance.color")
         color: section.theme.inkSurfaceVariant
         font.pixelSize: 12
     }
@@ -90,7 +93,7 @@ ColumnLayout {
             id: hexField
             Layout.fillWidth: true
             implicitHeight: 40
-            placeholderText: "Otro color: #rrggbb"
+            placeholderText: section.tr("appearance.otherColor")
             placeholderTextColor: section.theme.inkSurfaceVariant
             color: section.theme.inkSurface
             font.pixelSize: 14
@@ -109,14 +112,14 @@ ColumnLayout {
         }
         MButton {
             kind: "tonal"
-            text: "Aplicar"
+            text: section.tr("action.apply")
             enabled: hexField.text.length >= 6
             onClicked: section.vm.chooseAccent(hexField.text)
         }
     }
 
     Text {
-        text: "Variante"
+        text: section.tr("appearance.variant")
         color: section.theme.inkSurfaceVariant
         font.pixelSize: 12
     }
@@ -124,15 +127,15 @@ ColumnLayout {
     Choices {
         Repeater {
             model: [
-                { key: "tonalSpot", label: "Tonal" },
-                { key: "neutral", label: "Neutral" },
-                { key: "vibrant", label: "Vibrante" },
-                { key: "expressive", label: "Expresiva" },
-                { key: "content", label: "Contenido" }
+                { key: "tonalSpot", label: "variant.tonalSpot" },
+                { key: "neutral", label: "variant.neutral" },
+                { key: "vibrant", label: "variant.vibrant" },
+                { key: "expressive", label: "variant.expressive" },
+                { key: "content", label: "variant.content" }
             ]
             MChip {
                 required property var modelData
-                text: modelData.label
+                text: section.tr(modelData.label)
                 selected: section.vm.variant === modelData.key
                 onClicked: section.vm.chooseVariant(modelData.key)
             }
@@ -140,7 +143,7 @@ ColumnLayout {
     }
 
     Text {
-        text: "Contraste"
+        text: section.tr("appearance.contrast")
         color: section.theme.inkSurfaceVariant
         font.pixelSize: 12
     }
@@ -148,13 +151,13 @@ ColumnLayout {
     Choices {
         Repeater {
             model: [
-                { key: "standard", label: "Estándar" },
-                { key: "medium", label: "Medio" },
-                { key: "high", label: "Alto" }
+                { key: "standard", label: "contrast.standard" },
+                { key: "medium", label: "contrast.medium" },
+                { key: "high", label: "contrast.high" }
             ]
             MChip {
                 required property var modelData
-                text: modelData.label
+                text: section.tr(modelData.label)
                 selected: section.vm.contrast === modelData.key
                 onClicked: section.vm.chooseContrast(modelData.key)
             }

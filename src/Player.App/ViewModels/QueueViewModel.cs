@@ -25,6 +25,13 @@ public class QueueViewModel : INotifyPropertyChanged
 
     public void PlayItem(int position) => AppServices.Playback.PlayQueueItem(position);
 
+    /// <summary>Drag and drop: the entry at <paramref name="source"/> ends up at <paramref name="target"/>.</summary>
+    public void MoveItem(int source, int target) => AppServices.Playback.MoveQueueItem(source, target);
+
+    public void RemoveItem(int position) => AppServices.Playback.RemoveQueueItem(position);
+
+    public void ClearAll() => AppServices.Playback.ClearQueue();
+
     private void Refresh()
     {
         var p = AppServices.Playback;

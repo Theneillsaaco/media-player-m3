@@ -10,6 +10,9 @@ ColumnLayout {
 
     required property var vm
     required property var theme
+    readonly property var i18n: Window.window ? Window.window.i18n : null
+
+    function tr(key) { return i18n ? i18n.t(key) : key }
 
     spacing: 8
 
@@ -33,7 +36,7 @@ ColumnLayout {
 
     Text {
         Layout.fillWidth: true
-        text: "Crea una app en last.fm/api/account/create y pega aquí su clave de API y su secreto compartido. Se guardan en ~/.config/player/lastfm.json, que solo tú puedes leer."
+        text: root.tr("lastfm.keysHelp")
         color: root.theme.inkSurfaceVariant
         font.pixelSize: 12
         wrapMode: Text.Wrap
@@ -41,12 +44,12 @@ ColumnLayout {
 
     Field {
         id: keyField
-        placeholderText: "Clave de API"
+        placeholderText: root.tr("lastfm.apiKey")
     }
 
     Field {
         id: secretField
-        placeholderText: "Secreto compartido"
+        placeholderText: root.tr("lastfm.secret")
         echoMode: TextInput.Password
     }
 
@@ -56,7 +59,7 @@ ColumnLayout {
         Item { Layout.fillWidth: true }
 
         MButton {
-            text: "Guardar"
+            text: root.tr("action.save")
             enabled: keyField.text.trim().length > 0 && secretField.text.trim().length > 0
             onClicked: {
                 root.vm.saveScrobbleKeys(keyField.text, secretField.text)

@@ -19,7 +19,7 @@ internal sealed partial class ScrobbleService
 
         if (apiKey.Length == 0 || secret.Length == 0)
         {
-            lock (_gate) _note = "Escribe la clave de API y el secreto compartido.";
+            lock (_gate) _note = Tr.T("scrobble.enterKeys");
             return false;
         }
 
@@ -31,7 +31,7 @@ internal sealed partial class ScrobbleService
         }
         catch (Exception e)
         {
-            Fail("No se pudo guardar la clave", e);
+            Fail(Tr.T("scrobble.saveKeyFailed"), e);
             return false;
         }
 

@@ -8,6 +8,7 @@ open System.Text.Json
 open System.Threading.Tasks
 open Player.Core.Contracts
 open Player.Core.Domain
+open Player.Core.Localization
 
 type LastFmException(code: int, message: string) =
     inherit Exception(message)
@@ -28,7 +29,7 @@ module private Wire =
         | :? LastFmException as e -> { Outcome = classify e.Code; Message = e.Message }
         | :? HttpRequestException
         | :? TaskCanceledException
-        | :? IOException -> { Outcome = SubmitOutcome.Retry; Message = "sin conexión con Last.fm" }
+        | :? IOException -> { Outcome = SubmitOutcome.Retry; Message = I18n.t "lastfm.offline" }
         | _ -> { Outcome = SubmitOutcome.Retry; Message = ex.Message }
 
     let optional (name: string) (value: string) =
@@ -85,7 +86,8 @@ type LastFmClient(credentials: LastFmCredentials) =
                     None
 
             match parsed with
-            | None -> return raise (LastFmException(11, $"respuesta no válida (HTTP {int response.StatusCode})"))
+            | None ->
+                return raise (LastFmException(11, I18n.tf "lastfm.invalid" [| box (int response.StatusCode) |]))
             | Some doc ->
                 use doc = doc
                 let root = doc.RootElement
@@ -140,7 +142,7 @@ type LastFmClient(credentials: LastFmCredentials) =
 
                     return
                         { Outcome = SubmitOutcome.Accepted
-                          Message = if ignored > 0 then $"{ignored} ignorados por Last.fm" else "" }
+                          Message = if ignored > 0 then I18n.tf "lastfm.ignored" [| box ignored |] else "" }
                 with ex ->
                     return Wire.failure ex
             }

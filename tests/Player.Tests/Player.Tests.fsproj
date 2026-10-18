@@ -21,6 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Include="I18nTests.fs" />
       <Compile Include="LastFmTests.fs" />
       <Compile Include="ListeningTests.fs" />
       <Compile Include="LyricsTests.fs" />

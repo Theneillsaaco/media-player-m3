@@ -7,6 +7,7 @@ TextField {
 
     readonly property var theme: Window.window ? Window.window.theme : null
 
+    property string clearTip: ""
     property color cPrimary: theme ? theme.primary : "#6750A4"
     property color cContainer: theme ? theme.surfaceContainerHigh : "#ECE6F0"
     property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
@@ -39,6 +40,7 @@ TextField {
         x: field.width - width - 8
         anchors.verticalCenter: parent.verticalCenter
         glyph: "close"
+        tip: field.clearTip
         visible: field.text.length > 0
         onClicked: { field.clear(); field.forceActiveFocus() }
     }
