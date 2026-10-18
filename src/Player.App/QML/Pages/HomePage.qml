@@ -22,12 +22,15 @@ Item {
     ListView {
         id: list
         anchors.fill: parent
+        anchors.topMargin: 10
+        anchors.bottomMargin: 10
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        topMargin: 8
-        bottomMargin: 24
+        topMargin: 0
+        bottomMargin: 8
         model: root.shelves
-        ScrollBar.vertical: ScrollBar {}
 
         delegate: Item {
             id: shelf
@@ -106,6 +109,9 @@ Item {
                     supporting: modelData.subtitle
                     artUrl: modelData.art
                     round: modelData.kind === "artist"
+                    showAdd: modelData.kind === "track"
+                    onAddRequested: root.nav.addHomeTrack(shelf.index, modelData.index)
+                    onPlayNextRequested: root.nav.playNextHomeTrack(shelf.index, modelData.index)
                     onActivated: {
                         if (modelData.kind === "track")
                             root.nav.playHomeTrack(shelf.index, modelData.index)

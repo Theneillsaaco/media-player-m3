@@ -50,6 +50,9 @@ ApplicationWindow {
     // Width of the queue and lyrics side panels: they give way on narrow windows.
     readonly property int sideWidth: Math.round(Math.min(380, Math.max(280, width * 0.28)))
 
+    // Under this width the queue and the lyrics go below the picture instead of beside it.
+    readonly property bool compact: width < 1000
+
     // A text field has the keyboard: the single-key shortcuts (space) must not take it.
     readonly property bool typing: activeFocusItem !== null && activeFocusItem.selectByMouse !== undefined
 
@@ -65,6 +68,26 @@ ApplicationWindow {
     NavigationViewModel { id: navVm }
     Theme { id: appTheme; tokensJson: themeVm.tokensJson }
     Tr { id: appTr; json: localeVm.stringsJson }
+
+    Component {
+        id: queueComp
+        QueuePanel {
+            radius: 28
+            color: appTheme.surfaceContainer
+            clip: true
+            vm: queueVm
+        }
+    }
+
+    Component {
+        id: lyricsComp
+        LyricsPanel {
+            radius: 28
+            color: appTheme.surfaceContainer
+            clip: true
+            vm: lyricsVm
+        }
+    }
 
     SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; localeVm: localeVm; theme: appTheme }
 
@@ -250,94 +273,106 @@ ApplicationWindow {
                 }
             }
 
-            // The pages and the player share one rounded card.
-            Rectangle {
-                id: stageCard
+            ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: win.playerMode === "full" ? 0 : 28
-                clip: true
-                color: win.playerMode === "full" ? "#000000" : appTheme.surfaceContainer
+                spacing: 8
 
-                // Pages cross-fade (Material "fade through": the old one out, then the new one in).
-                FadePage {
-                    shown: !win.playerOpen && navVm.page === "search"
-                    SearchPage {
+                // The pages and the player share one rounded card.
+                Rectangle {
+                    id: stageCard
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: win.playerMode === "full" ? 0 : 28
+                    clip: true
+                    color: win.playerMode === "full" ? "#000000" : appTheme.surfaceContainer
+
+                    // Pages cross-fade (Material "fade through": the old one out, then the new one in).
+                    FadePage {
+                        shown: !win.playerOpen && navVm.page === "search"
+                        SearchPage {
+                            anchors.fill: parent
+                            vm: searchVm
+                            onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                        }
+                    }
+
+                    FadePage {
+                        shown: !win.playerOpen && navVm.page === "home"
+                        HomePage {
+                            anchors.fill: parent
+                            nav: navVm
+                            onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                        }
+                    }
+
+                    FadePage {
+                        shown: !win.playerOpen && navVm.page === "library"
+                        LibraryPage {
+                            anchors.fill: parent
+                            vm: libraryVm
+                            onSettingsRequested: settings.open()
+                        }
+                    }
+
+                    FadePage {
+                        shown: !win.playerOpen && (navVm.page === "album" || navVm.page === "collection")
+                        CollectionPage {
+                            anchors.fill: parent
+                            nav: navVm
+                        }
+                    }
+
+                    FadePage {
+                        shown: !win.playerOpen && navVm.page === "artist"
+                        ArtistPage {
+                            anchors.fill: parent
+                            nav: navVm
+                            onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                        }
+                    }
+
+                    PlayerPage {
+                        id: playerPage
                         anchors.fill: parent
-                        vm: searchVm
-                        onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
+                        visible: win.playerOpen
+                        mode: win.playerMode
+                        playback: playback
+                        video: videoVm
+                        theme: appTheme
+                        videoReady: videoLayer.ready
+                        videoUnavailable: videoLayer.failed
+                        onMinimizeRequested: win.playerMode = "mini"
+                        onMaximizeRequested: win.playerMode = "full"
+                        onRestoreRequested: win.playerMode = "page"
                     }
                 }
 
-                FadePage {
-                    shown: !win.playerOpen && navVm.page === "home"
-                    HomePage {
-                        anchors.fill: parent
-                        nav: navVm
-                        onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
-                    }
-                }
-
-                FadePage {
-                    shown: !win.playerOpen && navVm.page === "library"
-                    LibraryPage {
-                        anchors.fill: parent
-                        vm: libraryVm
-                        onSettingsRequested: settings.open()
-                    }
-                }
-
-                FadePage {
-                    shown: !win.playerOpen && (navVm.page === "album" || navVm.page === "collection")
-                    CollectionPage {
-                        anchors.fill: parent
-                        nav: navVm
-                    }
-                }
-
-                FadePage {
-                    shown: !win.playerOpen && navVm.page === "artist"
-                    ArtistPage {
-                        anchors.fill: parent
-                        nav: navVm
-                        onEntityActivated: (kind, entityId) => win.openEntity(kind, entityId)
-                    }
-                }
-
-                PlayerPage {
-                    id: playerPage
-                    anchors.fill: parent
-                    visible: win.playerOpen
-                    mode: win.playerMode
-                    playback: playback
-                    video: videoVm
-                    theme: appTheme
-                    videoReady: videoLayer.ready
-                    videoUnavailable: videoLayer.failed
-                    onMinimizeRequested: win.playerMode = "mini"
-                    onMaximizeRequested: win.playerMode = "full"
-                    onRestoreRequested: win.playerMode = "page"
+                // Narrow window: the queue or the lyrics go under the picture, as YouTube Music does.
+                Loader {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.max(180, Math.round(win.height * 0.38))
+                    active: win.compact && win.playerMode !== "full" && (win.queueOpen || win.lyricsOpen)
+                    visible: active
+                    sourceComponent: win.lyricsOpen ? lyricsComp : queueComp
                 }
             }
 
-            QueuePanel {
+            // Wide window: they stay on the right.
+            Loader {
                 Layout.preferredWidth: win.sideWidth
                 Layout.fillHeight: true
-                visible: win.queueOpen
-                radius: 28
-                color: appTheme.surfaceContainer
-                clip: true
-                vm: queueVm
+                active: !win.compact && win.queueOpen
+                visible: active
+                sourceComponent: queueComp
             }
 
-            LyricsPanel {
+            Loader {
                 Layout.preferredWidth: win.sideWidth + 20
                 Layout.fillHeight: true
-                visible: win.lyricsOpen
-                radius: 28
-                color: appTheme.surfaceContainer
-                clip: true
-                vm: lyricsVm
+                active: !win.compact && win.lyricsOpen
+                visible: active
+                sourceComponent: lyricsComp
             }
         }
 
