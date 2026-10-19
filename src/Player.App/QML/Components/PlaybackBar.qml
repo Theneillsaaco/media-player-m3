@@ -55,6 +55,8 @@ Rectangle {
                 to: Math.max(1, root.playback.duration)
                 value: root.playback.position
                 enabled: root.playback.isLoaded && root.playback.duration > 0
+                expressive: true
+                playing: root.playback.isLoaded && !root.playback.paused
                 onChangedByUser: (v) => root.playback.seek(v)
             }
             Text { text: root.playback.durationText; color: root.theme.inkSurfaceVariant; font.pixelSize: 12 }
@@ -220,6 +222,7 @@ Rectangle {
                         to: 100
                         value: root.playback.volume
                         live: true
+                        expressive: false
                         onChangedByUser: (v) => root.playback.setVolume(Math.round(v))
                     }
                 }
