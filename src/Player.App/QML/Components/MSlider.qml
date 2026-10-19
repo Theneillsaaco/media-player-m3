@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Basic
 
 Slider {
     id: slider
@@ -43,27 +43,33 @@ Slider {
         y: slider.topPadding + (slider.availableHeight - height) / 2
         width: slider.availableWidth
         height: slider.trackHeight
-
-        // Pista activa (Izquierda)
+        
         Item {
             id: activeTrackContainer
             width: slider.expressive
                 ? Math.max(0, slider.thumbCenter - slider.handleWidth / 2 - slider.sliderGap)
                 : Math.max(0, slider.thumbCenter)
             height: parent.height
-
-            // Canvas de la onda suave
+            
+            Rectangle {
+                anchors.fill: parent
+                radius: height / 2
+                topRightRadius: slider.expressive ? 2 : height / 2
+                bottomRightRadius: slider.expressive ? 2 : height / 2
+                color: slider.enabled ? slider.cPrimary : slider.cDisabled
+                visible: waveCanvas.currentAmplitude < 0.1 || activeTrackContainer.width < 12
+            }
+            
             Canvas {
                 id: waveCanvas
                 anchors.centerIn: parent
                 width: parent.width
                 height: slider.waveHeight
-                visible: activeTrackContainer.width >= 8
-                property real phase: 0
+                visible: activeTrackContainer.width >= 12 && currentAmplitude >= 0.01
 
-                // Amplitud animada: al pausar baja suavemente a 0 (línea recta), al reproducir sube a 2.2
-                property real targetAmplitude: slider.playing ? 2.2 : 0.0
+                property real targetAmplitude: slider.playing ? 2.0 : 0.0
                 property real currentAmplitude: 0.0
+                property real phase: 0.0
 
                 Behavior on currentAmplitude {
                     NumberAnimation {
@@ -84,26 +90,23 @@ Slider {
 
                     if (width <= 0) return;
 
-                    var w = width;
+                    var w = Math.floor(width);
                     var h = height;
                     var centerY = h / 2;
-
-                    // ONDA SUAVE: Longitud de onda más amplia (40px) para curvar sutilmente los picos
-                    var wavelength = 40;
+                    var wavelength = 48;
 
                     ctx.beginPath();
                     ctx.strokeStyle = slider.enabled ? slider.cPrimary : slider.cDisabled;
-                    ctx.lineWidth = slider.trackHeight; // 4px
+                    ctx.lineWidth = slider.trackHeight;
                     ctx.lineCap = "round";
                     ctx.lineJoin = "round";
 
-                    var startX = slider.trackHeight / 2;
-                    var endX = Math.max(startX, w - (slider.expressive ? 2 : slider.trackHeight / 2));
+                    var startX = Math.floor(slider.trackHeight / 2);
+                    var endX = Math.floor(Math.max(startX, w - (slider.expressive ? 2 : slider.trackHeight / 2)));
 
                     ctx.moveTo(startX, centerY + Math.sin((startX / wavelength) * Math.PI * 2 + phase) * currentAmplitude);
 
-                    // Interpolación de alta precisión (paso de 1px) para cero asperezas
-                    for (var x = startX + 1; x <= endX; x += 1) {
+                    for (var x = startX + 1; x <= endX; x++) {
                         var y = centerY + Math.sin((x / wavelength) * Math.PI * 2 + phase) * currentAmplitude;
                         ctx.lineTo(x, y);
                     }
@@ -112,21 +115,19 @@ Slider {
                 }
 
                 Timer {
-                    // Mantiene la animación activa mientras se mueva la onda o mientras esté transicionando la amplitud
-                    running: (slider.playing || waveCanvas.currentAmplitude > 0.01) && slider.visible
+                    running: (slider.playing || waveCanvas.currentAmplitude > 0.01) && slider.visible && slider.windowIsVisible
                     repeat: true
                     interval: 16
                     onTriggered: {
                         if (slider.playing) {
-                            waveCanvas.phase += 0.05; // Desplazamiento más lento y elegante
+                            waveCanvas.phase += 0.05;
                         }
                         waveCanvas.requestPaint();
                     }
                 }
             }
         }
-
-        // Pista inactiva (Derecha)
+        
         Rectangle {
             objectName: "sliderInactiveTrack"
             x: slider.expressive
@@ -139,8 +140,7 @@ Slider {
             bottomLeftRadius: slider.expressive ? 2 : height / 2
             color: slider.enabled ? slider.cSecondaryContainer : slider.cDisabled
         }
-
-        // Indicador Stop
+        
         Rectangle {
             objectName: "sliderStop"
             x: slider.trackEnd
