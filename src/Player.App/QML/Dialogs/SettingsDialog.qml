@@ -135,7 +135,7 @@ MDialog {
         Binding {
             target: autoVideo
             property: "checked"
-            value: dialog.videoVm.auto
+            value: dialog.videoVm.autoShow
         }
     }
 

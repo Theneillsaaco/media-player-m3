@@ -19,7 +19,7 @@ public class LocaleViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>"es" or "en".</summary>
-    public string Language { get; private set => Set(ref field, value); } = "es";
+    public string Language { get; private set => Set(ref field, value); } = "en";
 
     /// <summary>A JSON object with every text of the current language.</summary>
     public string StringsJson { get; private set => Set(ref field, value); } = "{}";

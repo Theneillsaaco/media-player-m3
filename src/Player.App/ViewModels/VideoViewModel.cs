@@ -22,7 +22,7 @@ public class VideoViewModel : INotifyPropertyChanged
     public VideoViewModel()
     {
         AppServices.EnsureStarted();
-        Auto = AppServices.Video.Auto;
+        Sync();
         AppServices.Playback.Changed += Poll;
     }
 
@@ -39,7 +39,7 @@ public class VideoViewModel : INotifyPropertyChanged
     /// <summary>A short note for the panel (loading, or what went wrong), "" when there is nothing to say.</summary>
     public string Message { get; private set => Set(ref field, value); } = "";
     /// <summary>The setting: official music videos replace the cover by themselves.</summary>
-    public bool Auto { get; private set => Set(ref field, value); } = true;
+    public bool AutoShow { get; private set => Set(ref field, value); } = true;
 
     /// <summary>The MV button: video instead of cover, or back, for this track.</summary>
     public void ToggleVideo()
@@ -54,7 +54,8 @@ public class VideoViewModel : INotifyPropertyChanged
     public void ChooseAuto(bool on)
     {
         AppServices.Video.SaveAuto(on);
-        Auto = on;
+        AutoShow = on;
+        _choice = VideoChoice.Unset;
         Poll();
     }
 
@@ -73,6 +74,12 @@ public class VideoViewModel : INotifyPropertyChanged
         Poll();
     }
 
+    private void Sync()
+    {
+        AutoShow = AppServices.Video.Auto;
+        Poll();
+    }
+    
     /// <summary>Follows the current track, decides what to show and keeps the sound on the right recording.</summary>
     public void Poll()
     {
@@ -89,7 +96,7 @@ public class VideoViewModel : INotifyPropertyChanged
         var snapshot = AppServices.Video.Snapshot;
         _plan = snapshot.Plan;
 
-        var showing = Video.showing(_plan, Auto, _choice);
+        var showing = Video.showing(_plan, AutoShow, _choice);
         var wantStream = showing;
         if (wantStream)
             AppServices.Video.EnsureStream();
