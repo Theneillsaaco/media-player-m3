@@ -45,91 +45,96 @@ Slider {
         y: slider.topPadding + (slider.availableHeight - height) / 2
         width: slider.availableWidth
         height: slider.trackHeight
-        
+
         Item {
             id: activeTrackContainer
             width: slider.expressive
                 ? Math.max(0, slider.thumbCenter - slider.handleWidth / 2 - slider.sliderGap)
                 : Math.max(0, slider.thumbCenter)
             height: parent.height
-            
+
             Rectangle {
                 anchors.fill: parent
                 radius: height / 2
                 topRightRadius: slider.expressive ? 2 : height / 2
                 bottomRightRadius: slider.expressive ? 2 : height / 2
                 color: slider.enabled ? slider.cPrimary : slider.cDisabled
-                visible: waveCanvas.currentAmplitude < 0.1 || activeTrackContainer.width < 12
+                visible: waveCanvas.currentAmplitude < 0.01 || activeTrackContainer.width < 12
             }
-            
-            Canvas {
-                id: waveCanvas
+
+            Item {
+                id: waveContainer
                 anchors.centerIn: parent
                 width: parent.width
                 height: slider.waveHeight
-                visible: activeTrackContainer.width >= 12 && currentAmplitude >= 0.01
+                visible: activeTrackContainer.width >= 12 && waveCanvas.currentAmplitude >= 0.01
 
-                property real targetAmplitude: slider.playing ? 2.0 : 0.0
-                property real currentAmplitude: 0.0
                 property real phase: 0.0
 
-                Behavior on currentAmplitude {
-                    NumberAnimation {
-                        duration: 150
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: [0.2, 0.0, 0.0, 1.0]
-                    }
+                onPhaseChanged: waveCanvas.requestPaint()
+
+                NumberAnimation {
+                    target: waveContainer
+                    property: "phase"
+                    from: 0
+                    to: Math.PI * 2
+                    duration: 1500
+                    loops: Animation.Infinite
+                    running: slider.playing && slider.visible && slider.windowIsVisible && waveCanvas.currentAmplitude >= 0.01
                 }
 
-                onTargetAmplitudeChanged: currentAmplitude = targetAmplitude
+                Canvas {
+                    id: waveCanvas
+                    anchors.fill: parent
 
-                renderTarget: Canvas.Image
-                smooth: true
+                    renderTarget: Canvas.FramebufferObject
+                    renderStrategy: Canvas.Cooperative
 
-                onPaint: {
-                    var ctx = getContext("2d");
-                    ctx.clearRect(0, 0, width, height);
+                    property real currentAmplitude: slider.playing ? 2.0 : 0.0
 
-                    if (width <= 0) return;
-
-                    var w = Math.floor(width);
-                    var h = height;
-                    var centerY = h / 2;
-                    var wavelength = 48;
-
-                    ctx.beginPath();
-                    ctx.strokeStyle = slider.enabled ? slider.cPrimary : slider.cDisabled;
-                    ctx.lineWidth = slider.trackHeight;
-                    ctx.lineCap = "round";
-                    ctx.lineJoin = "round";
-
-                    var startX = Math.floor(slider.trackHeight / 2);
-                    var endX = Math.floor(Math.max(startX, w - (slider.expressive ? 2 : slider.trackHeight / 2)));
-
-                    ctx.moveTo(startX, centerY + Math.sin((startX / wavelength) * Math.PI * 2 + phase) * currentAmplitude);
-
-                    for (var x = startX + 1; x <= endX; x++) {
-                        var y = centerY + Math.sin((x / wavelength) * Math.PI * 2 + phase) * currentAmplitude;
-                        ctx.lineTo(x, y);
-                    }
-
-                    ctx.stroke();
-                }
-
-                Timer {
-                    running: (slider.playing || waveCanvas.currentAmplitude > 0.01) && slider.visible && slider.windowIsVisible
-                    repeat: true
-                    interval: 16
-                    onTriggered: {
-                        if (slider.playing) {
-                            waveCanvas.phase += 0.05;
+                    Behavior on currentAmplitude {
+                        NumberAnimation {
+                            duration: 150
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: [0.2, 0.0, 0.0, 1.0]
                         }
-                        waveCanvas.requestPaint();
+                    }
+
+                    onCurrentAmplitudeChanged: requestPaint()
+
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.clearRect(0, 0, width, height);
+
+                        if (width <= 0) return;
+
+                        var w = Math.floor(width);
+                        var h = height;
+                        var centerY = h / 2;
+                        var wavelength = 48;
+
+                        ctx.beginPath();
+                        ctx.strokeStyle = slider.enabled ? slider.cPrimary : slider.cDisabled;
+                        ctx.lineWidth = slider.trackHeight;
+                        ctx.lineCap = "round";
+                        ctx.lineJoin = "round";
+
+                        var startX = Math.floor(slider.trackHeight / 2);
+                        var endX = Math.floor(Math.max(startX, w - (slider.expressive ? 2 : slider.trackHeight / 2)));
+
+                        ctx.moveTo(startX, centerY + Math.sin((startX / wavelength) * Math.PI * 2 + waveContainer.phase) * currentAmplitude);
+
+                        for (var x = startX + 1; x <= endX; x++) {
+                            var y = centerY + Math.sin((x / wavelength) * Math.PI * 2 + waveContainer.phase) * currentAmplitude;
+                            ctx.lineTo(x, y);
+                        }
+
+                        ctx.stroke();
                     }
                 }
             }
         }
-        
+
         Rectangle {
             objectName: "sliderInactiveTrack"
             x: slider.expressive
