@@ -23,6 +23,8 @@ Slider {
     readonly property real handlePressedWidth: 2
     readonly property real sliderGap: slider.expressive ? 6 : 0
     readonly property real stopSize: 4
+    readonly property bool windowIsVisible: Window.window !== null && Window.window.visible
+        && Window.window.visibility !== Window.Minimized
 
     implicitHeight: 24
     implicitWidth: 120
