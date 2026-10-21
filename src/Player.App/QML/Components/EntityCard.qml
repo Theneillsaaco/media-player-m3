@@ -13,6 +13,14 @@ Item {
     property string artUrl: ""
     property bool round: false
     property bool showAdd: false
+    property string videoId: ""
+    readonly property bool hasMenu: showAdd || canLike
+    // A real YouTube id and a signed-in account (Main.qml decides). `liked` is read when the menu opens.
+    readonly property bool canLike: {
+        const w = card.Window.window
+        return videoId !== "" && w && w.canLikeId ? w.canLikeId(videoId) : false
+    }
+    property bool liked: false
     property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
     property color cOnSurfaceVariant: theme ? theme.inkSurfaceVariant : "#49454F"
 
@@ -78,7 +86,7 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onClicked: (mouse) => {
-            if (mouse.button === Qt.RightButton && card.showAdd)
+            if (mouse.button === Qt.RightButton && card.hasMenu)
                 menu.popup()
             else if (mouse.button === Qt.LeftButton)
                 card.activated()
@@ -87,7 +95,7 @@ Item {
 
     MIconButton {
         id: more
-        visible: card.showAdd && (area.containsMouse || hovered)
+        visible: card.hasMenu && (area.containsMouse || hovered)
         anchors.top: art.top
         anchors.right: art.right
         anchors.margins: 4
@@ -99,6 +107,7 @@ Item {
 
     MMenu {
         id: menu
+        onAboutToShow: card.liked = card.Window.window && card.Window.window.isLiked ? card.Window.window.isLiked(card.videoId) : false
 
         MMenuItem {
             glyph: "playlist_add"
@@ -109,6 +118,16 @@ Item {
             glyph: "add"
             text: card.tr("menu.addToQueue")
             onTriggered: { card.addRequested(); card.toast("queue.added") }
+        }
+        MMenuItem {
+            visible: card.canLike
+            glyph: card.liked ? "favorite" : "favorite_border"
+            text: card.liked ? card.tr("menu.unlike") : card.tr("menu.like")
+            onTriggered: {
+                card.toast(card.liked ? "like.removed" : "like.added")
+                const w = card.Window.window
+                if (w) w.toggleLikeOf(card.videoId)
+            }
         }
     }
 }

@@ -8,6 +8,8 @@ import QtQuick
 // The "on" roles of Material (onSurface, onPrimary...) are called inkSurface, inkPrimary... here. Qt 6.12 reads a
 // property named on<Uppercase> as a signal handler: its value was always black, which made every text and icon
 // black (it only looked right on light surfaces). The keys of the JSON keep Material's names.
+//
+// Motion and type tokens are at the end. Do not name a token on<Uppercase> either.
 QtObject {
     property string tokensJson: ""
     readonly property var tokens: parse(tokensJson)
@@ -69,4 +71,37 @@ QtObject {
     readonly property color secondaryFixedDim: role("secondaryFixedDim", "#cbc2db")
     readonly property color tertiaryFixed: role("tertiaryFixed", "#ffd9e3")
     readonly property color tertiaryFixedDim: role("tertiaryFixedDim", "#efb8c8")
+
+    // ---- motion (Material 3 duration and easing tokens) ----
+    // Use them as: duration: theme.durationMedium1
+    //              easing.type: Easing.BezierSpline; easing.bezierCurve: theme.easingStandard
+    // Qt wants the curve in groups of six numbers (two control points and the end point 1,1).
+    readonly property int durationShort1: 50
+    readonly property int durationShort2: 100
+    readonly property int durationShort3: 150
+    readonly property int durationShort4: 200
+    readonly property int durationMedium1: 250
+    readonly property int durationMedium2: 300
+    readonly property int durationMedium3: 350
+    readonly property int durationMedium4: 400
+    readonly property int durationLong1: 450
+    readonly property int durationLong2: 500
+
+    readonly property var easingStandard: [0.2, 0.0, 0.0, 1.0, 1.0, 1.0]
+    readonly property var easingStandardDecelerate: [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+    readonly property var easingStandardAccelerate: [0.3, 0.0, 1.0, 1.0, 1.0, 1.0]
+    readonly property var easingEmphasizedDecelerate: [0.05, 0.7, 0.1, 1.0, 1.0, 1.0]
+    readonly property var easingEmphasizedAccelerate: [0.3, 0.0, 0.8, 0.15, 1.0, 1.0]
+
+    // ---- type scale (Material 3 sizes, in pixels) ----
+    readonly property int typeHeadlineSmall: 24
+    readonly property int typeTitleLarge: 22
+    readonly property int typeTitleMedium: 16
+    readonly property int typeTitleSmall: 14
+    readonly property int typeBodyLarge: 16
+    readonly property int typeBodyMedium: 14
+    readonly property int typeBodySmall: 12
+    readonly property int typeLabelLarge: 14
+    readonly property int typeLabelMedium: 12
+    readonly property int typeLabelSmall: 11
 }

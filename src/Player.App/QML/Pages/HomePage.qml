@@ -110,6 +110,7 @@ Item {
                     artUrl: modelData.art
                     round: modelData.kind === "artist"
                     showAdd: modelData.kind === "track"
+                    videoId: modelData.kind === "track" ? modelData.id : ""
                     onAddRequested: root.nav.addHomeTrack(shelf.index, modelData.index)
                     onPlayNextRequested: root.nav.playNextHomeTrack(shelf.index, modelData.index)
                     onActivated: {

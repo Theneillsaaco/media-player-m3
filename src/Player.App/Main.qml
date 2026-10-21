@@ -39,6 +39,16 @@ ApplicationWindow {
     // A short note in the snackbar.
     function toast(text) { navVm.notify(text) }
 
+    // Likes from the lists (the ⋮ menu and the right click of a song). The ids come as a JSON array.
+    readonly property var likedIds: {
+        const map = ({})
+        try { for (const id of JSON.parse(libraryVm.likedJson)) map[id] = true } catch (e) { }
+        return map
+    }
+    function isLiked(id) { return likedIds[id] === true }
+    function canLikeId(id) { return libraryVm.accountState === "signedIn" && id !== "" && !/^(https?:\/\/|\/)/i.test(id) }
+    function toggleLikeOf(id) { libraryVm.toggleLikeOf(id) }
+
     property bool queueOpen: true
     property bool lyricsOpen: false
 
@@ -68,6 +78,14 @@ ApplicationWindow {
     NavigationViewModel { id: navVm }
     Theme { id: appTheme; tokensJson: themeVm.tokensJson }
     Tr { id: appTr; json: localeVm.stringsJson }
+
+    // The colors follow the cover that plays while the option is on (Settings > Appearance).
+    CoverColor {
+        id: coverColor
+        source: playback.currentArt
+        active: themeVm.dynamic
+        onFound: (hex) => themeVm.useCoverColor(hex)
+    }
 
     Component {
         id: queueComp
@@ -418,7 +436,7 @@ ApplicationWindow {
         id: snack
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 124
+        anchors.bottomMargin: navVm.message.length > 0 ? 124 : 108
         z: 100
         width: Math.min(snackText.implicitWidth + 40, parent.width - 48)
         height: 48
@@ -426,7 +444,8 @@ ApplicationWindow {
         color: appTheme.inverseSurface
         opacity: navVm.message.length > 0 ? 1 : 0
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity { NumberAnimation { duration: appTheme.durationShort3; easing.type: Easing.BezierSpline; easing.bezierCurve: appTheme.easingStandard } }
+        Behavior on anchors.bottomMargin { NumberAnimation { duration: appTheme.durationMedium1; easing.type: Easing.BezierSpline; easing.bezierCurve: appTheme.easingEmphasizedDecelerate } }
 
         Text {
             id: snackText

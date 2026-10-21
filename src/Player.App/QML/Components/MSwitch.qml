@@ -71,7 +71,13 @@ Switch {
             x: control.checked ? 52 - 4 - 12 - size / 2 : 16 - size / 2 + (control.down ? 0 : 0)
             color: control.checked ? control.cOnPrimary : control.cOutline
 
-            Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+            Behavior on x {
+                NumberAnimation {
+                    duration: control.theme ? control.theme.durationShort3 : 150
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: control.theme ? control.theme.easingEmphasizedDecelerate : [0.05, 0.7, 0.1, 1.0, 1.0, 1.0]
+                }
+            }
             Behavior on width { NumberAnimation { duration: 100 } }
             Behavior on height { NumberAnimation { duration: 100 } }
         }

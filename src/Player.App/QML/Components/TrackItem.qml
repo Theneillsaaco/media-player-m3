@@ -30,7 +30,13 @@ Item {
     property color cOnSecondaryContainer: theme ? theme.inkSecondaryContainer : "#1D192B"
 
     readonly property bool linkable: videoId !== "" && supporting !== ""
-    readonly property bool hasMenu: showAdd || showRemove
+    readonly property bool hasMenu: showAdd || showRemove || canLike
+    // A real YouTube id and a signed-in account (Main.qml decides). `liked` is read when the menu opens.
+    readonly property bool canLike: {
+        const w = row.Window.window
+        return videoId !== "" && w && w.canLikeId ? w.canLikeId(videoId) : false
+    }
+    property bool liked: false
 
     signal activated()
     signal addRequested()
@@ -191,6 +197,7 @@ Item {
 
     MMenu {
         id: menu
+        onAboutToShow: row.liked = row.Window.window && row.Window.window.isLiked ? row.Window.window.isLiked(row.videoId) : false
 
         MMenuItem {
             visible: row.showAdd
@@ -204,6 +211,17 @@ Item {
             text: row.tr("menu.addToQueue")
             onTriggered: { row.addRequested(); row.toast("queue.added") }
         }
+        MMenuItem {
+            visible: row.canLike
+            glyph: row.liked ? "favorite" : "favorite_border"
+            text: row.liked ? row.tr("menu.unlike") : row.tr("menu.like")
+            onTriggered: {
+                row.toast(row.liked ? "like.removed" : "like.added")
+                const w = row.Window.window
+                if (w) w.toggleLikeOf(row.videoId)
+            }
+        }
+
         MMenuItem {
             visible: row.showRemove
             glyph: "delete"

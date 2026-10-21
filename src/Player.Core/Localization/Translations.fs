@@ -65,6 +65,10 @@ module Translations =
         "menu.playNext", "Reproducir a continuación", "Play next"
         "menu.addToQueue", "Añadir a la cola", "Add to queue"
         "menu.removeFromQueue", "Quitar de la cola", "Remove from queue"
+        "menu.like", "Me gusta", "Like"
+        "menu.unlike", "Quitar de Me gusta", "Remove from Liked"
+        "like.added", "Añadida a Me gusta", "Added to Liked"
+        "like.removed", "Quitada de Me gusta", "Removed from Liked"
 
         // tooltips
         "tip.back", "Atrás", "Back"
@@ -155,6 +159,7 @@ module Translations =
         "appearance.otherColor", "Otro color: #rrggbb", "Other color: #rrggbb"
         "appearance.variant", "Variante", "Variant"
         "appearance.contrast", "Contraste", "Contrast"
+        "appearance.dynamic", "Color según la carátula", "Color from the cover"
         "mode.system", "Sistema", "System"
         "mode.light", "Claro", "Light"
         "mode.dark", "Oscuro", "Dark"

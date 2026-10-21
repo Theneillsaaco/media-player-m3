@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Player.App.Models;
 using Player.App.Services;
 using Player.Core;
@@ -10,7 +11,8 @@ namespace Player.App.ViewModels;
 
 /// <summary>
 /// The user's YouTube Music library: playlists, the open playlist's tracks, and the heart (likes) of the
-/// playing track. Background work leaves results in a queue that <see cref="Poll"/> applies on the Qt thread.
+/// playing track or of any song of a list. Background work leaves results in a queue that <see cref="Poll"/>
+/// applies on the Qt thread.
 /// </summary>
 public class LibraryViewModel : INotifyPropertyChanged
 {
@@ -26,6 +28,7 @@ public class LibraryViewModel : INotifyPropertyChanged
     {
         AppServices.EnsureStarted();
         _likedIds = [.. (SafeCache(() => AppServices.Db?.LoadTracks(LikedList)) ?? []).Select(t => t.Id)];
+        PublishLiked();
         AppServices.Playback.Changed += UpdateLikeState;
         AppServices.AccountChanged += SyncAccount;
         AppServices.LanguageChanged += RefreshLibrary;
@@ -47,6 +50,9 @@ public class LibraryViewModel : INotifyPropertyChanged
     public int ListCount { get; private set => Set(ref field, value); }
     public bool CanLike { get; private set => Set(ref field, value); }
     public bool Liked { get; private set => Set(ref field, value); }
+
+    /// <summary>A JSON array with the id of every liked song. The ⋮ menus of the lists read it to show their heart.</summary>
+    public string LikedJson { get; private set => Set(ref field, value); } = "[]";
 
     // The library page shows these when no account is connected. State is one of: unavailable, signedOut, signedIn, expired.
     public string AccountState { get; private set => Set(ref field, value); } = "unavailable";
@@ -134,8 +140,19 @@ public class LibraryViewModel : INotifyPropertyChanged
     /// <summary>Likes or unlikes the playing track on YouTube Music.</summary>
     public void ToggleLike()
     {
-        if (AppServices.Account is not { } account || !CanLike) return;
-        var id = AppServices.Playback.CurrentId;
+        if (CanLike)
+            ToggleLikeOf(AppServices.Playback.CurrentId);
+    }
+
+    /// <summary>
+    /// Likes or unlikes any song by its YouTube id (the ⋮ menu and the right click of the lists). Nothing happens
+    /// without a signed-in account or for a link or a file.
+    /// </summary>
+    public void ToggleLikeOf(string id)
+    {
+        if (AppServices.Account is not { } account || AccountState != "signedIn" || id.Length == 0 || TrackSource.IsDirect(id))
+            return;
+
         var like = !_likedIds.Contains(id);
         SetLiked(id, like);
 
@@ -151,6 +168,7 @@ public class LibraryViewModel : INotifyPropertyChanged
     private void SetLiked(string id, bool liked)
     {
         if (liked) _likedIds.Add(id); else _likedIds.Remove(id);
+        PublishLiked();
         UpdateLikeState();
     }
 
@@ -171,8 +189,11 @@ public class LibraryViewModel : INotifyPropertyChanged
     private void ReplaceLiked(IReadOnlyList<Track> tracks)
     {
         _likedIds = [.. tracks.Select(t => t.Id)];
+        PublishLiked();
         UpdateLikeState();
     }
+
+    private void PublishLiked() => LikedJson = JsonSerializer.Serialize(_likedIds);
 
     private void UpdateLikeState()
     {
@@ -215,6 +236,7 @@ public class LibraryViewModel : INotifyPropertyChanged
             _libraryLoaded = false;
             _playlists = [];
             _likedIds = [];
+            PublishLiked();
             Library.Replace([]);
             CloseList();
             LibraryStatus = "";

@@ -28,6 +28,8 @@ public class ThemeViewModel : INotifyPropertyChanged
     public string Contrast { get; private set => Set(ref field, value); } = "standard";
     /// <summary>The mode after resolving "system".</summary>
     public bool IsDark { get; private set => Set(ref field, value); }
+    /// <summary>The colors follow the cover that plays instead of the accent.</summary>
+    public bool Dynamic { get; private set => Set(ref field, value); }
     /// <summary>A JSON object with every Material color role as "#rrggbb".</summary>
     public string TokensJson { get; private set => Set(ref field, value); } = "{}";
 
@@ -35,6 +37,14 @@ public class ThemeViewModel : INotifyPropertyChanged
     public void ChooseAccent(string hex) { AppServices.Theme.ChooseAccent(hex); Sync(); }
     public void ChooseVariant(string variant) { AppServices.Theme.ChooseVariant(variant); Sync(); }
     public void ChooseContrast(string contrast) { AppServices.Theme.ChooseContrast(contrast); Sync(); }
+    public void ChooseDynamic(bool on) { AppServices.Theme.ChooseDynamic(on); Sync(); }
+
+    /// <summary>The dominant color of the cover that plays ("" for none). QML calls it when the cover changes.</summary>
+    public void UseCoverColor(string hex)
+    {
+        if (AppServices.Theme.UseCoverColor(hex))
+            Sync();
+    }
 
     /// <summary>Follows the desktop's light/dark setting. QML calls it from a Timer while the mode is "system".</summary>
     public void Poll()
@@ -51,6 +61,7 @@ public class ThemeViewModel : INotifyPropertyChanged
         Variant = s.Variant;
         Contrast = s.Contrast;
         IsDark = s.IsDark;
+        Dynamic = s.Dynamic;
         TokensJson = s.Tokens;
     }
 

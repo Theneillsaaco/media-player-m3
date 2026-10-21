@@ -47,6 +47,20 @@ ColumnLayout {
         }
     }
 
+    MSwitch {
+        id: dynamicSwitch
+        Layout.fillWidth: true
+        text: section.tr("appearance.dynamic")
+        onToggled: section.vm.chooseDynamic(checked)
+
+        // A Binding keeps following the model after the user has toggled the switch.
+        Binding {
+            target: dynamicSwitch
+            property: "checked"
+            value: section.vm.dynamic
+        }
+    }
+
     Text {
         text: section.tr("appearance.color")
         color: section.theme.inkSurfaceVariant

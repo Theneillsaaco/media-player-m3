@@ -30,8 +30,20 @@ Popup {
 
     Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.32) }
 
-    enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 150 } }
-    exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 100 } }
+    readonly property int cMotionIn: theme ? theme.durationMedium1 : 250
+    readonly property int cMotionOut: theme ? theme.durationShort3 : 150
+    readonly property var cEaseIn: theme ? theme.easingEmphasizedDecelerate : [0.05, 0.7, 0.1, 1.0, 1.0, 1.0]
+    readonly property var cEaseOut: theme ? theme.easingEmphasizedAccelerate : [0.3, 0.0, 0.8, 0.15, 1.0, 1.0]
+
+    enter: Transition {
+        ParallelAnimation {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: dialog.cMotionIn; easing.type: Easing.BezierSpline; easing.bezierCurve: dialog.cEaseIn }
+            NumberAnimation { property: "scale"; from: 0.92; to: 1; duration: dialog.cMotionIn; easing.type: Easing.BezierSpline; easing.bezierCurve: dialog.cEaseIn }
+        }
+    }
+    exit: Transition {
+        NumberAnimation { property: "opacity"; from: 1; to: 0; duration: dialog.cMotionOut; easing.type: Easing.BezierSpline; easing.bezierCurve: dialog.cEaseOut }
+    }
 
     background: Rectangle {
         color: dialog.cSurface
