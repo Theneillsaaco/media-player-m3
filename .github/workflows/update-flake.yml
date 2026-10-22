@@ -28,7 +28,7 @@ jobs:
       - name: Update flake.lock
         uses: DeterminateSystems/update-flake-lock@main
         with:
-          pr-title: "chore(nix): actualización semanal de flake.lock"
+          pr-title: "chore(nix): weekly update of flake.lock"
           pr-labels: |
             dependencies
             automated
