@@ -62,8 +62,14 @@ Item {
             onActivated: root.vm.openPlaylist(index)
         }
     }
+    LoadingIndicator {
+        anchors.centerIn: parent
+        anchors.verticalCenterOffset: -44
+        visible: root.signedIn && !root.inList && listsView.count === 0 && root.vm.working
+    }
     Text {
         anchors.centerIn: parent
+        anchors.verticalCenterOffset: root.vm.working ? 44 : 0
         width: parent.width - 48
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.Wrap
@@ -141,8 +147,14 @@ Item {
                 onAddRequested: root.vm.addListItem(index)
                 onPlayNextRequested: root.vm.playNextListItem(index)
             }
+            LoadingIndicator {
+                anchors.centerIn: parent
+                anchors.verticalCenterOffset: -44
+                visible: tracksView.count === 0 && root.vm.working
+            }
             Text {
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: root.vm.working ? 44 : 0
                 width: parent.width - 48
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap

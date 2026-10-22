@@ -93,6 +93,13 @@ Rectangle {
                         }
                         // The minimized video is drawn here (Main.qml parents the video layer to this item).
                         Item { id: slot; anchors.fill: parent }
+                        // Waiting for the minimized video.
+                        CircularProgress {
+                            anchors.centerIn: parent
+                            size: 24
+                            visible: root.videoInSlot && root.video.loading
+                            z: 5
+                        }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.coverClicked() }
                     }
 

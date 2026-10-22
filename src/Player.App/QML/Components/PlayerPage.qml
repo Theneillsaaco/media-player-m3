@@ -97,6 +97,14 @@ Rectangle {
 
             // The video layer is parented here by Main.qml, on top of the cover.
 
+            // Waiting for the video stream.
+            CircularProgress {
+                anchors.centerIn: parent
+                size: 48
+                visible: root.video.loading
+                z: 5
+            }
+
             MouseArea {
                 anchors.fill: parent
                 z: 10

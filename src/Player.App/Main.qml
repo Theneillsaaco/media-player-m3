@@ -80,6 +80,35 @@ ApplicationWindow {
     Theme { id: appTheme; tokensJson: themeVm.tokensJson }
     Tr { id: appTr; json: localeVm.stringsJson }
 
+    // The queue and lyrics panels are built once and only moved and faded. Creating and destroying them on every
+    // click is what made the player crash after many quick clicks. compactHost, wideQueueHost and wideLyricsHost
+    // are the places they live in (below the picture on a narrow window, on the right on a wide one).
+    QueuePanel {
+        id: queuePanel
+        parent: win.compact ? compactHost : wideQueueHost
+        anchors.fill: parent
+        radius: 28
+        color: appTheme.surfaceContainer
+        clip: true
+        vm: queueVm
+        opacity: win.queueOpen ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { Anim { type: Anim.FastEffects } }
+    }
+
+    LyricsPanel {
+        id: lyricsPanel
+        parent: win.compact ? compactHost : wideLyricsHost
+        anchors.fill: parent
+        radius: 28
+        color: appTheme.surfaceContainer
+        clip: true
+        vm: lyricsVm
+        opacity: win.lyricsOpen ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { Anim { type: Anim.FastEffects } }
+    }
+
     // The colors follow the cover that plays while the option is on (Settings > Appearance).
     CoverColor {
         id: coverColor
@@ -407,30 +436,27 @@ ApplicationWindow {
                 }
 
                 // Narrow window: the queue or the lyrics go under the picture, as YouTube Music does.
-                FadeLoader {
+                Item {
+                    id: compactHost
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.max(180, Math.round(win.height * 0.38))
-                    active: win.compact && win.playerMode !== "full" && (win.queueOpen || win.lyricsOpen)
-                    visible: active
-                    sourceComp: win.lyricsOpen ? lyricsComp : queueComp
+                    visible: win.compact && win.playerMode !== "full" && (win.queueOpen || win.lyricsOpen)
                 }
             }
 
             // Wide window: they stay on the right.
-            Loader {
+            Item {
+                id: wideQueueHost
                 Layout.preferredWidth: win.sideWidth
                 Layout.fillHeight: true
-                active: !win.compact && win.queueOpen
-                visible: active
-                sourceComponent: queueComp
+                visible: !win.compact && win.queueOpen
             }
 
-            Loader {
+            Item {
+                id: wideLyricsHost
                 Layout.preferredWidth: win.sideWidth + 20
                 Layout.fillHeight: true
-                active: !win.compact && win.lyricsOpen
-                visible: active
-                sourceComponent: lyricsComp
+                visible: !win.compact && win.lyricsOpen
             }
         }
 

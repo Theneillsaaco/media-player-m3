@@ -91,8 +91,15 @@ Item {
                 }
             }
 
+            LoadingIndicator {
+                anchors.centerIn: parent
+                anchors.verticalCenterOffset: -44
+                visible: root.vm.searching && (root.vm.entityMode ? entitiesView.count : tracksView.count) === 0
+            }
+
             Text {
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: root.vm.searching ? 44 : 0
                 width: parent.width - 48
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
