@@ -6,9 +6,11 @@ public class TrackListModel : ListModel<TrackRow>
 {
     private List<TrackRow> _rows = new();
 
+    private static readonly TrackRow Empty = new();
+
     public override int ItemCount() => _rows.Count;
 
-    public override TrackRow Data(int index) => index >= 0 && index < _rows.Count ? _rows[index] : null!;
+    public override TrackRow Data(int index) => index >= 0 && index < _rows.Count ? _rows[index] : Empty;
 
     [Qt.Ignore]
     public void Replace(IEnumerable<TrackRow> rows)

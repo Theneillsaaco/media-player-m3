@@ -129,6 +129,11 @@ Rectangle {
                 visible: !root.hasLines
                 spacing: 16
 
+                LoadingIndicator {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: root.vm.loading
+                }
+
                 Text {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter

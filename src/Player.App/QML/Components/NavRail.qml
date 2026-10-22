@@ -26,7 +26,8 @@ Item {
     readonly property var destinations: [
         { key: "home", glyph: "home", label: "nav.home" },
         { key: "search", glyph: "search", label: "nav.search" },
-        { key: "library", glyph: "library", label: "nav.library" }
+        { key: "library", glyph: "library", label: "nav.library" },
+        { key: "history", glyph: "history", label: "nav.history" }
     ]
 
     ColumnLayout {

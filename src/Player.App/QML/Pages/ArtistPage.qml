@@ -185,6 +185,11 @@ Item {
         visible: root.nav.artistName === "" && root.nav.status !== ""
         spacing: 16
 
+        LoadingIndicator {
+            Layout.alignment: Qt.AlignHCenter
+            visible: root.nav.working && !root.nav.failed
+        }
+
         Text {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter

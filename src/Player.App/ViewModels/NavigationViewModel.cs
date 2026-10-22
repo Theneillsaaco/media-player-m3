@@ -79,7 +79,7 @@ public class NavigationViewModel : INotifyPropertyChanged
 
     public void GoRoot(string section)
     {
-        if (section is not ("home" or "search" or "library"))
+        if (section is not ("home" or "search" or "library" or "history"))
             return;
 
         _stack.Clear();

@@ -33,6 +33,7 @@ Item {
     function align(hard) {
         if (!root.playback) return
         const want = root.wanted()
+        if (!isFinite(want)) return
 
         if (!root.running) {
             if (player.playbackState !== MediaPlayer.PausedState) player.pause()
@@ -76,6 +77,7 @@ Item {
     VideoOutput {
         id: output
         anchors.fill: parent
+        visible: root.width >= 8 && root.height >= 8
         fillMode: root.fit ? VideoOutput.PreserveAspectFit : VideoOutput.PreserveAspectCrop
     }
 

@@ -60,12 +60,19 @@ public class LyricsViewModel : INotifyPropertyChanged
     public void PanelShown(bool shown)
     {
         _shown = shown;
+        Player.Core.Log.Info("lyrics", shown ? "panel opened" : "panel closed");
         if (shown)
             Poll();
     }
 
     /// <summary>Starts the lookup for a new track, picks up a finished one and moves the current line.</summary>
     public void Poll()
+    {
+        try { PollCore(); }
+        catch (Exception ex) { Player.Core.Log.Error("lyrics", "poll", ex); }
+    }
+
+    private void PollCore()
     {
         if (!_shown)
             return;

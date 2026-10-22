@@ -83,6 +83,12 @@ public class VideoViewModel : INotifyPropertyChanged
     /// <summary>Follows the current track, decides what to show and keeps the sound on the right recording.</summary>
     public void Poll()
     {
+        try { PollCore(); }
+        catch (Exception ex) { Player.Core.Log.Error("video", "poll", ex); }
+    }
+
+    private void PollCore()
+    {
         var track = AppServices.Playback.CurrentTrack;
         var id = track?.Id ?? "";
 

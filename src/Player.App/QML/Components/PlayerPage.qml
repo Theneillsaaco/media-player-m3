@@ -71,7 +71,7 @@ Rectangle {
             id: stageRect
             anchors.horizontalCenter: parent.horizontalCenter
             y: root.full ? 0 : Math.max(0, (area.roomHeight - height) / 2)
-            width: root.full ? area.width : root.video.showing ? Math.min(area.width, area.roomHeight * 16 / 9) : Math.min(area.width, area.roomHeight)
+            width: root.full ? area.width : root.video.showing ? Math.max(64, Math.min(area.width, area.roomHeight * 16 / 9)) : Math.min(area.width, area.roomHeight)
             height: root.full ? area.height : root.video.showing ? width * 9 / 16 : width
             radius: root.full ? 0 : 16
             clip: true

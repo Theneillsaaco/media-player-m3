@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Player.App.Models;
 using Player.App.Services;
+using Player.Core;
 using Player.Core.Contracts;
 using Player.Core.Domain;
 
@@ -10,7 +12,8 @@ namespace Player.App.ViewModels;
 /// <summary>
 /// Search box and results. A link or absolute path plays directly; anything else is searched on YouTube Music,
 /// as songs, videos, albums, artists or playlists (<see cref="Filter"/>). The search runs on the thread pool and
-/// leaves its result in a field under a lock; <see cref="Poll"/> picks it up.
+/// leaves its result in a field under a lock; <see cref="Poll"/> picks it up. The suggestions under the box work
+/// the same way and are kept per text, so typing back over a text does not ask again.
 /// </summary>
 public class SearchViewModel : INotifyPropertyChanged
 {
@@ -26,6 +29,13 @@ public class SearchViewModel : INotifyPropertyChanged
     private string? _pendingError;
     private string _pendingFilter = "songs";
     private int _searchTicket;
+
+    // The same for the suggestions.
+    private readonly Dictionary<string, string[]> _suggestCache = [];
+    private bool _suggestReady;
+    private string[]? _suggestPending;
+    private string _suggestFor = "";
+    private int _suggestTicket;
 
     public SearchViewModel()
     {
@@ -48,6 +58,11 @@ public class SearchViewModel : INotifyPropertyChanged
     /// <summary>Also shows playback messages ("Cargando…", "Error: …"), as the one status line always did.</summary>
     public string Status { get; private set => Set(ref field, value); } = "";
 
+    /// <summary>A JSON array of texts to offer under the search box.</summary>
+    public string SuggestionsJson { get; private set => Set(ref field, value); } = "[]";
+    /// <summary>Waiting for suggestions, so the UI timer keeps polling.</summary>
+    public bool Suggesting { get; private set => Set(ref field, value); }
+
     public void Search(string query)
     {
         query = query.Trim();
@@ -61,6 +76,52 @@ public class SearchViewModel : INotifyPropertyChanged
 
         _lastQuery = query;
         RunSearch(query);
+    }
+
+    /// <summary>Asks for the suggestions of what is typed. Links, paths and one letter get none.</summary>
+    public void Suggest(string text)
+    {
+        text = text.Trim();
+        var ticket = Interlocked.Increment(ref _suggestTicket);
+
+        if (text.Length < 2 || TrackSource.IsDirect(text) || AppServices.Provider is not { } provider)
+        {
+            SuggestionsJson = "[]";
+            Suggesting = false;
+            return;
+        }
+
+        if (_suggestCache.TryGetValue(text, out var known))
+        {
+            SuggestionsJson = JsonSerializer.Serialize(known);
+            Suggesting = false;
+            return;
+        }
+
+        Suggesting = true;
+
+        _ = Task.Run(async () =>
+        {
+            string[]? found = null;
+            try { found = await provider.Suggestions(text); }
+            catch (Exception e) { Log.Warn("search", "suggestions", e); }
+
+            lock (_gate)
+            {
+                if (ticket != Volatile.Read(ref _suggestTicket)) return; // a newer text owns the answer
+                _suggestPending = found ?? [];
+                _suggestFor = text;
+                _suggestReady = true;
+            }
+        });
+    }
+
+    /// <summary>Hides the suggestions and drops any answer still on its way.</summary>
+    public void ClearSuggestions()
+    {
+        Interlocked.Increment(ref _suggestTicket);
+        SuggestionsJson = "[]";
+        Suggesting = false;
     }
 
     /// <summary>Changes what is searched for; with a query already made, it searches again.</summary>
@@ -82,9 +143,11 @@ public class SearchViewModel : INotifyPropertyChanged
 
     public void PlayNextResult(int index) => AppServices.Playback.PlayNextFrom(_results, index);
 
-    /// <summary>Picks up a finished search. QML calls it from a Timer while searching.</summary>
+    /// <summary>Picks up a finished search or suggestion. QML calls it from a Timer while one is running.</summary>
     public void Poll()
     {
+        PollSuggestions();
+
         SearchHits? hits;
         string? error;
         string filter;
@@ -113,6 +176,29 @@ public class SearchViewModel : INotifyPropertyChanged
 
         var count = EntityMode ? hits.Entities.Length : hits.Tracks.Length;
         AppServices.Status.Text = count == 0 ? Tr.T("search.noResults") : Tr.F("search.results", count);
+    }
+
+    private void PollSuggestions()
+    {
+        string[]? found;
+        string text;
+        lock (_gate)
+        {
+            if (!_suggestReady) return;
+            found = _suggestPending;
+            text = _suggestFor;
+            _suggestReady = false;
+            _suggestPending = null;
+        }
+
+        Suggesting = false;
+        if (found is null) return;
+
+        if (_suggestCache.Count >= 60)
+            _suggestCache.Clear();
+
+        _suggestCache[text] = found;
+        SuggestionsJson = JsonSerializer.Serialize(found);
     }
 
     private void RunSearch(string query)

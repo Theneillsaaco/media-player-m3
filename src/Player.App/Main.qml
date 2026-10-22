@@ -76,6 +76,7 @@ ApplicationWindow {
     LyricsViewModel { id: lyricsVm }
     VideoViewModel { id: videoVm }
     NavigationViewModel { id: navVm }
+    HistoryViewModel { id: historyVm }
     Theme { id: appTheme; tokensJson: themeVm.tokensJson }
     Tr { id: appTr; json: localeVm.stringsJson }
 
@@ -105,6 +106,26 @@ ApplicationWindow {
             clip: true
             vm: lyricsVm
         }
+    }
+
+    SearchSuggestions {
+        id: suggestions
+        field: input
+        entries: searchVm.suggestionsJson.length > 0 ? JSON.parse(searchVm.suggestionsJson) : []
+        onChosen: (text) => {
+            input.text = text
+            close()
+            searchVm.clearSuggestions()
+            win.playerMode = "mini"
+            navVm.goRoot("search")
+            searchVm.search(text)
+        }
+    }
+
+    Timer {
+        id: suggestTimer
+        interval: 220
+        onTriggered: searchVm.suggest(input.text)
     }
 
     SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; localeVm: localeVm; theme: appTheme }
@@ -138,7 +159,7 @@ ApplicationWindow {
     Timer {
         interval: win.lyricsOpen ? 120 : 250
         repeat: true
-        running: (playback.isLoaded && !playback.paused) || searchVm.searching || libraryVm.working || settingsVm.busy || lyricsVm.loading || videoVm.loading || navVm.working
+        running: (playback.isLoaded && !playback.paused) || searchVm.searching || searchVm.suggesting || libraryVm.working || settingsVm.busy || lyricsVm.loading || videoVm.loading || navVm.working
         onTriggered: win.pollAll()
     }
 
@@ -167,7 +188,10 @@ ApplicationWindow {
 
     // Opening the library, or signing in while it is open, loads the playlists.
     property string currentPage: navVm.page
-    onCurrentPageChanged: if (currentPage === "library") libraryVm.loadLibrary()
+    onCurrentPageChanged: {
+        if (currentPage === "library") libraryVm.loadLibrary()
+        else if (currentPage === "history") historyVm.load()
+    }
     property string accountState: libraryVm.accountState
     onAccountStateChanged: if (currentPage === "library") libraryVm.loadLibrary()
 
@@ -243,10 +267,18 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 placeholderText: win.tr("search.placeholder")
                 clearTip: win.tr("tip.clearSearch")
+                onTextEdited: suggestTimer.restart()
+                Keys.onDownPressed: suggestions.step(1)
+                Keys.onUpPressed: suggestions.step(-1)
+                Keys.onEscapePressed: { suggestions.close(); searchVm.clearSuggestions() }
                 onAccepted: {
+                    const query = suggestions.pick() !== "" ? suggestions.pick() : text
+                    suggestions.close()
+                    searchVm.clearSuggestions()
+                    if (query !== text) text = query
                     win.playerMode = "mini"
                     navVm.goRoot("search")
-                    searchVm.search(text)
+                    searchVm.search(query)
                 }
             }
             MIconButton {
@@ -334,6 +366,14 @@ ApplicationWindow {
                     }
 
                     FadePage {
+                        shown: !win.playerOpen && navVm.page === "history"
+                        HistoryPage {
+                            anchors.fill: parent
+                            vm: historyVm
+                        }
+                    }
+
+                    FadePage {
                         shown: !win.playerOpen && (navVm.page === "album" || navVm.page === "collection")
                         CollectionPage {
                             anchors.fill: parent
@@ -367,12 +407,12 @@ ApplicationWindow {
                 }
 
                 // Narrow window: the queue or the lyrics go under the picture, as YouTube Music does.
-                Loader {
+                FadeLoader {
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.max(180, Math.round(win.height * 0.38))
                     active: win.compact && win.playerMode !== "full" && (win.queueOpen || win.lyricsOpen)
                     visible: active
-                    sourceComponent: win.lyricsOpen ? lyricsComp : queueComp
+                    sourceComp: win.lyricsOpen ? lyricsComp : queueComp
                 }
             }
 

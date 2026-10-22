@@ -23,9 +23,11 @@ public class EntityListModel : ListModel<EntityRow>
 {
     private List<EntityRow> _rows = new();
 
+    private static readonly EntityRow Empty = new();
+
     public override int ItemCount() => _rows.Count;
 
-    public override EntityRow Data(int index) => index >= 0 && index < _rows.Count ? _rows[index] : null!;
+    public override EntityRow Data(int index) => index >= 0 && index < _rows.Count ? _rows[index] : Empty;
 
     [Qt.Ignore]
     public void Replace(IEnumerable<EntityRow> rows)

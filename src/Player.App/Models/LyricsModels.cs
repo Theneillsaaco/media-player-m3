@@ -14,9 +14,11 @@ public class LyricsListModel : ListModel<LyricRow>
 {
     private List<LyricRow> _rows = new();
 
+    private static readonly LyricRow Empty = new();
+
     public override int ItemCount() => _rows.Count;
 
-    public override LyricRow Data(int index) => index >= 0 && index < _rows.Count ? _rows[index] : null!;
+    public override LyricRow Data(int index) => index >= 0 && index < _rows.Count ? _rows[index] : Empty;
 
     [Qt.Ignore]
     public void Replace(IEnumerable<LyricRow> rows)
