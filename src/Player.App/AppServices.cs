@@ -72,6 +72,7 @@ internal static class AppServices
                 (key, value) => Db?.SetSetting(key, value));
 
             Prefetcher = new PrefetchService(Provider);
+            Stats = new StatsService(Provider);
             Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status);
             Playback.Restore();
             Playback.StartMpris();
@@ -117,6 +118,7 @@ internal static class AppServices
     public static LyricsService Lyrics { get; private set; } = null!;
     public static VideoService Video { get; private set; } = null!;
     public static PrefetchService Prefetcher { get; private set; } = null!;
+    public static StatsService Stats { get; private set; } = null!;
     public static PlaybackService Playback { get; private set; } = null!;
     public static StatusLine Status { get; } = new();
     

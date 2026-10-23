@@ -14,6 +14,8 @@ Item {
 
     readonly property bool ready: loader.item !== null && loader.item.ready
     readonly property bool failed: loader.status === Loader.Error
+    /// The picture waits for data (the frozen frame is on show): the panel draws a loading bar.
+    readonly property bool waiting: loader.item !== null && loader.item.waiting
 
     visible: vm !== null && vm.showing
 

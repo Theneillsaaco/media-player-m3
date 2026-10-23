@@ -184,6 +184,15 @@ Rectangle {
                     containerSize: 48
                     enabled: root.queue.count > 0
                     onClicked: root.playback.toggle()
+
+                    // The track is loading or filling its cache.
+                    CircularProgress {
+                        anchors.centerIn: parent
+                        size: 58
+                        thickness: 3
+                        visible: root.playback.buffering
+                        z: 2
+                    }
                 }
                 MIconButton {
                     glyph: "next"

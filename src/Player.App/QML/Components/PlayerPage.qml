@@ -21,6 +21,8 @@ Rectangle {
     property bool videoUnavailable: false
     /// The video on stage has frames to show, so the cover can step aside.
     property bool videoReady: false
+    /// The video holds a frozen frame while it waits for data.
+    property bool videoWaiting: false
 
     readonly property bool full: mode === "full"
     readonly property Item stage: stageRect
@@ -101,7 +103,7 @@ Rectangle {
             CircularProgress {
                 anchors.centerIn: parent
                 size: 48
-                visible: root.video.loading
+                visible: root.video.loading || root.videoWaiting || root.playback.buffering
                 z: 5
             }
 
@@ -136,6 +138,15 @@ Rectangle {
                 text: root.playback.currentArtist
                 color: root.theme.inkSurfaceVariant
                 font.pixelSize: 14
+                elide: Text.ElideRight
+            }
+            Text {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                visible: text.length > 0
+                text: root.playback.statsText
+                color: root.theme.inkSurfaceVariant
+                font.pixelSize: 12
                 elide: Text.ElideRight
             }
             Text {
@@ -195,6 +206,15 @@ Rectangle {
                 text: root.playback.currentArtist
                 color: "#E6E0E9"
                 font.pixelSize: 14
+                elide: Text.ElideRight
+            }
+            Text {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                visible: text.length > 0
+                text: root.playback.statsText
+                color: "#CAC4CF"
+                font.pixelSize: 12
                 elide: Text.ElideRight
             }
         }

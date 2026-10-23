@@ -118,6 +118,12 @@ type TrackLinks = {
     AlbumName: string
 }
 
+/// How many times a track was watched and liked on YouTube; 0 when YouTube does not say.
+type TrackStats = {
+    Views: int64
+    Likes: int64
+}
+
 /// Pages of the catalog. Methods run on any thread and fail the task on network trouble.
 type IBrowseProvider =
     /// Personalized with a session, generic without one.
@@ -130,3 +136,5 @@ type IBrowseProvider =
     abstract SearchTyped: query: string * filter: string -> Task<SearchHits>
     abstract Suggestions: query: string -> Task<string[]>
     abstract Links: trackId: string -> Task<TrackLinks>
+    /// Views and likes of a track.
+    abstract Stats: id: string -> Task<TrackStats>

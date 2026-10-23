@@ -67,6 +67,16 @@ public partial class YtSidecarProvider : IBrowseProvider
         return [.. r.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!)];
     }
 
+    /// <summary>Views and likes of a track; 0 for what YouTube does not say.</summary>
+    public async Task<TrackStats> Stats(string id)
+    {
+        var r = await CallAsync("stats", new { id }, SidecarProtocol.ResolveTimeout);
+        return new TrackStats(Count(r, "views"), Count(r, "likes"));
+    }
+
+    private static long Count(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt64() : 0;
+
     public async Task<TrackLinks> Links(string trackId)
     {
         var r = await CallAsync("track_links", new { id = trackId });

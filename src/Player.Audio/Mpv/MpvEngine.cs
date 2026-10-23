@@ -153,6 +153,7 @@ public class MpvEngine : IAudioEngine
     public double Duration => GetDouble("duration");
     public bool Paused => Get("pause") == "yes";
     public bool Idle => Get("idle-active") == "yes";
+    public bool Buffering => Get("pause") != "yes" && Get("core-idle") == "yes";
     
     public MpvEngine()
     {

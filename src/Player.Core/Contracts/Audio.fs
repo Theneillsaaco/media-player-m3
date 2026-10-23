@@ -12,6 +12,9 @@ type IAudioEngine =
     
     /// True when nothing is loaded or playback has finished.
     abstract Idle: bool
+    /// True while a track that should be playing is not: it is loading, or the cache is filling after a seek or
+    /// after the network stalled. The picture of a video waits for it.
+    abstract Buffering: bool
     
     /// Starts playing a file path, stream URL or YouTube link, replacing whatever was loaded.
     /// Headers are "Name: value" lines for a direct stream URL; empty otherwise.

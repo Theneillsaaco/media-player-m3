@@ -298,6 +298,7 @@ internal sealed class PlaybackService
     public void Poll()
     {
         PollCore();
+        UpdateWaiting();
         PublishMpris();
         Changed?.Invoke();
     }
@@ -367,6 +368,30 @@ internal sealed class PlaybackService
         }
     }
     
+    /// <summary>
+    /// Whether the sound is supposed to be playing and is not (still opening the track, or mpv is paused for the
+    /// cache). The video holds still while it lasts; the loading bar only shows after a moment, so a quick seek
+    /// does not make it flash.
+    /// </summary>
+    private void UpdateWaiting()
+    {
+        var waiting = IsLoaded && !Paused && (!_sawActive || _engine.Buffering);
+        AudioWaiting = waiting;
+
+        if (!waiting)
+        {
+            _waitingSince = -1;
+            Buffering = false;
+            return;
+        }
+
+        var now = _clock.Elapsed.TotalSeconds;
+        if (_waitingSince < 0)
+            _waitingSince = now;
+
+        Buffering = now - _waitingSince > 0.4;
+    }
+
     private void OnTrackEnded()
     {
         var next = PlayQueue.advance(_queue);
@@ -826,6 +851,7 @@ internal sealed class PlaybackService
     private double _restoreSeek;  // where the restored track resumes when it is played
     private double _pendingSeek;  // the same, once the track is loading
     private double _lastSavedAt;
+    private double _waitingSince = -1;
     private ListenTracker? _tracker;
     private double _knownDuration;
     private bool _sawActive;
@@ -843,6 +869,10 @@ internal sealed class PlaybackService
     public double Duration { get; private set; }
     public bool Paused { get; private set; } = true;
     public bool IsLoaded { get; private set; }
+    /// <summary>The sound should be playing but is not yet: the track is loading or the cache is filling. The video waits for it.</summary>
+    public bool AudioWaiting { get; private set; }
+    /// <summary>The same, once it has lasted long enough for a loading bar to make sense.</summary>
+    public bool Buffering { get; private set; }
     public int Volume { get; private set; } = 100;
     public string CurrentId { get; private set; } = "";
     public string CurrentTitle { get; private set; } = "";

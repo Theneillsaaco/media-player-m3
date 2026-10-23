@@ -188,7 +188,7 @@ ApplicationWindow {
     Timer {
         interval: win.lyricsOpen ? 120 : 250
         repeat: true
-        running: (playback.isLoaded && !playback.paused) || searchVm.searching || searchVm.suggesting || libraryVm.working || settingsVm.busy || lyricsVm.loading || videoVm.loading || navVm.working
+        running: (playback.isLoaded && !playback.paused) || searchVm.searching || searchVm.suggesting || playback.statsPending || libraryVm.working || settingsVm.busy || lyricsVm.loading || videoVm.loading || navVm.working
         onTriggered: win.pollAll()
     }
 
@@ -428,6 +428,7 @@ ApplicationWindow {
                         video: videoVm
                         theme: appTheme
                         videoReady: videoLayer.ready
+                        videoWaiting: videoLayer.waiting
                         videoUnavailable: videoLayer.failed
                         onMinimizeRequested: win.playerMode = "mini"
                         onMaximizeRequested: win.playerMode = "full"

@@ -1,6 +1,8 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Player.App.Services;
+using Player.Core.Contracts;
 
 namespace Player.App.ViewModels;
 
@@ -25,11 +27,19 @@ public class PlaybackViewModel : INotifyPropertyChanged
     public string DurationText { get; private set => Set(ref field, value); } = "0:00";
     public bool Paused { get; private set => Set(ref field, value); } = true;
     public bool IsLoaded { get; private set => Set(ref field, value); }
+    /// <summary>The sound should be playing but is not yet (loading, or the cache is filling). The video holds still.</summary>
+    public bool AudioWaiting { get; private set => Set(ref field, value); }
+    /// <summary>The same once it has lasted long enough to show a loading bar.</summary>
+    public bool Buffering { get; private set => Set(ref field, value); }
     /// <summary>Id of the current track (a YouTube id, or the link or path when it was played directly).</summary>
     public string CurrentId { get; private set => Set(ref field, value); } = "";
     public string CurrentTitle { get; private set => Set(ref field, value); } = "";
     public string CurrentArtist { get; private set => Set(ref field, value); } = "";
     public string CurrentArt { get; private set => Set(ref field, value); } = "";
+    /// <summary>"1.2M views · 45K likes" for the current track, "" while unknown.</summary>
+    public string StatsText { get; private set => Set(ref field, value); } = "";
+    /// <summary>The numbers are being looked up, so the UI timer keeps polling.</summary>
+    public bool StatsPending { get; private set => Set(ref field, value); }
     public string RepeatMode { get; private set => Set(ref field, value); } = "off";
     public bool Shuffle { get; private set => Set(ref field, value); }
     /// <summary>0..100, restored from the last session.</summary>
@@ -69,6 +79,8 @@ public class PlaybackViewModel : INotifyPropertyChanged
         DurationText = TimeFormat.Clock(p.Duration, "0:00");
         Paused = p.Paused;
         IsLoaded = p.IsLoaded;
+        AudioWaiting = p.AudioWaiting;
+        Buffering = p.Buffering;
         CurrentId = p.CurrentId;
         CurrentTitle = p.CurrentTitle;
         CurrentArtist = p.CurrentArtist;
@@ -78,6 +90,38 @@ public class PlaybackViewModel : INotifyPropertyChanged
         Volume = p.Volume;
         CanNext = p.CanNext;
         CanPrevious = p.CanPrevious;
+
+        var stats = AppServices.Stats;
+        stats.Request(p.CurrentId);
+        StatsText = FormatStats(stats.TryGet(p.CurrentId));
+        StatsPending = stats.Pending(p.CurrentId);
+    }
+
+    private static string FormatStats(TrackStats? stats)
+    {
+        if (stats is null)
+            return "";
+
+        List<string> parts = [];
+        if (stats.Views > 0) parts.Add(Tr.F("stats.views", Compact(stats.Views)));
+        if (stats.Likes > 0) parts.Add(Tr.F("stats.likes", Compact(stats.Likes)));
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>1234 → 1.2K, 1500000 → 1.5M.</summary>
+    private static string Compact(long n) => n switch
+    {
+        >= 1_000_000_000 => Scaled(n, 1e9, "B"),
+        >= 1_000_000 => Scaled(n, 1e6, "M"),
+        >= 1_000 => Scaled(n, 1e3, "K"),
+        _ => n.ToString(CultureInfo.InvariantCulture)
+    };
+
+    private static string Scaled(long n, double divisor, string suffix)
+    {
+        var value = n / divisor;
+        return (value >= 100 ? Math.Round(value).ToString("0", CultureInfo.InvariantCulture)
+                             : value.ToString("0.#", CultureInfo.InvariantCulture)) + suffix;
     }
 
     private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)

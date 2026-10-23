@@ -30,6 +30,8 @@ module Translations =
         "history.empty", "Todavía no has escuchado nada.", "You have not listened to anything yet."
         "history.clear", "Borrar", "Clear"
         "history.cleared", "Historial borrado", "History cleared"
+        "stats.views", "{0} visualizaciones", "{0} views"
+        "stats.likes", "{0} Me gusta", "{0} likes"
         "nav.unavailable", "La búsqueda no está disponible.", "Search is not available."
         "nav.noRecs", "No hay recomendaciones por ahora.", "No recommendations for now."
         "nav.openFailed", "No se pudo abrir la página: {0}", "Could not open the page: {0}"

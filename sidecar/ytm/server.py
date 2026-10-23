@@ -292,6 +292,7 @@ def _extract(video, fmt, codec="acodec"):
     `codec` says which part to take when the selection is a merge: acodec for audio, vcodec for video."""
     with _resolving:
         info = _ydl(fmt).extract_info("https://music.youtube.com/watch?v=" + video, download=False)
+    _remember_stats(video, info)
     chosen = info
     url = info.get("url")
     if not url:  # a merged selection lists its parts
@@ -317,6 +318,50 @@ def resolve(params):
         "expires_at": _expires_at(url),
         "duration": info.get("duration") or 0,
     }
+
+
+# ---- views and likes ----
+
+_stats = {}
+_stats_lock = threading.Lock()
+_stat_slot = threading.BoundedSemaphore(1)  # one lookup at a time, so the streams the player waits for are not delayed
+
+
+def _remember_stats(video, info):
+    entry = {"views": info.get("view_count"), "likes": info.get("like_count")}
+    with _stats_lock:
+        if len(_stats) > 300:
+            _stats.clear()
+        _stats[video] = entry
+    return entry
+
+
+def stats(params):
+    video = str(params.get("id", ""))
+    if not VIDEO_ID.fullmatch(video):
+        raise ValueError("Invalid YouTube video ID")
+    with _stats_lock:
+        known = _stats.get(video)
+    if known is None:  # resolve and video_stream remember them too; this is for a track that was not resolved here
+        with _stat_slot:
+            with _stats_lock:
+                known = _stats.get(video)
+            if known is None:
+                try:
+                    info = _ydl().extract_info("https://music.youtube.com/watch?v=" + video, download=False)
+                    known = _remember_stats(video, info)
+                except Exception:
+                    known = None
+    views = (known or {}).get("views")
+    likes = (known or {}).get("likes")
+    if not views:  # yt-dlp failed or did not say: the player response of YouTube Music has the views at least
+        try:
+            views = int((api().get_song(video).get("videoDetails") or {}).get("viewCount") or 0)
+        except Exception:
+            views = 0
+    if known is None and not views:
+        raise ValueError("No statistics")
+    return {"views": int(views or 0), "likes": int(likes or 0)}
 
 
 # ---- video ----
@@ -450,6 +495,7 @@ METHODS = {
     "library_playlists": library_playlists,
     "playlist": playlist,
     "rate_song": rate_song,
+    "stats": stats,
 }
 
 METHODS.update(browse.build(api=api, signed_in=signed_in, get_auth=lambda: _auth,
