@@ -1,0 +1,212 @@
+app-id: io.github.Theneillsaaco.MediaPlayer
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+appstream-compose: false
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.dotnet10
+command: media-player
+
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  - --share=ipc
+  - --share=network
+  # Keyring (secret-tool): YouTube Music cookie and Last.fm session
+  - --talk-name=org.freedesktop.secrets
+  # MPRIS (playerctl, media keys). MprisService claims this name, or ...Player.instance<pid>
+  - --own-name=org.mpris.MediaPlayer2.Player
+  - --own-name=org.mpris.MediaPlayer2.Player.*
+  # Dark/light mode fallback (gsettings) when the portal is not read through busctl
+  - --filesystem=xdg-run/dconf
+  - --filesystem=~/.config/dconf:ro
+  - --talk-name=ca.desktop.dconf
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+  - --env=PLAYER_SIDECAR_DIR=/app/share/player/sidecar
+  - --env=QT_QUICK_CONTROLS_STYLE=Basic
+  - --env=QtDir=/usr
+  - --env=DOTNET_ROOT=/app/lib/dotnet
+  # "Import session from browser" reads the browser's cookie database. Off by default (it exposes every
+  # cookie of that profile). Pasting the cookie in Settings works without it. Enable what you use:
+  #   flatpak override --user --filesystem=~/.mozilla:ro io.github.Theneillsaaco.MediaPlayer
+  - --filesystem=~/.mozilla:ro
+  - --filesystem=~/.config/mozilla:ro
+  - --filesystem=~/.var/app/org.mozilla.firefox:ro
+  - --filesystem=~/.config/chromium:ro
+  - --filesystem=~/.config/google-chrome:ro
+  - --filesystem=~/.config/BraveSoftware:ro
+  - --filesystem=~/.config/microsoft-edge:ro
+  - --filesystem=~/.config/vivaldi:ro
+  - --filesystem=~/.config/opera:ro
+
+build-options:
+  append-path: /usr/lib/sdk/dotnet10/bin
+  append-ld-library-path: /usr/lib/sdk/dotnet10/lib
+  append-pkg-config-path: /usr/lib/sdk/dotnet10/lib/pkgconfig
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/man
+  - '*.a'
+  - '*.la'
+
+modules:
+  - name: luajit
+    buildsystem: simple
+    build-commands:
+      - make amalg PREFIX=/app -j$FLATPAK_BUILDER_N_JOBS
+      - make install PREFIX=/app
+    sources:
+      - type: git
+        url: https://github.com/LuaJIT/LuaJIT.git
+        branch: v2.1
+    cleanup:
+      - /bin
+      - /share/man
+
+  # Kept in /app so libmpv and QtMultimedia (video) use the same libav*. LGPL build.
+  - name: ffmpeg
+    config-opts:
+      - --enable-shared
+      - --disable-static
+      - --disable-programs
+      - --disable-doc
+      - --disable-debug
+      - --enable-pic
+      - --enable-gnutls
+    sources:
+      - type: git
+        url: https://git.ffmpeg.org/ffmpeg.git
+        tag: n9.0.1
+    cleanup:
+      - /share/ffmpeg
+
+  - name: libplacebo
+    buildsystem: meson
+    config-opts:
+      - -Dvulkan=enabled
+      - -Dopengl=enabled
+    sources:
+      - type: git
+        url: https://github.com/haasn/libplacebo.git
+        tag: v7.360.1
+        
+  - name: libass
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://github.com/libass/libass.git
+        tag: 0.17.5
+        
+  # mpv >= 0.37 wants libplacebo. If the runtime has none, add a libplacebo module before this one.
+  - name: mpv
+    buildsystem: meson
+    config-opts:
+      - -Dauto_features=disabled
+      - -Dlibmpv=true
+      - -Dcplayer=false
+      - -Dlua=luajit
+      - -Dpulse=enabled
+      - -Diconv=enabled
+      - -Dzlib=enabled
+      - -Dbuild-date=false
+      - -Dgl=enabled
+      - -Degl=enabled
+      - -Dvulkan=enabled
+      - -Dwayland=enabled
+      - -Degl-wayland=enabled
+      - -Dx11=disabled
+    sources:
+      - type: git
+        url: https://github.com/mpv-player/mpv.git
+        tag: v0.41.0
+  
+  # secret-tool, which SecretStore calls
+  - name: libsecret
+    buildsystem: meson
+    config-opts:
+      - -Dgtk_doc=false
+      - -Dmanpage=false
+      - -Dintrospection=false
+      - -Dvapi=false
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/libsecret.git
+        tag: 0.21.8.2
+  
+  # yt-dlp needs a JS runtime to solve YouTube's challenges. Fill the sha256 (see README steps).
+  - name: deno
+    buildsystem: simple
+    only-arches: [x86_64]
+    build-commands:
+      - install -Dm755 deno /app/bin/deno
+    sources:
+      - type: archive
+        url: https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-unknown-linux-gnu.zip
+        sha256: e890975bc2549807bbcc0b584ffafda72cc7c93349dd99c80483dd784f6c4609
+        strip-components: 0
+      
+  # ytmusicapi, yt-dlp, secretstorage: generate with flatpak-pip-generator (see steps)
+  - python3-modules.json
+
+  # ---- the app ----
+
+  - name: media-player
+    buildsystem: simple
+    build-options:
+      env:
+        DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+        DOTNET_NOLOGO: '1'
+        PLAYER_NIX: '1' # hace que Directory.Build.targets tolere un despliegue de Qt fallido
+        QtDir: /run/build/media-player/qt-sdk
+        CMAKE_PREFIX_PATH: /run/build/media-player/qt-sdk:/usr
+        QT_NO_PRIVATE_MODULE_WARNING: 'ON'
+    build-commands:
+      # Crear el prefijo virtual de Qt que espera el puente C#
+      - mkdir -p /run/build/media-player/qt-sdk/lib
+      - ln -s /usr/lib/x86_64-linux-gnu/cmake /run/build/media-player/qt-sdk/lib/cmake
+      - ln -s /usr/include /run/build/media-player/qt-sdk/include
+      - ln -s /usr/lib/x86_64-linux-gnu /run/build/media-player/qt-sdk/lib/x86_64-linux-gnu
+      
+      # Compilar y publicar la aplicación .NET
+      - >-
+        dotnet publish src/Player.App/Player.App.csproj
+        -c Release -r linux-x64 --self-contained false
+        -p:PublishReadyToRun=false -p:UseAppHost=true
+        --source ./nuget-sources --source /usr/lib/sdk/dotnet10/nuget/packages
+        -o /app/lib/player
+
+      # Runtime de .NET dentro de la app: el lanzador del Qt Bridge lo busca con DOTNET_ROOT / PATH
+      - |
+        root=$(dirname "$(readlink -f "$(which dotnet)")")
+        mkdir -p /app/lib/dotnet
+        cp -r "$root/host" "$root/shared" "$root/dotnet" /app/lib/dotnet/
+        ln -s ../lib/dotnet/dotnet /app/bin/dotnet
+        
+      # El Qt Bridge deja estos archivos fuera del publish (igual que postInstall en flake.nix)
+      - |
+        d=src/Player.App/bin/Release/net10.0/linux-x64
+        for f in player_app Application qt_bridge_metadata.json qtdeploy.txt; do
+          if [ -e "$d/$f" ]; then cp -r "$d/$f" /app/lib/player/; fi
+        done
+      
+      - install -Dm755 media-player.sh /app/bin/media-player
+      - mkdir -p /app/share/player
+      - cp -r sidecar /app/share/player/
+      - python3 -m compileall -o 1 /app/share/player/sidecar
+      - install -Dm644 flatpak/io.github.Theneillsaaco.MediaPlayer.desktop /app/share/applications/io.github.Theneillsaaco.MediaPlayer.desktop
+      - install -Dm644 flatpak/io.github.Theneillsaaco.MediaPlayer.metainfo.xml /app/share/metainfo/io.github.Theneillsaaco.MediaPlayer.metainfo.xml
+      - install -Dm644 flatpak/io.github.Theneillsaaco.MediaPlayer.svg /app/share/icons/hicolor/scalable/apps/io.github.Theneillsaaco.MediaPlayer.svg
+    sources:
+      - type: dir
+        path: ..
+        skip: [.git, .direnv, bin, obj, result, flatpak/.flatpak-builder, flatpak/build-dir]
+      - nuget-sources.json
+      - type: script
+        dest-filename: media-player.sh
+        commands:
+          - exec /app/lib/player/Player.App "$@"

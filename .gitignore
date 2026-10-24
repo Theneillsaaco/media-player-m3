@@ -9,3 +9,10 @@ result
 .idea/
 packages
 packages/
+.flatpak-builder
+.flatpak-builder/
+.venv/
+flatpak-builder-tools/
+build-dir/
+/flatpak/nuget-sources.json
+/flatpak/python3-modules.json

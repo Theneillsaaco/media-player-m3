@@ -50,7 +50,7 @@
       devShells.${system}.default = pkgs.mkShell {
         inputsFrom = [ qt.qtbase qt.qtdeclarative ];
         nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
-        packages = [ pkgs.dotnet-sdk_10 pkgs.libsecret ] ++ runtimeBins;
+        packages = [ pkgs.dotnet-sdk_10 pkgs.libsecret pkgs.flatpak pkgs.flatpak-builder ] ++ runtimeBins;
         shellHook = ''
           export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
           export QtDir=${qtPrefix}

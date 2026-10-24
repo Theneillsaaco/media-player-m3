@@ -33,6 +33,7 @@ import sys
 import threading
 import time
 import browse
+import hostprofile
 from concurrent.futures import ThreadPoolExecutor
 
 # Protocol output goes to the real stdout; anything a library prints goes to stderr.
@@ -161,7 +162,7 @@ def auth_import_browser(params):
     browser = str(params.get("browser", "")).lower()
     if browser not in SUPPORTED_BROWSERS:
         raise ValueError("Navegador no soportado: " + browser)
-    profile = str(params.get("profile", "")).strip() or None
+    profile = str(params.get("profile", "")).strip() or hostprofile.default_profile(browser) or None
     cookie = cookie_header(extract_cookies_from_browser(browser, profile))
     client = browser_client(cookie, 0)
     name = account_name(client)

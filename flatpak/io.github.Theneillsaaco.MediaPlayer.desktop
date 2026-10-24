@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=YouTube Music Player
+Comment=YouTube Music player (.NET + Qt Bridge + libmpv)
+Exec=media-player
+Icon=io.github.Theneillsaaco.MediaPlayer
+Categories=AudioVideo;Audio;Player;Music;
+Keywords=Music;YouTube;Player;Audio;
+Terminal=false
+StartupNotify=true
