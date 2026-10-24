@@ -6,10 +6,11 @@ import QtQuick.Controls.Basic
 // volume on the right. The left and right blocks always share the free width equally, so the transport stays
 // exactly centred. The bar floats as a rounded card at the bottom of the window; in the maximized player Main.qml
 // moves it onto the video (docked), which drops the cover and the title because the player already shows them.
-// While the video is minimized, its picture lives in miniSlot, in place of the cover. The title opens the album
-// and the artist opens the artist page. The video on/off button is not here: it is with the window buttons of
-// the player. vm properties: playback = PlaybackViewModel, queue = QueueViewModel, library = LibraryViewModel,
-// video = VideoViewModel.
+// While the video is minimized, its picture lives in miniSlot, in place of the cover, with rounded corners
+// (CornerMask in the color of the bar). The title opens the album and the artist opens the artist page. The video
+// on/off button is not here: it is with the window buttons of the player. A ring turns around the play button while
+// the track loads or its cache fills. vm properties: playback = PlaybackViewModel, queue = QueueViewModel,
+// library = LibraryViewModel, video = VideoViewModel.
 Rectangle {
     id: root
 
@@ -56,7 +57,7 @@ Rectangle {
                 value: root.playback.position
                 enabled: root.playback.isLoaded && root.playback.duration > 0
                 expressive: true
-                playing: root.playback.isLoaded && !root.playback.paused
+                playing: root.playback.isLoaded && !root.playback.paused && !root.playback.audioWaiting
                 onChangedByUser: (v) => root.playback.seek(v)
             }
             Text { text: root.playback.durationText; color: root.theme.inkSurfaceVariant; font.pixelSize: 12 }
@@ -99,6 +100,14 @@ Rectangle {
                             size: 24
                             visible: root.videoInSlot && root.video.loading
                             z: 5
+                        }
+                        // Rounded corners over the minimized video.
+                        CornerMask {
+                            anchors.fill: parent
+                            visible: root.videoInSlot
+                            radius: 8
+                            color: root.color
+                            z: 6
                         }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.coverClicked() }
                     }

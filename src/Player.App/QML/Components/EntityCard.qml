@@ -2,6 +2,8 @@ import QtQuick
 
 // A card for horizontal shelves: cover (round for artists) with a title and a supporting line under it.
 // showAdd (songs): right click or the ⋮ button opens a menu to play it next or add it to the queue.
+// With a videoId (songs) the menu also offers to like it. The ⋮ button sits on an almost opaque disc, so it reads on
+// any cover.
 Item {
     id: card
 
@@ -93,6 +95,15 @@ Item {
         }
     }
 
+    // Under the ⋮ button: a disc of the surface color, nearly opaque, so the dots do not get lost on a busy cover.
+    Rectangle {
+        anchors.fill: more
+        radius: height / 2
+        color: card.theme ? card.theme.surfaceContainerHigh : "#ECE6F0"
+        opacity: 0.96
+        visible: more.visible
+    }
+
     MIconButton {
         id: more
         visible: card.hasMenu && (area.containsMouse || hovered)
@@ -102,6 +113,7 @@ Item {
         containerSize: 36
         glyph: "more"
         tip: card.tr("tip.more")
+        cOnSurfaceVariant: card.cOnSurface
         onClicked: menu.popup(more, 0, more.height)
     }
 

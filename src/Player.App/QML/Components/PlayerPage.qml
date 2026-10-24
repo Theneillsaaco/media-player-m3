@@ -8,6 +8,8 @@ import QtQuick.Controls.Basic
 // it as a card; the buttons and the card fade out after a few idle seconds while it plays). The right side stays
 // free for the queue and the lyrics. stage is where Main.qml puts the video; dock is where it puts the playback bar.
 // The window buttons (video on/off, maximize or restore, minimize) are in the top right corner of both modes.
+// Under the title: the artist and, after a dot, the views and likes. The picture has rounded corners in "page" mode
+// (CornerMask: a clip does not follow a radius, and a mask would redraw the video on every frame).
 Rectangle {
     id: root
 
@@ -27,6 +29,9 @@ Rectangle {
     readonly property bool full: mode === "full"
     readonly property Item stage: stageRect
     readonly property Item dock: dockHost
+
+    /// "Artist · 1.2M views · 45K likes": the parts that exist, joined with a dot.
+    readonly property string artistLine: [playback.currentArtist, playback.statsText].filter(s => s.length > 0).join(" · ")
 
     signal minimizeRequested()
     signal maximizeRequested()
@@ -99,7 +104,7 @@ Rectangle {
 
             // The video layer is parented here by Main.qml, on top of the cover.
 
-            // Waiting for the video stream.
+            // Waiting for the video stream, for data of the video or for the sound.
             CircularProgress {
                 anchors.centerIn: parent
                 size: 48
@@ -111,6 +116,15 @@ Rectangle {
                 anchors.fill: parent
                 z: 10
                 onClicked: root.playback.toggle()
+            }
+
+            // Rounded corners over the cover and the video.
+            CornerMask {
+                anchors.fill: parent
+                visible: !root.full
+                radius: stageRect.radius
+                color: root.theme.surfaceContainer
+                z: 20
             }
         }
 
@@ -135,18 +149,9 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
-                text: root.playback.currentArtist
+                text: root.artistLine
                 color: root.theme.inkSurfaceVariant
                 font.pixelSize: 14
-                elide: Text.ElideRight
-            }
-            Text {
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                visible: text.length > 0
-                text: root.playback.statsText
-                color: root.theme.inkSurfaceVariant
-                font.pixelSize: 12
                 elide: Text.ElideRight
             }
             Text {
@@ -203,18 +208,9 @@ Rectangle {
             }
             Text {
                 Layout.fillWidth: true
-                text: root.playback.currentArtist
+                text: root.artistLine
                 color: "#E6E0E9"
                 font.pixelSize: 14
-                elide: Text.ElideRight
-            }
-            Text {
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                visible: text.length > 0
-                text: root.playback.statsText
-                color: "#CAC4CF"
-                font.pixelSize: 12
                 elide: Text.ElideRight
             }
         }

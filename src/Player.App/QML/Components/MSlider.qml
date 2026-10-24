@@ -1,6 +1,12 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Shapes
 
+// Material 3 slider. Two looks:
+//   expressive: false  a flat track (volume).
+//   expressive: true   the progress is a wave that moves while `playing` and goes flat when it is not (the seek bar).
+// Both have an active and an inactive track with a gap around the handle, a 4 dp handle that narrows only while it
+// is pressed, and a stop dot at the end.
 Slider {
     id: slider
 
@@ -11,27 +17,63 @@ Slider {
     property string valueLabel: ""
 
     property color cPrimary: theme ? theme.primary : "#6750A4"
-    property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
-    property color cDisabled: "#A0A0A0"
+    property color cInactive: theme ? theme.secondaryContainer : "#E8DEF8"
+    property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
+    property color cInverse: theme ? theme.inverseSurface : "#313033"
+    property color cOnInverse: theme ? theme.inverseOnSurface : "#F4EFF4"
 
     signal changedByUser(real v)
 
-    readonly property real trackHeight: 4
-    readonly property real waveHeight: 16
-    readonly property real fullHandleHeight: 20
+    readonly property real trackHeight: 7
     readonly property real handleWidth: 4
-    readonly property real handlePressedWidth: 2
-    readonly property real sliderGap: slider.expressive ? 6 : 0
-    readonly property real stopSize: 4
-    readonly property bool windowIsVisible: Window.window !== null && Window.window.visible
-        && Window.window.visibility !== Window.Minimized
+    readonly property real handleHeight: 24
+    readonly property real gap: 8
+    readonly property real stopSize: 3
+    readonly property real amplitude: 2.5
+    readonly property real wavelength: 48
+    readonly property real waveBox: 14
 
-    implicitHeight: 24
-    implicitWidth: 120
+    padding: 0
+    implicitHeight: 28
+    implicitWidth: 160
+    hoverEnabled: true
     opacity: enabled ? 1 : 0.38
 
     readonly property real thumbCenter: visualPosition * (availableWidth - handleWidth) + handleWidth / 2
-    readonly property real trackEnd: availableWidth - stopSize - sliderGap
+    readonly property real activeEnd: Math.max(0, thumbCenter - handleWidth / 2 - gap)
+    readonly property real inactiveStart: Math.min(availableWidth, thumbCenter + handleWidth / 2 + gap)
+
+    // ---- the wave ----
+
+    property real amp: playing ? amplitude : 0
+    Behavior on amp { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+    property real shift: 0 // how far the wave has slid, 0 .. wavelength
+
+    NumberAnimation on shift {
+        from: 0
+        to: slider.wavelength
+        duration: 1400
+        loops: Animation.Infinite
+        running: slider.expressive && slider.playing && slider.visible
+    }
+
+    function buildWave(a, width, wl, box, sh) {
+        if (width <= 0) return []
+        const points = []
+        
+        for (let x = 0; x <= width; x += 2) {
+            points.push(Qt.point(x, box / 2 + a * Math.sin(2 * Math.PI * (x + sh) / wl)))
+        }
+        
+        if (points.length === 0 || points[points.length - 1].x !== width) {
+            points.push(Qt.point(width, box / 2 + a * Math.sin(2 * Math.PI * (width + sh) / wl)))
+        }
+        
+        return points
+    }
+
+    readonly property var wavePath: expressive ? buildWave(amp, activeEnd, wavelength, waveBox, shift) : []
 
     onMoved: {
         if (slider.live) slider.changedByUser(slider.value)
@@ -46,162 +88,93 @@ Slider {
         width: slider.availableWidth
         height: slider.trackHeight
 
-        Item {
-            id: activeTrackContainer
-            width: slider.expressive
-                ? Math.max(0, slider.thumbCenter - slider.handleWidth / 2 - slider.sliderGap)
-                : Math.max(0, slider.thumbCenter)
-            height: parent.height
-
-            Rectangle {
-                anchors.fill: parent
-                radius: height / 2
-                topRightRadius: slider.expressive ? 2 : height / 2
-                bottomRightRadius: slider.expressive ? 2 : height / 2
-                color: slider.enabled ? slider.cPrimary : slider.cDisabled
-                visible: waveCanvas.currentAmplitude < 0.01 || activeTrackContainer.width < 12
-            }
-
-            Item {
-                id: waveContainer
-                anchors.centerIn: parent
-                width: parent.width
-                height: slider.waveHeight
-                visible: activeTrackContainer.width >= 12 && waveCanvas.currentAmplitude >= 0.01
-
-                property real phase: 0.0
-
-                onPhaseChanged: waveCanvas.requestPaint()
-
-                NumberAnimation {
-                    target: waveContainer
-                    property: "phase"
-                    from: 0
-                    to: Math.PI * 2
-                    duration: 1500
-                    loops: Animation.Infinite
-                    running: slider.playing && slider.visible && slider.windowIsVisible && waveCanvas.currentAmplitude >= 0.01
-                }
-
-                Canvas {
-                    id: waveCanvas
-                    anchors.fill: parent
-
-                    renderTarget: Canvas.FramebufferObject
-                    renderStrategy: Canvas.Cooperative
-
-                    property real currentAmplitude: slider.playing ? 2.0 : 0.0
-
-                    Behavior on currentAmplitude {
-                        NumberAnimation {
-                            duration: 150
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: [0.2, 0.0, 0.0, 1.0, 1.0, 1.0]
-                        }
-                    }
-
-                    onCurrentAmplitudeChanged: requestPaint()
-
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        ctx.clearRect(0, 0, width, height);
-
-                        if (width <= 0) return;
-
-                        var w = Math.floor(width);
-                        var h = height;
-                        var centerY = h / 2;
-                        var wavelength = 48;
-
-                        ctx.beginPath();
-                        ctx.strokeStyle = slider.enabled ? slider.cPrimary : slider.cDisabled;
-                        ctx.lineWidth = slider.trackHeight;
-                        ctx.lineCap = "round";
-                        ctx.lineJoin = "round";
-
-                        var startX = Math.floor(slider.trackHeight / 2);
-                        var endX = Math.floor(Math.max(startX, w - (slider.expressive ? 2 : slider.trackHeight / 2)));
-
-                        ctx.moveTo(startX, centerY + Math.sin((startX / wavelength) * Math.PI * 2 + waveContainer.phase) * currentAmplitude);
-
-                        for (var x = startX + 1; x <= endX; x++) {
-                            var y = centerY + Math.sin((x / wavelength) * Math.PI * 2 + waveContainer.phase) * currentAmplitude;
-                            ctx.lineTo(x, y);
-                        }
-
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-
+        // active track, flat (expressive: false)
         Rectangle {
-            objectName: "sliderInactiveTrack"
-            x: slider.expressive
-                ? Math.min(parent.width, slider.thumbCenter + slider.handleWidth / 2 + slider.sliderGap)
-                : Math.min(parent.width, slider.thumbCenter)
-            width: Math.max(0, parent.width - x)
+            visible: !slider.expressive && slider.activeEnd > 0.5
+            width: slider.activeEnd
             height: parent.height
             radius: height / 2
-            topLeftRadius: slider.expressive ? 2 : height / 2
-            bottomLeftRadius: slider.expressive ? 2 : height / 2
-            color: slider.enabled ? slider.cSecondaryContainer : slider.cDisabled
+            topRightRadius: 2
+            bottomRightRadius: 2
+            color: slider.cPrimary
         }
-        
+
+        // active track, wave (expressive: true)
+        Item {
+            visible: slider.expressive && slider.activeEnd > 0.5
+            y: (parent.height - slider.waveBox) / 2
+            width: slider.activeEnd
+            height: slider.waveBox
+
+            Shape {
+                width: slider.activeEnd
+                height: slider.waveBox
+                preferredRendererType: Shape.CurveRenderer
+
+                ShapePath {
+                    strokeColor: slider.cPrimary
+                    strokeWidth: slider.trackHeight
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    joinStyle: ShapePath.RoundJoin
+                    PathPolyline { path: slider.wavePath }
+                }
+            }
+        }
+
+        // inactive track
         Rectangle {
-            objectName: "sliderStop"
-            x: slider.trackEnd
+            x: slider.inactiveStart
+            width: Math.max(0, parent.width - x)
+            height: parent.height
+            visible: width > 0.5
+            radius: height / 2
+            topLeftRadius: 2
+            bottomLeftRadius: 2
+            color: slider.cInactive
+        }
+
+        // stop dot
+        Rectangle {
+            x: parent.width - width - (parent.height - height) / 2
             anchors.verticalCenter: parent.verticalCenter
             width: slider.stopSize
             height: slider.stopSize
             radius: height / 2
-            color: slider.enabled ? slider.cPrimary : slider.cDisabled
-            visible: slider.expressive && (slider.thumbCenter + slider.handleWidth / 2 + slider.sliderGap < slider.trackEnd)
+            color: slider.cPrimary
+            visible: slider.inactiveStart < parent.width - 16
         }
     }
 
-    handle: Item {
-        x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - slider.handleWidth)
+    handle: Rectangle {
+        property real w: slider.pressed ? 2 : slider.handleWidth
+
+        x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - slider.handleWidth) + (slider.handleWidth - w) / 2
         y: slider.topPadding + (slider.availableHeight - height) / 2
-        width: slider.handleWidth
-        height: Math.min(slider.fullHandleHeight, slider.height)
+        width: w
+        height: slider.handleHeight
+        radius: width / 2
+        color: slider.cPrimary
 
-        Rectangle {
-            objectName: "sliderHandle"
-            anchors.centerIn: parent
-            width: (slider.expressive && (slider.pressed || slider.visualFocus))
-                ? slider.handlePressedWidth
-                : slider.handleWidth
-            height: parent.height
-            radius: width / 2
-            color: slider.enabled ? slider.cPrimary : slider.cDisabled
-
-            Behavior on width {
-                enabled: slider.expressive
-                NumberAnimation {
-                    duration: 150
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: [0.2, 0.0, 0.0, 1.0, 1.0, 1.0]
-                }
-            }
-        }
+        Behavior on w { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
     }
 
     ToolTip {
-        objectName: "sliderValueLabel"
-        visible: slider.valueLabel.length > 0 && (slider.pressed || slider.visualFocus)
+        visible: slider.valueLabel.length > 0 && slider.pressed
         delay: 0
         timeout: -1
         x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
         y: -height - 12
         padding: 8
+        
         contentItem: Text {
             text: slider.valueLabel
-            color: "#FFFFFF"
+            color: slider.cOnInverse
             font.pixelSize: 12
         }
+        
         background: Rectangle {
-            color: "#313033"
+            color: slider.cInverse
             radius: height / 2
         }
     }
