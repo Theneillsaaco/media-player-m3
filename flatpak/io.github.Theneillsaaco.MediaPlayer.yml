@@ -4,7 +4,7 @@ runtime-version: '6.11'
 sdk: org.kde.Sdk
 appstream-compose: false
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.dotnet10
+  - org.freedesktop.Sdk.Extension.dotnet10//26.08
 command: media-player
 
 finish-args:
