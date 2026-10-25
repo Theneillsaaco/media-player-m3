@@ -43,6 +43,22 @@ dotnet run --project src/Player.App
 
 Or build the package: `nix build` (the binary is `result/bin/media-player`).
 
+#### Install (flake)
+
+Add in your inputs
+```nix
+media-player = {
+  url = "github:Theneillsaaco/media-player-m3";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+```
+
+Add in your sistem or home packages like that
+
+```nix
+inputs.media-player.packages.${pkgs.stdenv.hostPlatform.system}.default
+```
+
 ### Flatpak
 
 ```sh
