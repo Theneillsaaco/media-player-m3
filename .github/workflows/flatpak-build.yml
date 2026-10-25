@@ -1,0 +1,68 @@
+name: Flatpak build (test only)
+
+# Only checks that the Flatpak builds and starts to exist. Nothing is uploaded: no artifact, no release.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - 'flatpak/**'
+      - 'sidecar/**'
+      - 'src/**'
+      - '**/*.csproj'
+      - '**/*.fsproj'
+      - '.github/workflows/flatpak-build.yml'
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP: io.github.Theneillsaaco.MediaPlayer
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # ffmpeg + mpv + libplacebo + the KDE SDK are big: make room first.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Install flatpak and flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder python3-venv git
+
+      # Ubuntu 24.04 blocks unprivileged user namespaces, which bubblewrap (flatpak-builder) needs.
+      - name: Allow user namespaces
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Add Flathub
+        run: flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Cache runtimes and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/flatpak
+            flatpak/.flatpak-builder
+          key: flatpak-${{ runner.os }}-${{ hashFiles('flatpak/*.yml', 'flatpak/build.sh', '**/*.csproj', '**/*.fsproj') }}
+          restore-keys: |
+            flatpak-${{ runner.os }}-
+
+      # build.sh installs the runtimes, generates nuget-sources.json and python3-modules.json,
+      # then runs flatpak-builder --user --install.
+      - name: Build
+        run: bash flatpak/build.sh
+
+      - name: Check the installed app
+        run: |
+          flatpak info --user "$APP"
+          flatpak run --command=test "$APP" -x /app/lib/player/Player.App
+          flatpak run --command=sh "$APP" -c 'ls /app/lib/libmpv.so* /app/lib/dotnet/dotnet /app/share/player/sidecar/ytm/server.py'
