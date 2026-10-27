@@ -19,4 +19,16 @@
         Command="sed -e &quot;s#^$(TargetDir.Replace('\', '/').TrimEnd('/'))/##&quot; &quot;$(QtNativeBuildDir)/install_manifest.txt&quot; &gt;&gt; &quot;$(TargetDir)qtdeploy.txt&quot;"
         IgnoreExitCode="true" />
   </Target>
+
+  <Target Name="PlayerFixQtAppHost" BeforeTargets="QtBridgePrepareAppHost"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_PlayerQtHostFile>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)qt/native/bin/player_app</_PlayerQtHostFile>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(_PlayerQtHostFile)')">
+      <AppHostSourcePath>$(_PlayerQtHostFile)</AppHostSourcePath>
+    </PropertyGroup>
+    <Warning Condition="!Exists('$(_PlayerQtHostFile)')"
+             Text="PlayerFixQtAppHost: no existe $(_PlayerQtHostFile)" />
+  </Target>
 </Project>
