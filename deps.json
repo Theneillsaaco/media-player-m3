@@ -1,23 +1,23 @@
 [
   {
     "pname": "FSharp.Core",
-    "version": "10.1.402",
-    "hash": "sha256-2vDEOE7f5A9ofoVmKK1Sy1xV5aM4nYAZDcBEnHWLnfc="
+    "version": "10.1.403",
+    "hash": "sha256-UYJ9bh3HxXqAnLCp2k1FbvWgtaWDpz2byTJO6Cuzyr8="
   },
   {
     "pname": "Microsoft.Data.Sqlite",
-    "version": "10.0.13",
-    "hash": "sha256-FcV73lQnXtMNEnOslpG8bZt+R8+9YSeM6ldRIf96zTo="
+    "version": "10.0.14",
+    "hash": "sha256-NO54SJI4cty/NB6JtsGSFw8iKBXLnLJgSscHslt/sLQ="
   },
   {
     "pname": "Microsoft.Data.Sqlite.Core",
-    "version": "10.0.13",
-    "hash": "sha256-Zh5mlrNeiKXNzrGsIj2vowOlryfH34vuIhVsDdxe4Nc="
+    "version": "10.0.14",
+    "hash": "sha256-3wgo44YaHgJAyaPsGJHNwZQs3Ee2HI0vs2ziVC8CsJI="
   },
   {
     "pname": "QtGroup.Qt.Bridge.CSharp.linux-x64",
-    "version": "0.4.0-beta",
-    "hash": "sha256-41xzLPcJiZmpQkkf4BPHz3Vi6OR/v4Wa+j00Cz41Yjo="
+    "version": "0.5.0",
+    "hash": "sha256-tQ4d4oJ9JFVLJ0s3+vB4/qBgbEP9tKoithI2G68ghuo="
   },
   {
     "pname": "SQLitePCLRaw.bundle_e_sqlite3",
