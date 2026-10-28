@@ -41,12 +41,12 @@
   },
   {
     "pname": "Tmds.DBus.Generator",
-    "version": "0.95.1",
-    "hash": "sha256-2zRXl1JbEBO7hIdLkhSgfgD93O2yMfkmhrMEblshuME="
+    "version": "0.95.2",
+    "hash": "sha256-JhNy5J6Oor22dj/eWc+ZwgB45awEW+yW2g3ZqQKB030="
   },
   {
     "pname": "Tmds.DBus.Protocol",
-    "version": "0.95.1",
-    "hash": "sha256-LUum1jB4RxzgfoqwxKoTRe7UdhTikbBh5Em7g4gvp3U="
+    "version": "0.95.2",
+    "hash": "sha256-6aDaOhzL6sIUzJGgzyg4Pu/hLR3AzHnVyPUIZdYqYTU="
   }
 ]
