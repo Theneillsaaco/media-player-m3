@@ -8,8 +8,8 @@
 
     <ItemGroup>
       <PackageReference Include="FSharp.Core" Version="10.1.403" />
-      <PackageReference Include="Tmds.DBus.Generator" Version="0.95.1" PrivateAssets="all" />
-      <PackageReference Include="Tmds.DBus.Protocol" Version="0.95.1" />
+      <PackageReference Include="Tmds.DBus.Generator" Version="0.95.2" PrivateAssets="all" />
+      <PackageReference Include="Tmds.DBus.Protocol" Version="0.95.2" />
     </ItemGroup>
 
     <ItemGroup>
