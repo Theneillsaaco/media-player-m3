@@ -280,7 +280,7 @@ def _ydl(fmt=AUDIO_FORMAT):
             "skip_download": True,
             "socket_timeout": 20,
         }
-        clients = [c.strip() for c in os.environ.get("PLAYER_YT_CLIENTS", "").split(",") if c.strip()]
+        clients = [c.strip() for c in os.environ.get("PLAYER_YT_CLIENTS", "visionos").split(",") if c.strip()]
         if clients:
             options["extractor_args"] = {"youtube": {"player_client": clients}}
         ydl = cache[fmt] = YoutubeDL(options)
