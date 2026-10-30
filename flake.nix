@@ -92,6 +92,7 @@
         runtimeDeps = runtimeLibs;
         makeWrapperArgs = [
           "--set" "QtDir" "${qtPrefix}"
+          "--set" "QSG_RHI_BACKEND" "vulkan"
           "--set" "QT_NO_PRIVATE_MODULE_WARNING" "ON"
           "--set" "QT_PLUGIN_PATH" "${qtPrefix}/${qt.qtbase.qtPluginPrefix}"
           "--set" "QML_IMPORT_PATH" "${qtPrefix}/${qt.qtbase.qtQmlPrefix}"
