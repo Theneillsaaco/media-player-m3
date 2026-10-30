@@ -264,6 +264,12 @@ def song(params):
 
 # ---- streams ----
 
+def _clients(fmt):
+    name = "PLAYER_YT_VIDEO_CLIENTS" if fmt == VIDEO_FORMAT else "PLAYER_YT_AUDIO_CLIENTS"
+    default = "visionos" if fmt == VIDEO_FORMAT else ""
+    raw = os.environ.get(name, default)
+    return [c.strip() for c in raw.split(",") if c.strip()]
+    
 def _ydl(fmt=AUDIO_FORMAT):
     """One YoutubeDL per worker thread and format, reused between calls."""
     cache = getattr(_local, "ydl", None)
@@ -280,7 +286,7 @@ def _ydl(fmt=AUDIO_FORMAT):
             "skip_download": True,
             "socket_timeout": 20,
         }
-        clients = [c.strip() for c in os.environ.get("PLAYER_YT_CLIENTS", "visionos").split(",") if c.strip()]
+        clients = _clients(fmt)
         if clients:
             options["extractor_args"] = {"youtube": {"player_client": clients}}
         ydl = cache[fmt] = YoutubeDL(options)
