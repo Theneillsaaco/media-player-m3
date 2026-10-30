@@ -28,6 +28,7 @@ Result normalisation (artwork upscaling, artist/album extraction) follows Sung's
 helper/catalog.py (MIT), rewritten for this protocol.
 """
 import json
+import os
 import re
 import sys
 import threading
@@ -271,14 +272,18 @@ def _ydl(fmt=AUDIO_FORMAT):
     ydl = cache.get(fmt)
     if ydl is None:
         from yt_dlp import YoutubeDL
-        ydl = cache[fmt] = YoutubeDL({
+        options = {
             "format": fmt,
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
             "socket_timeout": 20,
-        })
+        }
+        clients = [c.strip() for c in os.environ.get("PLAYER_YT_CLIENTS", "").split(",") if c.strip()]
+        if clients:
+            options["extractor_args"] = {"youtube": {"player_client": clients}}
+        ydl = cache[fmt] = YoutubeDL(options)
     return ydl
 
 
