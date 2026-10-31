@@ -56,6 +56,17 @@ type IAccountProvider =
     /// Every track of a playlist when limit is 0, otherwise the first `limit`.
     abstract GetPlaylist: id: string * limit: int -> Task<IReadOnlyList<Track>>
     abstract Rate: id: string * liked: bool -> Task
+    /// Tells YouTube Music the account started playing a track: what its recommendations are made from.
+    abstract ReportPlayback: id: string -> Task
+    /// How loud YouTube measured a track, in dB; 0 when it does not say.
+    abstract Loudness: id: string -> Task<float>
+    /// Makes a playlist (with the song in it when videoId is not empty) and returns its id.
+    abstract CreatePlaylist: title: string * videoId: string -> Task<string>
+    abstract DeletePlaylist: id: string -> Task
+    /// Fails with the message "duplicate" when the playlist already holds the song.
+    abstract AddToPlaylist: playlistId: string * videoId: string -> Task
+    /// Follows (true) or unfollows (false) an artist by its channel id.
+    abstract Follow: channelId: string * following: bool -> Task
 
 // browsing
 
@@ -102,6 +113,10 @@ type ArtistPage = {
     Albums: Entity[]
     Singles: Entity[]
     Related: Entity[]
+    /// The channel to follow, "" when there is none.
+    ChannelId: string
+    /// The signed-in account follows this artist.
+    Subscribed: bool
 }
 
 /// What a typed search found: Tracks for the songs and videos filters, Entities for the rest.
@@ -138,3 +153,5 @@ type IBrowseProvider =
     abstract Links: trackId: string -> Task<TrackLinks>
     /// Views and likes of a track.
     abstract Stats: id: string -> Task<TrackStats>
+    /// What plays after a track: the songs of its radio (the track itself left out).
+    abstract Radio: id: string -> Task<Track[]>

@@ -14,6 +14,8 @@ public class SettingsViewModel : INotifyPropertyChanged
         AppServices.EnsureStarted();
         ScrobbleStatus = AppServices.DatabaseError;
         Startup = ReadStartup();
+        AutoPlay = AppServices.Prefs.AutoPlay;
+        NormalizeVolume = AppServices.Prefs.Normalize;
         SyncScrobbler();
         SyncAccount();
     }
@@ -22,6 +24,11 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     /// <summary>What happens to the saved session at start: "continue", "fromStart" (default) or "none".</summary>
     public string Startup { get; private set => Set(ref field, value); } = "fromStart";
+
+    /// <summary>Keep playing similar music when the queue ends.</summary>
+    public bool AutoPlay { get; private set => Set(ref field, value); } = true;
+    /// <summary>Turn loud songs down to a common level (needs a YouTube Music account).</summary>
+    public bool NormalizeVolume { get; private set => Set(ref field, value); } = true;
 
     // Last.fm. State is one of: unavailable, signedOut, authorizing, signedIn, reconnect.
     public string ScrobbleState { get; private set => Set(ref field, value); } = "unavailable";
@@ -55,6 +62,19 @@ public class SettingsViewModel : INotifyPropertyChanged
 
         try { AppServices.Db?.SetSetting(Resume.settingKey, value); }
         catch (Exception e) { Log.Warn("settings", "startup mode", e); }
+    }
+
+    public void ChooseAutoPlay(bool on)
+    {
+        AppServices.Prefs.SaveAutoPlay(on);
+        AutoPlay = on;
+    }
+
+    public void ChooseNormalizeVolume(bool on)
+    {
+        AppServices.Prefs.SaveNormalize(on);
+        NormalizeVolume = on;
+        AppServices.Playback.RefreshSound();
     }
 
     public void ImportBrowserSession(string browser) { AppServices.Account?.ImportBrowser(browser); AccountChangedByUser(); }

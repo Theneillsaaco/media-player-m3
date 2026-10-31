@@ -69,6 +69,9 @@ internal static class Migrations
             body       TEXT NOT NULL,
             fetched_at INTEGER NOT NULL
         ) WITHOUT ROWID;
+        """,
+        """
+        ALTER TABLE scrobble_queue ADD COLUMN chosen INTEGER NOT NULL DEFAULT 1;
         """
     ];
 }

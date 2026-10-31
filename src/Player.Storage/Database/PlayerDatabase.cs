@@ -37,11 +37,12 @@ public partial class PlayerDatabase : IDisposable
         lock (_gate)
         {
             Run("""
-                INSERT INTO scrobble_queue (service, started_at, artist, title, album, duration)
-                VALUES ($s, $at, $artist, $title, $album, $duration)
+                INSERT INTO scrobble_queue (service, started_at, artist, title, album, duration, chosen)
+                VALUES ($s, $at, $artist, $title, $album, $duration, $chosen)
                 """,
                 ("$s", service), ("$at", listen.StartedAt), ("$artist", listen.Artist),
-                ("$title", listen.Title), ("$album", listen.Album), ("$duration", listen.DurationSeconds));
+                ("$title", listen.Title), ("$album", listen.Album), ("$duration", listen.DurationSeconds),
+                ("$chosen", listen.Chosen ? 1 : 0));
             Run("""
                 DELETE FROM scrobble_queue
                 WHERE service = $s AND id NOT IN
@@ -59,7 +60,7 @@ public partial class PlayerDatabase : IDisposable
         {
             using var cmd = _db.CreateCommand();
             cmd.CommandText = """
-                              SELECT id, started_at, artist, title, album, duration
+                              SELECT id, started_at, artist, title, album, duration, chosen
                               FROM scrobble_queue WHERE service = $s ORDER BY id LIMIT $n
                               """;
 
@@ -72,7 +73,7 @@ public partial class PlayerDatabase : IDisposable
             while (reader.Read())
                 rows.Add(new(reader.GetInt64(0),
                     new Listen(reader.GetInt64(1), reader.GetString(2), reader.GetString(3), 
-                        reader.GetString(4), reader.GetDouble(5))));
+                        reader.GetString(4), reader.GetDouble(5), reader.GetInt32(6) != 0)));
             
             return rows;
         }

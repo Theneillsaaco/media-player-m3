@@ -213,7 +213,14 @@ def build(api, signed_in, get_auth, track, artwork, artist_names):
 
     def artist(params):
         key = check(params.get("id"))
-        data = api().get_artist(key)
+        data = None
+        if get_auth() is not None:  # signed in, the page also says whether the account follows the artist
+            try:
+                data = signed_in(lambda c: c.get_artist(key))
+            except Exception:
+                data = None
+        if data is None:
+            data = api().get_artist(key)
         songs = data.get("songs") if isinstance(data.get("songs"), dict) else {}
 
         def part(name, fallback):
@@ -231,6 +238,8 @@ def build(api, signed_in, get_auth, track, artwork, artist_names):
             "albums": part("albums", "album"),
             "singles": part("singles", "album"),
             "related": part("related", "artist"),
+            "channelId": data.get("channelId") or "",
+            "subscribed": bool(data.get("subscribed")),
         }
 
     def links(params):

@@ -19,10 +19,14 @@
     <Compile Include="Playback\Prefetch.fs" />
     <Compile Include="Playback\Resume.fs" />
     <Compile Include="Playback\Video.fs" />
+    <Compile Include="Playback\PlayErrors.fs" />
+    <Compile Include="Playback\Autoplay.fs" />
+    <Compile Include="Playback\Sound.fs" />
     <Compile Include="Theme\Hct.fs" />
     <Compile Include="Theme\Scheme.fs" />
     <Compile Include="Theme\Appearance.fs" />
     <Compile Include="Lyrics\Lrc.fs" />
+    <Compile Include="Lyrics\LyricTitle.fs" />
     <Compile Include="Lyrics\LyricsSync.fs" />
     <Compile Include="Localization\Translations.fs" />
     <Compile Include="Localization\I18n.fs" />

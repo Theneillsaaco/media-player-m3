@@ -45,6 +45,7 @@ module Listening =
                 Title = title
                 Album = (track.Album |> Option.ofObj |> Option.defaultValue "").Trim()
                 DurationSeconds = track.DurationSeconds
+                Chosen = true
             }
             
     let start (startedAt: int64) (track: Track) : ListenTracker =
@@ -53,6 +54,10 @@ module Listening =
           Last = ValueNone
           Reported = false }
         
+    /// Marks the play as one the user did not pick (autoplay added it), which Last.fm wants to know.
+    let unchosen (tracker: ListenTracker) : ListenTracker =
+        { tracker with Listen = tracker.Listen |> ValueOption.map (fun l -> { l with Chosen = false }) }
+
     /// Feeds one reading. Time only counts when both this and the previous reading were
     /// playing and the position advanced no faster than the clock, so pauses and seeks add
     /// nothing. Returns the listen exactly once, the moment the track counts.

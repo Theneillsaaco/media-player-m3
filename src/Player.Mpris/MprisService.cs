@@ -49,6 +49,8 @@ public class MprisService : IDisposable
             changed.Add(PlayerProperty.Shuffle);
         if (Math.Abs(previous.Volume - state.Volume) > 0.001)
             changed.Add(PlayerProperty.Volume);
+        if (Math.Abs(previous.Rate - state.Rate) > 0.001)
+            changed.Add(PlayerProperty.Rate);
         if (previous.CanGoNext != state.CanGoNext)
             changed.Add(PlayerProperty.CanGoNext);
         if (previous.CanGoPrevious != state.CanGoPrevious)
@@ -131,12 +133,12 @@ public class MprisService : IDisposable
         // ---- org.mpris.MediaPlayer2.Player ----
         public string PlaybackStatus => State.Status;
         public string LoopStatus { get => State.Loop; set => Send(MprisAction.SetLoop, text: value); }
-        public double Rate { get => 1.0; set { } }
+        public double Rate { get => State.Rate; set => Send(MprisAction.SetRate, value); }
         public bool Shuffle { get => State.Shuffle; set => Send(MprisAction.SetShuffle, value ? 1 : 0); }
         public double Volume { get => State.Volume; set => Send(MprisAction.SetVolume, value); }
         public long Position => State.PositionMicros;
-        public double MinimumRate => 1.0;
-        public double MaximumRate => 1.0;
+        public double MinimumRate => 0.5;
+        public double MaximumRate => 3.0;
         public bool CanGoNext => State.CanGoNext;
         public bool CanGoPrevious => State.CanGoPrevious;
         public bool CanPlay => State.CanPlay;

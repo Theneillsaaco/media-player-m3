@@ -40,6 +40,7 @@ module private Wire =
     let listenParams (suffix: string) (l: Listen) =
         [ "artist" + suffix, l.Artist; "track" + suffix, l.Title ]
         @ optional ("album" + suffix) l.Album
+        @ (if l.Chosen then [] else [ "chosenByUser" + suffix, "0" ])
         @ (if l.DurationSeconds >= 1.0 then
                [ "duration" + suffix, string (int (Math.Round l.DurationSeconds)) ]
            else

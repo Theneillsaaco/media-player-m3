@@ -11,6 +11,7 @@ public sealed record MprisState(
     long LengthMicros,
     long PositionMicros,
     double Volume, // 0..1
+    double Rate, // playback speed, 1.0 is normal
     string Loop, // "None" | "Track" | "Playlist"
     bool Shuffle,
     bool CanGoNext,
@@ -20,5 +21,5 @@ public sealed record MprisState(
 )
 {
     public static MprisState Idle { get; } =
-        new("Stopped", "", "", [], "", "", 0, 0, 1.0, "None", false, false, false, false, false);
+        new("Stopped", "", "", [], "", "", 0, 0, 1.0, 1.0, "None", false, false, false, false, false);
 }

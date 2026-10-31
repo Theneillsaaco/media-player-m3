@@ -226,7 +226,7 @@ Rectangle {
                 RowLayout {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.min(parent.width, 190)
+                    width: Math.min(parent.width, 250)
                     spacing: 4
 
                     MIconButton {
@@ -249,6 +249,13 @@ Rectangle {
                         live: true
                         expressive: false
                         onChangedByUser: (v) => root.playback.setVolume(Math.round(v))
+                    }
+                    MButton {
+                        kind: "text"
+                        text: root.playback.speedText
+                        ToolTip.visible: hovered
+                        ToolTip.text: root.tr("tip.speed")
+                        onClicked: root.playback.cycleSpeed()
                     }
                 }
             }

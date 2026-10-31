@@ -116,6 +116,48 @@ MDialog {
         color: dialog.theme.outlineVariant
     }
 
+    // ---- Reproducción ----
+
+    Text {
+        text: dialog.tr("settings.playback")
+        color: dialog.theme.primary
+        font.pixelSize: 14
+        font.weight: Font.Medium
+    }
+
+    MSwitch {
+        id: autoPlaySwitch
+        Layout.fillWidth: true
+        text: dialog.tr("settings.autoplay")
+        onToggled: dialog.vm.chooseAutoPlay(checked)
+
+        // A Binding keeps following the model after the user has toggled the switch.
+        Binding {
+            target: autoPlaySwitch
+            property: "checked"
+            value: dialog.vm.autoPlay
+        }
+    }
+
+    MSwitch {
+        id: normalizeSwitch
+        Layout.fillWidth: true
+        text: dialog.tr("settings.normalize")
+        onToggled: dialog.vm.chooseNormalizeVolume(checked)
+
+        Binding {
+            target: normalizeSwitch
+            property: "checked"
+            value: dialog.vm.normalizeVolume
+        }
+    }
+
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: dialog.theme.outlineVariant
+    }
+
     // ---- Video ----
 
     Text {

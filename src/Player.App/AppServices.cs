@@ -71,10 +71,16 @@ internal static class AppServices
                 key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "video setting", ex); return null; } },
                 (key, value) => Db?.SetSetting(key, value));
 
+            Prefs = new PlaybackPrefs(
+                key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "playback setting", ex); return null; } },
+                (key, value) => Db?.SetSetting(key, value));
+            AutoplayFeed = new AutoplayService(Provider);
+            LoudnessLookup = new LoudnessService(Provider, () => Account?.SignedIn == true);
             Prefetcher = new PrefetchService(Provider);
             Stats = new StatsService(Provider);
-            Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status);
+            Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status, Prefs, AutoplayFeed, LoudnessLookup, Account);
             Playback.Restore();
+            Playback.ApplyStartupSound();
             Playback.StartMpris();
             
             AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();
@@ -119,6 +125,9 @@ internal static class AppServices
     public static VideoService Video { get; private set; } = null!;
     public static PrefetchService Prefetcher { get; private set; } = null!;
     public static StatsService Stats { get; private set; } = null!;
+    public static PlaybackPrefs Prefs { get; private set; } = null!;
+    public static AutoplayService AutoplayFeed { get; private set; } = null!;
+    public static LoudnessService LoudnessLookup { get; private set; } = null!;
     public static PlaybackService Playback { get; private set; } = null!;
     public static StatusLine Status { get; } = new();
     

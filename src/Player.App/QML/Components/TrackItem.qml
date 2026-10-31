@@ -221,6 +221,15 @@ Item {
                 if (w) w.toggleLikeOf(row.videoId)
             }
         }
+        MMenuItem {
+            visible: row.canLike
+            glyph: "playlist_add"
+            text: row.tr("menu.addToPlaylist")
+            onTriggered: {
+                const w = row.Window.window
+                if (w && w.pickPlaylist) w.pickPlaylist(row.videoId)
+            }
+        }
 
         MMenuItem {
             visible: row.showRemove

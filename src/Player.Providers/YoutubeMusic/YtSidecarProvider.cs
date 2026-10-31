@@ -124,6 +124,32 @@ public partial class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyri
     public async Task Rate(string id, bool liked) => 
         await CallAsync("rate_song", new { id, rating = liked ? "LIKE" : "INDIFFERENT" }, signedIn: true);
 
+    public async Task ReportPlayback(string id) =>
+        await CallAsync("report_playback", new { id }, signedIn: true);
+
+    /// <summary>How loud YouTube measured a track, in dB; 0 when it does not say (it only tells a signed-in session).</summary>
+    public async Task<double> Loudness(string id)
+    {
+        var result = await CallAsync("loudness", new { id }, signedIn: true);
+        return result.TryGetProperty("db", out var db) && db.ValueKind == JsonValueKind.Number ? db.GetDouble() : 0.0;
+    }
+
+    public async Task<string> CreatePlaylist(string title, string videoId)
+    {
+        var result = await CallAsync("create_playlist", new { title, videoId }, signedIn: true);
+        return Text(result, "id");
+    }
+
+    public async Task DeletePlaylist(string id) =>
+        await CallAsync("delete_playlist", new { id }, signedIn: true);
+
+    /// <summary>Throws with the message "duplicate" when the playlist already holds the song.</summary>
+    public async Task AddToPlaylist(string playlistId, string videoId) =>
+        await CallAsync("playlist_add", new { playlistId, videoId }, signedIn: true);
+
+    public async Task Follow(string channelId, bool following) =>
+        await CallAsync("follow", new { channelId, on = following }, signedIn: true);
+
     public void Dispose()
     {
         lock (_gate) _cookie = null;

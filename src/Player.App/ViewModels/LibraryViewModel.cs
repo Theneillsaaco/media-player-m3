@@ -51,6 +51,9 @@ public class LibraryViewModel : INotifyPropertyChanged
     public bool CanLike { get; private set => Set(ref field, value); }
     public bool Liked { get; private set => Set(ref field, value); }
 
+    /// <summary>How the last playlist action went ("" when there is none). QML shows it in the snackbar.</summary>
+    public string Notice { get; private set => Set(ref field, value); } = "";
+
     /// <summary>A JSON array with the id of every liked song. The ⋮ menus of the lists read it to show their heart.</summary>
     public string LikedJson { get; private set => Set(ref field, value); } = "[]";
 
@@ -163,6 +166,61 @@ public class LibraryViewModel : INotifyPropertyChanged
                 SetLiked(id, !like); // it did not go through: put the heart back
                 AppServices.Status.Text = Tr.F("like.failed", e.Message);
             });
+    }
+
+    /// <summary>Adds a song to one of the user's playlists.</summary>
+    public void AddToPlaylist(string playlistId, string videoId)
+    {
+        if (AppServices.Account is not { } account || playlistId.Length == 0 || videoId.Length == 0) return;
+
+        var title = _playlists.FirstOrDefault(p => p.Id == playlistId)?.Title ?? "";
+
+        Run(Task.Run(() => account.AddToPlaylistAsync(playlistId, videoId)),
+            _ =>
+            {
+                _libraryLoaded = false; // the song count changed: the next visit to the library reads it again
+                SayOnce(Tr.F("playlist.addedTo", title));
+            },
+            e => SayOnce(e.Message == "duplicate" ? Tr.T("playlist.exists") : Tr.F("playlist.failed", e.Message)));
+    }
+
+    /// <summary>Makes a playlist, with the song in it when videoId is not empty.</summary>
+    public void CreatePlaylist(string title, string videoId)
+    {
+        title = title.Trim();
+        if (AppServices.Account is not { } account || title.Length == 0) return;
+
+        Run(Task.Run(() => account.CreatePlaylistAsync(title, videoId)),
+            _ =>
+            {
+                _libraryLoaded = false;
+                LoadLibrary();
+                SayOnce(Tr.F("playlist.created", title));
+            },
+            e => SayOnce(Tr.F("playlist.failed", e.Message)));
+    }
+
+    public void DeletePlaylist(string playlistId)
+    {
+        if (AppServices.Account is not { } account || playlistId.Length == 0 || playlistId == LikedList) return;
+
+        Run(Task.Run(() => account.DeletePlaylistAsync(playlistId)),
+            _ =>
+            {
+                SafeCache(() => { AppServices.Db?.SaveTracks(playlistId, []); return 0; });
+                CloseList();
+                _libraryLoaded = false;
+                LoadLibrary();
+                SayOnce(Tr.T("playlist.deleted"));
+            },
+            e => SayOnce(Tr.F("playlist.failed", e.Message)));
+    }
+
+    /// <summary>Sets the notice twice, so the same text twice in a row still reaches QML.</summary>
+    private void SayOnce(string text)
+    {
+        Notice = "";
+        Notice = text;
     }
 
     private void SetLiked(string id, bool liked)

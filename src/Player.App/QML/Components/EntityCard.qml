@@ -141,5 +141,14 @@ Item {
                 if (w) w.toggleLikeOf(card.videoId)
             }
         }
+        MMenuItem {
+            visible: card.canLike
+            glyph: "playlist_add"
+            text: card.tr("menu.addToPlaylist")
+            onTriggered: {
+                const w = card.Window.window
+                if (w && w.pickPlaylist) w.pickPlaylist(card.videoId)
+            }
+        }
     }
 }

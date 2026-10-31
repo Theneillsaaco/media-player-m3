@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using Player.App.Services;
 using Player.Core.Contracts;
+using Player.Core.Playback;
 
 namespace Player.App.ViewModels;
 
@@ -55,11 +56,16 @@ public class PlaybackViewModel : INotifyPropertyChanged
     } = 100;
     public bool CanNext { get; private set => Set(ref field, value); }
     public bool CanPrevious { get; private set => Set(ref field, value); }
+    /// <summary>Playback speed, 0.5 to 3.</summary>
+    public double Speed { get; private set => Set(ref field, value); } = 1.0;
+    /// <summary>"1×", "1.25×".</summary>
+    public string SpeedText { get; private set => Set(ref field, value); } = "1×";
 
     public void Toggle() => AppServices.Playback.Toggle();
     public void Next() => AppServices.Playback.Next();
     public void Previous() => AppServices.Playback.Previous();
     public void CycleRepeat() => AppServices.Playback.CycleRepeat();
+    public void CycleSpeed() => AppServices.Playback.CycleSpeed();
     public void ToggleShuffle() => AppServices.Playback.ToggleShuffle();
     public void Seek(double seconds) => AppServices.Playback.Seek(seconds);
     public void SetVolume(int percent) => AppServices.Playback.SetVolume(percent);
@@ -90,6 +96,8 @@ public class PlaybackViewModel : INotifyPropertyChanged
         Volume = p.Volume;
         CanNext = p.CanNext;
         CanPrevious = p.CanPrevious;
+        Speed = p.Speed;
+        SpeedText = PlaybackSpeed.label(p.Speed);
 
         var stats = AppServices.Stats;
         stats.Request(p.CurrentId);

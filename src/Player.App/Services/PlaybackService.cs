@@ -24,6 +24,7 @@ internal sealed class PlaybackService
     public void PlayDirect(string source)
     {
         var direct = new Track(source, source, "", [], "", 0.0, "", TrackKind.Song);
+        _radioIds.Clear();
         _queue = PlayQueue.replace(_rng.Next(), [direct], 0, _queue);
         RefreshQueue(persist: false);
         PlayCurrent();
@@ -36,6 +37,7 @@ internal sealed class PlaybackService
         if (index < 0 || index >= tracks.Count)
             return;
         
+        _radioIds.Clear();
         _queue = PlayQueue.replace(_rng.Next(), tracks, index, _queue);
         RefreshQueue(persist: false);
         PlayCurrent();
@@ -134,6 +136,7 @@ internal sealed class PlaybackService
         if (PlayQueue.count(_queue) == 0)
             return;
 
+        _radioIds.Clear();
         _queue = PlayQueue.clear(_queue);
         StopPlayback();
         ClearCurrent();
@@ -293,6 +296,56 @@ internal sealed class PlaybackService
 
     #endregion
 
+    #region Sound
+
+    /// <summary>Playback speed, 0.5 to 3.</summary>
+    public double Speed => _prefs.Speed;
+
+    /// <summary>Goes to the next speed of the list (the pitch stays).</summary>
+    public void CycleSpeed() => ChooseSpeed(PlaybackSpeed.next(_prefs.Speed));
+
+    public void ChooseSpeed(double speed)
+    {
+        var value = PlaybackSpeed.normalize(speed);
+        _prefs.SaveSpeed(value);
+        _engine.SetSpeed(value);
+        Poll();
+    }
+
+    /// <summary>Gives mpv the saved speed. Called once at start.</summary>
+    public void ApplyStartupSound() => _engine.SetSpeed(_prefs.Speed);
+
+    /// <summary>The levelling setting changed: look the levels up and apply the gain again.</summary>
+    public void RefreshSound()
+    {
+        RequestPrefetch();
+        ApplyGain();
+    }
+
+    /// <summary>Turns the current track down to the common level, when its loudness is known. Never turns it up.</summary>
+    private void ApplyGain()
+    {
+        var db = 0.0;
+
+        if (_prefs.Normalize && PlayQueue.current(_queue) is { } current && _loudness.TryGet(current.Value.Id) is { } measured)
+            db = TrackLoudness.gainDb(measured);
+
+        if (Math.Abs(db - _appliedGain) < 0.05)
+            return;
+
+        _appliedGain = db;
+        _engine.SetGain(db);
+    }
+
+    /// <summary>A playback error as the listener should read it: the known reasons in words, the rest as they are.</summary>
+    private static string ErrorText(string raw)
+    {
+        var key = PlayErrors.reason(raw);
+        return key.Length > 0 ? Tr.T(key) : Tr.F("status.error", PlayErrors.firstLine(raw));
+    }
+
+    #endregion
+
     #region Polling
 
     public void Poll()
@@ -330,7 +383,8 @@ internal sealed class PlaybackService
             {
                 IsLoaded = false;
                 _sawActive = false;
-                _status.Text = Tr.F("status.error", error);
+                Log.Warn("playback", "play failed: " + error);
+                _status.Text = ErrorText(error);
                 return;
             }
         }
@@ -358,6 +412,18 @@ internal sealed class PlaybackService
         else if (_sawActive)
         {
             OnTrackEnded();
+        }
+
+        if (_autoplay.Version != _seenAutoplay)
+        {
+            _seenAutoplay = _autoplay.Version;
+            ApplyAutoplay();
+        }
+
+        if (_loudness.Version != _seenLoudness)
+        {
+            _seenLoudness = _loudness.Version;
+            ApplyGain();
         }
 
         var version = _prefetch.Version;
@@ -405,7 +471,17 @@ internal sealed class PlaybackService
         _sawActive = false;
         IsLoaded = false;
         Position = 0;
-        _status.Text = Tr.T("status.finished");
+        if (_prefs.AutoPlay && Autoplay.wanted(_queue) && PlayQueue.current(_queue) is { } last)
+        {
+            _waitingAutoplay = true;
+            _status.Text = Tr.T("status.autoplay");
+            _autoplay.Request(last.Value.Id);
+            ApplyAutoplay(); // already known: goes on at once; otherwise the poll picks the answer up
+        }
+        else
+        {
+            _status.Text = Tr.T("status.finished");
+        }
         PersistQueue();
     }
 
@@ -486,6 +562,7 @@ internal sealed class PlaybackService
     private void AfterQueueEdit()
     {
         RequestPrefetch();
+        RequestAutoplay();
         SyncNext();
     }
 
@@ -493,6 +570,9 @@ internal sealed class PlaybackService
     {
         string[] ids = [.. Prefetch.upcoming(_queue).Select(t => t.Id).Where(id => !TrackSource.IsDirect(id)).Distinct()];
         _prefetch.Want(ids);
+
+        if (_prefs.Normalize)
+            _loudness.Want(PlayQueue.current(_queue) is { } now ? ids.Prepend(now.Value.Id) : ids);
     }
 
     /// <summary>
@@ -537,6 +617,68 @@ internal sealed class PlaybackService
 
     #endregion
     
+    #region Autoplay
+
+    /// <summary>The queue is about to run out: ask for what plays after it, so it is there when the track ends.</summary>
+    private void RequestAutoplay()
+    {
+        if (_prefs.AutoPlay && Autoplay.wanted(_queue) && PlayQueue.current(_queue) is { } current)
+            _autoplay.Request(current.Value.Id);
+    }
+
+    /// <summary>The track ended and autoplay is still looking: pick the answer up even though nothing plays.</summary>
+    private void PumpAutoplay()
+    {
+        if (_waitingAutoplay && _autoplay.Version != _seenAutoplay)
+            Poll();
+    }
+
+    /// <summary>
+    /// Adds the radio of the last track to the end of the queue (so the next track is prefetched and the switch stays
+    /// gapless). If the queue had already ended, it goes on with the first new song.
+    /// </summary>
+    private void ApplyAutoplay()
+    {
+        var waiting = _waitingAutoplay && !IsLoaded;
+        _waitingAutoplay = waiting;
+
+        if (_prefs.AutoPlay && Autoplay.wanted(_queue) && PlayQueue.current(_queue) is { } current
+            && _autoplay.TryGet(current.Value.Id) is { Length: > 0 } found)
+        {
+            var fresh = Autoplay.fresh(_queue.Items.Select(item => item.Id), found);
+
+            if (fresh.Length > 0)
+            {
+                foreach (var added in fresh)
+                    _radioIds.Add(added.Id);
+
+                _queue = PlayQueue.add(fresh, _queue);
+                RefreshQueue();
+
+                if (waiting)
+                {
+                    _waitingAutoplay = false;
+                    _queue = PlayQueue.next(_queue);
+                    PlayCurrent();
+                }
+                else
+                {
+                    AfterQueueEdit();
+                }
+
+                return;
+            }
+        }
+
+        if (waiting && !_autoplay.Busy)
+        {
+            _waitingAutoplay = false;
+            _status.Text = Tr.T("status.finished");
+        }
+    }
+
+    #endregion
+
     #region Save and restore
 
     /// <summary>Where listening resumes: the playback position, or the restored one while nothing is loaded.</summary>
@@ -667,6 +809,12 @@ internal sealed class PlaybackService
     /// </summary>
     public void Pump()
     {
+        PumpAutoplay();
+        PumpCore();
+    }
+
+    private void PumpCore()
+    {
         if (_mpris is not { } mpris)
             return;
 
@@ -715,6 +863,7 @@ internal sealed class PlaybackService
             case MprisAction.SeekRelative: Seek(Math.Clamp(Position + command.Number / 1e6, 0, Duration)); break;
             case MprisAction.SeekTo: Seek(Math.Clamp(command.Number / 1e6, 0, Duration)); break;
             case MprisAction.SetVolume: SetVolume((int)Math.Round(Math.Clamp(command.Number, 0, 1) * 100)); break;
+            case MprisAction.SetRate: ChooseSpeed(command.Number); break;
             case MprisAction.SetShuffle:
                 if (_queue.Shuffle != command.Number > 0) ToggleShuffle();
                 break;
@@ -754,6 +903,7 @@ internal sealed class PlaybackService
             LengthMicros: (long)(Duration * 1e6),
             PositionMicros: (long)(Position * 1e6),
             Volume: Volume / 100.0,
+            Rate: Speed,
             Loop: RepeatMode switch { "one" => "Track", "all" => "Playlist", _ => "None" },
             Shuffle: Shuffle,
             CanGoNext: CanNext,
@@ -820,7 +970,10 @@ internal sealed class PlaybackService
 
     private void StartListening(Track t)
     {
-        _tracker = Listening.start(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), t);
+        var tracker = Listening.start(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), t);
+        _tracker = _radioIds.Contains(t.Id) ? Listening.unchosen(tracker) : tracker;
+        _account?.ReportPlayback(t.Id);
+        ApplyGain();
         if (_tracker.Listen is { IsSome: true } listen) _scrobble?.NowPlaying(listen.Value);
     }
     
@@ -859,9 +1012,20 @@ internal sealed class PlaybackService
     private bool _viaPrefetch;     // the current track plays from a resolved URL (not the yt-dlp hook)
     private string? _audioOverride; // a video id whose own audio plays instead of the track's (see SwapAudio)
     private int _seenPrefetch;
+    private readonly PlaybackPrefs _prefs;
+    private readonly AutoplayService _autoplay;
+    private readonly LoudnessService _loudness;
+    private readonly AccountService? _account;
+    private readonly HashSet<string> _radioIds = []; // tracks autoplay added: scrobbled as not chosen by the user
+    private int _seenAutoplay;
+    private int _seenLoudness;
+    private bool _waitingAutoplay; // the queue ended and autoplay is still looking for more
+    private double _appliedGain;
 
-    public PlaybackService(IAudioEngine engine, PlayerDatabase? db, ScrobbleService? scrobble, PrefetchService prefetch, StatusLine status) =>
-        (_engine, _db, _scrobble, _prefetch, _status) = (engine, db, scrobble, prefetch, status);
+    public PlaybackService(IAudioEngine engine, PlayerDatabase? db, ScrobbleService? scrobble, PrefetchService prefetch, StatusLine status,
+        PlaybackPrefs prefs, AutoplayService autoplay, LoudnessService loudness, AccountService? account) =>
+        (_engine, _db, _scrobble, _prefetch, _status, _prefs, _autoplay, _loudness, _account) =
+            (engine, db, scrobble, prefetch, status, prefs, autoplay, loudness, account);
     
     public event Action? Changed;
     

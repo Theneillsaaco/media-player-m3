@@ -38,6 +38,12 @@ public class MpvEngine : IAudioEngine
     public void SetVolume(int percent) => 
         mpv_set_property_string(_h, "volume", Math.Clamp(percent, 0, 100).ToString(CultureInfo.InvariantCulture));
 
+    public void SetSpeed(double speed) =>
+        mpv_set_property_string(_h, "speed", Math.Clamp(speed, 0.25, 4.0).ToString("0.###", CultureInfo.InvariantCulture));
+
+    public void SetGain(double db) =>
+        mpv_set_property_string(_h, "volume-gain", Math.Clamp(db, -60.0, 0.0).ToString("0.##", CultureInfo.InvariantCulture));
+
     public bool TakeEnded()
     {
         var ended = _ended;

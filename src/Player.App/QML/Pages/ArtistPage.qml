@@ -120,6 +120,12 @@ Item {
                             enabled: songs.count > 0
                             onClicked: root.nav.playArtist(true)
                         }
+                        MButton {
+                            visible: root.nav.canFollowArtist
+                            kind: root.nav.artistSubscribed ? "outlined" : "tonal"
+                            text: root.tr(root.nav.artistSubscribed ? "artist.following" : "artist.follow")
+                            onClicked: root.nav.toggleFollowArtist()
+                        }
                     }
                 }
             }

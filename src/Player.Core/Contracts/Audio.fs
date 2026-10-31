@@ -30,6 +30,10 @@ type IAudioEngine =
     abstract SetPaused: paused: bool -> unit
     abstract Seek: seconds: float -> unit
     abstract SetVolume: percent: int -> unit
+    /// Playback speed, 1.0 is normal; the pitch is kept.
+    abstract SetSpeed: speed: float -> unit
+    /// Extra gain in dB (0 or less): what levels the volume between songs.
+    abstract SetGain: db: float -> unit
     /// True once if a track reached its end since the last call (mpv may have gone on into the queued entry).
     abstract TakeEnded: unit -> bool
     /// Drains pending engine events. Returns the error message if playback failed, otherwise "".

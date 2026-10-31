@@ -507,6 +507,9 @@ METHODS = {
 METHODS.update(browse.build(api=api, signed_in=signed_in, get_auth=lambda: _auth,
                             track=track, artwork=artwork, artist_names=artist_names))
 
+import extras  # noqa: E402  (after METHODS exists: it replaces resolve and adds the account methods)
+METHODS.update(extras.build(sys.modules[__name__]))
+
 def reply(obj):
     line = json.dumps(obj, ensure_ascii=False) + "\n"
     with _write:

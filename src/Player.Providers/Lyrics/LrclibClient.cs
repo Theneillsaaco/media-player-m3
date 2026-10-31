@@ -2,12 +2,14 @@ using System.Net;
 using System.Text.Json;
 using Player.Core.Contracts;
 using Player.Core.Domain;
+using Player.Core.Lyrics;
 
 namespace Player.Providers.Lyrics;
 
 /// <summary>
 /// Lyrics from LRCLIB (https://lrclib.net): free, no key, with timed lyrics for many songs. It asks for the exact
-/// match first (artist, title, album and duration) and falls back to a search, accepting only a result whose
+/// match first (artist, title, album and duration) and falls back to a search, first with the title as it is and then
+/// without what YouTube Music adds to it (a translation, a version, a "feat." credit). It accepts only a result whose
 /// duration is within two seconds of the track's, so lyrics of another version are not shown.
 /// </summary>
 public sealed class LrclibClient : ILyricsSource, IDisposable
@@ -49,9 +51,27 @@ public sealed class LrclibClient : ILyricsSource, IDisposable
                 return result;
         }
 
+        foreach (var name in new[] { title, LyricTitle.shorten(title) }.Where(n => n.Length > 0).Distinct())
+        {
+            if (await SearchAsync(artist, name, duration) is { } hit)
+                return hit;
+        }
+
+        return Missing;
+    }
+
+    public void Dispose()
+    {
+        if (_ownsClient)
+            _http.Dispose();
+    }
+
+    /// <summary>The best candidate of a search, null when there is none that fits.</summary>
+    private async Task<LyricsResult?> SearchAsync(string artist, string title, double duration)
+    {
         var found = await GetAsync($"search?artist_name={Escape(artist)}&track_name={Escape(title)}");
         if (found is not { ValueKind: JsonValueKind.Array } candidates)
-            return Missing;
+            return null;
 
         JsonElement? best = null;
         var bestScore = double.MaxValue;
@@ -67,13 +87,7 @@ public sealed class LrclibClient : ILyricsSource, IDisposable
                 (best, bestScore) = (candidate, score);
         }
 
-        return best is { } pick ? ToResult(pick) : Missing;
-    }
-
-    public void Dispose()
-    {
-        if (_ownsClient)
-            _http.Dispose();
+        return best is { } pick && ToResult(pick) is { Found: true } result ? result : null;
     }
 
     private static LyricsResult Missing => new(false, false, false, "", "LRCLIB");

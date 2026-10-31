@@ -24,9 +24,9 @@ internal sealed partial class ScrobbleService : IDisposable
     private const string SessionSecret = "lastfm-session";
     private const string EnabledKey = "lastfm.enabled";
     private const string UserKey = "lastfm.user";
-    private const int QueueLimit = 500;
+    private const int QueueLimit = 2000;
     private const int BatchSize = 50;
-    private static readonly TimeSpan MaxAge = TimeSpan.FromDays(14); // Last.fm ignores older timestamps
+    private static readonly TimeSpan MaxAge = TimeSpan.FromDays(13); // Last.fm ignores older timestamps
 
     private IScrobbler? _client;
     private readonly PlayerDatabase _db;

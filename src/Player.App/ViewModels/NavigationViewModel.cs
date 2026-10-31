@@ -31,6 +31,7 @@ public class NavigationViewModel : INotifyPropertyChanged
     private IReadOnlyList<Track> _collection = [];
     private IReadOnlyList<Track> _artistSongs = [];
     private string _collectionArtistId = "";
+    private string _artistChannelId = "";
 
     public NavigationViewModel()
     {
@@ -74,6 +75,10 @@ public class NavigationViewModel : INotifyPropertyChanged
     public EntityListModel ArtistAlbums { get; } = new();
     public EntityListModel ArtistSingles { get; } = new();
     public EntityListModel ArtistRelated { get; } = new();
+    /// <summary>The account follows the artist on screen.</summary>
+    public bool ArtistSubscribed { get; private set => Set(ref field, value); }
+    /// <summary>A session is open and the artist has a channel: the Follow button shows.</summary>
+    public bool CanFollowArtist { get; private set => Set(ref field, value); }
 
     // ---- going places ----
 
@@ -115,6 +120,30 @@ public class NavigationViewModel : INotifyPropertyChanged
     public void OpenTrackAlbum(string videoId) => ResolveLink(videoId, artist: false);
 
     public void OpenCollectionArtist() => OpenEntity("artist", _collectionArtistId);
+
+    /// <summary>Follows or unfollows the artist on screen.</summary>
+    public void ToggleFollowArtist()
+    {
+        if (AppServices.Account is not { } account || _artistChannelId.Length == 0 || _stack[^1].Page != "artist")
+            return;
+
+        var channel = _artistChannelId;
+        var entry = _stack[^1];
+        var follow = !ArtistSubscribed;
+        ArtistSubscribed = follow; // at once; put back if YouTube refuses
+
+        _work.Run(Task.Run(() => account.FollowAsync(channel, follow)),
+            _ => _cache.Remove("artist:" + entry.Id), // the cached page has the old state
+            error =>
+            {
+                if (_stack[^1] == entry)
+                    ArtistSubscribed = !follow;
+
+                Message = Tr.F("nav.followFailed", error.Message);
+            });
+
+        Working = true;
+    }
 
     /// <summary>Asks again for the page on screen (after an error).</summary>
     public void Retry()
@@ -209,7 +238,7 @@ public class NavigationViewModel : INotifyPropertyChanged
         if (entry.Page is "album" or "collection")
             ApplyCollection(new TrackCollection("", "", "", "", "", []));
         else if (entry.Page == "artist")
-            ApplyArtist(new ArtistPage("", "", "", "", "", [], [], [], []));
+            ApplyArtist(new ArtistPage("", "", "", "", "", [], [], [], [], "", false));
 
         Status = Tr.T("status.loading");
 
@@ -311,6 +340,9 @@ public class NavigationViewModel : INotifyPropertyChanged
         ArtistAlbums.Replace(artist.Albums.Select(Rows.FromEntity));
         ArtistSingles.Replace(artist.Singles.Select(Rows.FromEntity));
         ArtistRelated.Replace(artist.Related.Select(Rows.FromEntity));
+        _artistChannelId = artist.ChannelId;
+        ArtistSubscribed = artist.Subscribed;
+        CanFollowArtist = artist.ChannelId.Length > 0 && AppServices.Account?.SignedIn == true;
         Title = artist.Name;
     }
 

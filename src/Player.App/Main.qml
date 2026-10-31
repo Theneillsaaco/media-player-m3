@@ -48,6 +48,7 @@ ApplicationWindow {
     function isLiked(id) { return likedIds[id] === true }
     function canLikeId(id) { return libraryVm.accountState === "signedIn" && id !== "" && !/^(https?:\/\/|\/)/i.test(id) }
     function toggleLikeOf(id) { libraryVm.toggleLikeOf(id) }
+    function pickPlaylist(id) { playlistPicker.show(id) }
 
     property bool queueOpen: true
     property bool lyricsOpen: false
@@ -159,6 +160,8 @@ ApplicationWindow {
 
     SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; localeVm: localeVm; theme: appTheme }
 
+    PlaylistPicker { id: playlistPicker; vm: libraryVm; theme: appTheme }
+
     // Called by the lists and the playback bar: a name opens its page, from wherever the user is.
     function openEntity(kind, entityId) {
         playerMode = "mini"
@@ -190,6 +193,12 @@ ApplicationWindow {
         repeat: true
         running: (playback.isLoaded && !playback.paused) || searchVm.searching || searchVm.suggesting || playback.statsPending || libraryVm.working || settingsVm.busy || lyricsVm.loading || videoVm.loading || navVm.working
         onTriggered: win.pollAll()
+    }
+
+    // Playlist actions say how they went in the snackbar.
+    Connections {
+        target: libraryVm
+        function onNoticeChanged() { if (libraryVm.notice !== "") win.toast(libraryVm.notice) }
     }
 
     // Follows the desktop's light/dark setting, only while the mode is "system".

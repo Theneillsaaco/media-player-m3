@@ -52,13 +52,22 @@ public partial class YtSidecarProvider : IBrowseProvider
             [.. r.GetProperty("songs").EnumerateArray().Select(ToTrack)],
             ReadEntities(r.GetProperty("albums")),
             ReadEntities(r.GetProperty("singles")),
-            ReadEntities(r.GetProperty("related")));
+            ReadEntities(r.GetProperty("related")),
+            Text(r, "channelId"),
+            r.TryGetProperty("subscribed", out var subscribed) && subscribed.ValueKind == JsonValueKind.True);
     }
 
     public async Task<SearchHits> SearchTyped(string query, string filter)
     {
         var r = await CallAsync("search_typed", new { query, filter, limit = 30 });
         return new SearchHits(ReadTracks(r), ReadEntities(r));
+    }
+
+    /// <summary>The songs that follow a track in its radio (what autoplay adds when the queue ends).</summary>
+    public async Task<Track[]> Radio(string id)
+    {
+        var r = await CallAsync("radio", new { id, limit = 25 }, SidecarProtocol.ResolveTimeout);
+        return [.. r.EnumerateArray().Select(ToTrack)];
     }
 
     public async Task<string[]> Suggestions(string query)

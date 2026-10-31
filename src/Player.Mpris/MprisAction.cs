@@ -12,5 +12,6 @@ public enum MprisAction
     SeekTo,
     SetVolume,
     SetLoop,
-    SetShuffle
+    SetShuffle,
+    SetRate
 }

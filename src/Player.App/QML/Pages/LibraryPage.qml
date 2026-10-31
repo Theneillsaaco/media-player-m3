@@ -18,6 +18,39 @@ Item {
 
     function tr(key) { return i18n ? i18n.t(key) : key }
 
+    MDialog {
+        id: confirmDelete
+        title: root.tr("playlist.delete")
+
+        Text {
+            Layout.fillWidth: true
+            text: root.tr("playlist.deleteAsk").replace("{0}", root.vm.openListTitle)
+            color: root.theme ? root.theme.inkSurface : "#1D1B20"
+            font.pixelSize: 14
+            wrapMode: Text.Wrap
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Item { Layout.fillWidth: true }
+
+            MButton {
+                kind: "text"
+                text: root.tr("action.cancel")
+                onClicked: confirmDelete.close()
+            }
+            MButton {
+                text: root.tr("playlist.delete")
+                onClicked: {
+                    root.vm.deletePlaylist(root.vm.openListId)
+                    confirmDelete.close()
+                }
+            }
+        }
+    }
+
     // No account connected
     ColumnLayout {
         anchors.centerIn: parent
@@ -108,6 +141,12 @@ Item {
                 text: root.tr("action.shuffle")
                 enabled: root.vm.listCount > 0
                 onClicked: root.vm.playList(true)
+            }
+            MIconButton {
+                glyph: "delete"
+                tip: root.tr("playlist.delete")
+                visible: root.vm.openListId !== "LM"
+                onClicked: confirmDelete.open()
             }
             MButton {
                 text: root.tr("action.play")

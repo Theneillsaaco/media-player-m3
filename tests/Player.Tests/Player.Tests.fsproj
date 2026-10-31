@@ -21,7 +21,11 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Include="AutoplayTests.fs" />
       <Compile Include="I18nTests.fs" />
+      <Compile Include="LrcCopiesTests.fs" />
+      <Compile Include="PlayErrorsTests.fs" />
+      <Compile Include="SoundTests.fs" />
       <Compile Include="LastFmTests.fs" />
       <Compile Include="ListeningTests.fs" />
       <Compile Include="LyricsTests.fs" />

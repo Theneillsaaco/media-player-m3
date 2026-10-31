@@ -139,11 +139,44 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
         });
     }
 
+    /// <summary>True while a Google session is active.</summary>
+    public bool SignedIn
+    {
+        get { lock (_gate) return _signedIn; }
+    }
+
+    /// <summary>
+    /// Tells YouTube Music the account started playing a track: it is what its recommendations are made from. Runs in
+    /// the background and nothing depends on it, so a failure is only logged.
+    /// </summary>
+    public void ReportPlayback(string id)
+    {
+        if (provider is null || id.Length != 11 || TrackSource.IsDirect(id) || !SignedIn) return;
+
+        _ = Task.Run(async () =>
+        {
+            try { await provider.ReportPlayback(id); }
+            catch (Exception e) { Log("could not report the playback", e); }
+        });
+    }
+
     // ---- library calls ----
 
     public Task<IReadOnlyList<PlaylistInfo>> GetLibraryAsync() => RunAsync(() => provider!.GetLibrary());
 
     public Task<IReadOnlyList<Track>> GetPlaylistAsync(string id) => RunAsync(() => provider!.GetPlaylist(id, 0));
+
+    public Task<string> CreatePlaylistAsync(string title, string videoId) =>
+        RunAsync(() => provider!.CreatePlaylist(title, videoId));
+
+    public Task<bool> AddToPlaylistAsync(string playlistId, string videoId) =>
+        RunAsync(async () => { await provider!.AddToPlaylist(playlistId, videoId); return true; });
+
+    public Task<bool> DeletePlaylistAsync(string id) =>
+        RunAsync(async () => { await provider!.DeletePlaylist(id); return true; });
+
+    public Task<bool> FollowAsync(string channelId, bool following) =>
+        RunAsync(async () => { await provider!.Follow(channelId, following); return true; });
 
     public Task<bool> RateAsync(string id, bool liked) =>
         RunAsync(async () => { await provider!.Rate(id, liked); return true; });
