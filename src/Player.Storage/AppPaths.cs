@@ -9,6 +9,9 @@ public static class AppPaths
     
     public static string DataFile(string name) => Path.Combine(Home("XDG_DATA_HOME", ".local/share"), "player", name);
 
+    /// <summary>A folder of throwaway data: $XDG_CACHE_HOME/player/&lt;name&gt;, ~/.cache/player/&lt;name&gt; by default.</summary>
+    public static string CacheDir(string name) => Path.Combine(Home("XDG_CACHE_HOME", ".cache"), "player", name);
+    
     private static string Home(string variable, string fallback) =>
         Environment.GetEnvironmentVariable(variable) is { Length: > 0 } dir
             ? dir

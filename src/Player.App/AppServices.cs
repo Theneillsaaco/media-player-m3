@@ -7,6 +7,7 @@ using Player.Providers.Lyrics;
 using Player.Providers.YoutubeMusic;
 using Player.Scrobble.LastFm;
 using Player.Storage;
+using Player.Storage.Cache;
 using Player.Storage.Database;
 using Player.Storage.Secrets;
 
@@ -28,8 +29,10 @@ internal static class AppServices
 
             _started = true;
 
+            MemProbe.StartIfAsked();
+
             Engine = new MpvEngine();
-            
+
             try { Provider = new YtSidecarProvider(); }
             catch (Exception ex) { Status.Text = Tr.F("app.searchUnavailable", ex.Message); }
 
@@ -39,12 +42,12 @@ internal static class AppServices
                 I18n.select(Db.GetSetting(I18n.settingKey) ?? "es"); // before any text is built
                 var secrets = new SecretStore();
                 Account = new AccountService(Provider, Db, secrets);
-                
+
                 Account.Start();
                 IScrobbler? client = LastFmConfig.load(AppPaths.ConfigFile("lastfm.json")) is { IsSome: true } credentials
                     ? new LastFmClient(credentials.Value)
                     : null;
-                
+
                 Scrobble = new ScrobbleService(client, Db, secrets);
                 Scrobble.Start();
             }
@@ -74,15 +77,20 @@ internal static class AppServices
             Prefs = new PlaybackPrefs(
                 key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "playback setting", ex); return null; } },
                 (key, value) => Db?.SetSetting(key, value));
+
+            // lectura...) la app sigue sin ella.
+            try { Cache = new AudioCache(AppPaths.CacheDir("audio"), Prefs.CacheLimit); }
+            catch (Exception ex) { Log.Warn("app", "audio cache unavailable", ex); }
+
             AutoplayFeed = new AutoplayService(Provider);
             LoudnessLookup = new LoudnessService(Provider, () => Account?.SignedIn == true);
             Prefetcher = new PrefetchService(Provider);
             Stats = new StatsService(Provider);
-            Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status, Prefs, AutoplayFeed, LoudnessLookup, Account);
+            Playback = new PlaybackService(Engine, Db, Scrobble, Prefetcher, Status, Prefs, AutoplayFeed, LoudnessLookup, Account, Cache);
             Playback.Restore();
             Playback.ApplyStartupSound();
             Playback.StartMpris();
-            
+
             AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();
         }
     }
@@ -99,17 +107,18 @@ internal static class AppServices
         Status.Refresh();
         LanguageChanged?.Invoke();
     }
-    
+
     private static void Shutdown()
     {
         Playback.Shutdown();
+        Cache?.Dispose();
         Scrobble?.Dispose();
         Theme.Dispose();
         Provider?.Dispose();
         Engine.Dispose();
         Db?.Dispose();
     }
-    
+
     #region Fields
 
     private static readonly Lock Gate = new();
@@ -128,9 +137,11 @@ internal static class AppServices
     public static PlaybackPrefs Prefs { get; private set; } = null!;
     public static AutoplayService AutoplayFeed { get; private set; } = null!;
     public static LoudnessService LoudnessLookup { get; private set; } = null!;
+    /// <summary>The songs saved on the disk. Null when the folder could not be made.</summary>
+    public static AudioCache? Cache { get; private set; }
     public static PlaybackService Playback { get; private set; } = null!;
     public static StatusLine Status { get; } = new();
-    
+
     /// <summary>Why the database could not be opened, "" when it could. Shown in settings.</summary>
     public static string DatabaseError { get; private set; } = "";
 

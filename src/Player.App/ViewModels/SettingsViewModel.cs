@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Player.App.Services;
 using Player.Core;
@@ -6,7 +7,7 @@ using Player.Core.Playback;
 
 namespace Player.App.ViewModels;
 
-/// <summary>The settings dialog: startup behaviour, YouTube Music account and Last.fm connection (state, status, commands).</summary>
+/// <summary>The settings dialog: startup behaviour, playback, audio cache, YouTube Music account and Last.fm connection (state, status, commands).</summary>
 public class SettingsViewModel : INotifyPropertyChanged
 {
     public SettingsViewModel()
@@ -16,6 +17,8 @@ public class SettingsViewModel : INotifyPropertyChanged
         Startup = ReadStartup();
         AutoPlay = AppServices.Prefs.AutoPlay;
         NormalizeVolume = AppServices.Prefs.Normalize;
+        CacheLimit = AppServices.Cache?.Limit ?? AppServices.Prefs.CacheLimit;
+        SyncCache();
         SyncScrobbler();
         SyncAccount();
     }
@@ -29,6 +32,11 @@ public class SettingsViewModel : INotifyPropertyChanged
     public bool AutoPlay { get; private set => Set(ref field, value); } = true;
     /// <summary>Turn loud songs down to a common level (needs a YouTube Music account).</summary>
     public bool NormalizeVolume { get; private set => Set(ref field, value); } = true;
+    
+    /// <summary>How many songs the disk cache keeps; 0 is off.</summary>
+    public int CacheLimit { get; private set => Set(ref field, value); } = 30;
+    /// <summary>"12 canciones · 48 MB", or "Vacía".</summary>
+    public string CacheSummary { get; private set => Set(ref field, value); } = "";
 
     // Last.fm. State is one of: unavailable, signedOut, authorizing, signedIn, reconnect.
     public string ScrobbleState { get; private set => Set(ref field, value); } = "unavailable";
@@ -53,6 +61,7 @@ public class SettingsViewModel : INotifyPropertyChanged
     {
         SyncScrobbler();
         SyncAccount();
+        SyncCache();
     }
 
     public void ChooseStartup(string mode)
@@ -75,6 +84,24 @@ public class SettingsViewModel : INotifyPropertyChanged
         AppServices.Prefs.SaveNormalize(on);
         NormalizeVolume = on;
         AppServices.Playback.RefreshSound();
+    }
+
+    /// <summary>How many songs to keep on the disk (0 turns the cache off and empties it).</summary>
+    public void ChooseCacheLimit(int limit)
+    {
+        var value = CachePolicy.normalizeLimit(limit);
+        AppServices.Prefs.SaveCacheLimit(value);
+        AppServices.Cache?.SetLimit(value);
+        CacheLimit = value;
+        SyncCache();
+        AppServices.Playback.RefreshSound(); // asks for what plays next again, now that the cache can take it
+    }
+
+    /// <summary>Deletes the songs saved on the disk.</summary>
+    public void ClearCache()
+    {
+        AppServices.Cache?.Clear();
+        SyncCache();
     }
 
     public void ImportBrowserSession(string browser) { AppServices.Account?.ImportBrowser(browser); AccountChangedByUser(); }
@@ -105,7 +132,23 @@ public class SettingsViewModel : INotifyPropertyChanged
         SyncAccount();
         AppServices.RaiseAccountChanged(); // the library page reacts to it
     }
+    
+    private void SyncCache()
+    {
+        if (AppServices.Cache is not { } cache)
+        {
+            CacheSummary = "";
+            return;
+        }
 
+        var (files, bytes) = cache.Stats;
+        CacheSummary = files == 0 ? Tr.T("cache.empty") : Tr.F("cache.used", files, FormatBytes(bytes));
+    }
+
+    private static string FormatBytes(long bytes) => bytes >= 1L << 30
+        ? (bytes / (double)(1L << 30)).ToString("0.0", CultureInfo.InvariantCulture) + " GB"
+        : (bytes / (double)(1L << 20)).ToString("0", CultureInfo.InvariantCulture) + " MB";
+    
     private void SyncScrobbler()
     {
         if (AppServices.Scrobble is not { } scrobble) return;

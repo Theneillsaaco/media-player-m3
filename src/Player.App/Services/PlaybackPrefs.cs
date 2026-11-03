@@ -5,14 +5,16 @@ using Player.Core.Playback;
 namespace Player.App.Services;
 
 /// <summary>
-/// The small playback settings: keep playing when the queue ends, level the volume between songs and the speed.
-/// Read once at start and written through to the settings table, so asking for one never touches the database.
+/// The small playback settings: keep playing when the queue ends, level the volume between songs, the speed and
+/// how many songs the disk cache keeps. Read once at start and written through to the settings table, so asking
+/// for one never touches the database.
 /// </summary>
 internal sealed class PlaybackPrefs
 {
     private const string AutoPlayKey = "playback.autoplay";
     private const string NormalizeKey = "playback.normalize";
     private const string SpeedKey = "playback.speed";
+    private const string CacheKey = "cache.limit";
 
     private readonly Func<string, string?> _read;
     private readonly Action<string, string> _write;
@@ -25,6 +27,10 @@ internal sealed class PlaybackPrefs
         Speed = double.TryParse(Read(SpeedKey), NumberStyles.Float, CultureInfo.InvariantCulture, out var speed)
             ? PlaybackSpeed.normalize(speed)
             : 1.0;
+        
+        CacheLimit = int.TryParse(Read(CacheKey), NumberStyles.Integer, CultureInfo.InvariantCulture, out var limit)
+            ? CachePolicy.normalizeLimit(limit)
+            : CachePolicy.defaultLimit;
     }
 
     /// <summary>When the queue runs out, go on with similar music. On by default.</summary>
@@ -35,6 +41,15 @@ internal sealed class PlaybackPrefs
 
     /// <summary>0.5 to 3, 1 is normal.</summary>
     public double Speed { get; private set; }
+    
+    /// <summary>How many songs the disk cache keeps; 0 turns it off.</summary>
+    public int CacheLimit { get; private set; }
+
+    public void SaveCacheLimit(int limit)
+    {
+        CacheLimit = CachePolicy.normalizeLimit(limit);
+        Write(CacheKey, CacheLimit.ToString(CultureInfo.InvariantCulture));
+    }
 
     public void SaveAutoPlay(bool on)
     {

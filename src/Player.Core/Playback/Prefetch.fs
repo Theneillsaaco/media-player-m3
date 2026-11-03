@@ -6,7 +6,7 @@ open Player.Core.Domain
 /// Which tracks are worth resolving ahead of time, and whether a resolved URL can still be used.
 module Prefetch =
     /// How many tracks ahead are resolved.
-    let depth = 2
+    let depth = 3
     
     /// A URL is dropped this many seconds before the time it says it expires.
     let margin = 300L
@@ -29,3 +29,10 @@ module Prefetch =
                     | Some track -> go following (n - 1) (track :: acc)
         
         go q depth [] |> List.toArray
+        
+    /// The current track first, then `upcoming`. May repeat a track (repeat one); callers drop the duplicates.
+    let plan (q: QueueState) : Track[] =
+        match PlayQueue.current q with
+        | Some current -> Array.append [| current |] (upcoming q)
+        | None -> upcoming q
+    

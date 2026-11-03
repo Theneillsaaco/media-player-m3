@@ -25,8 +25,6 @@ Rectangle {
     property bool docked: false
     /// The minimized video is on show: its slot is wider than a cover.
     property bool videoInSlot: false
-    /// Volume to come back to after a mute.
-    property int lastVolume: 60
 
     readonly property Item miniSlot: slot
     readonly property bool linkable: root.playback.currentId !== "" && root.playback.isLoaded
@@ -34,6 +32,12 @@ Rectangle {
     signal coverClicked()
 
     function tr(key) { return i18n ? i18n.t(key) : key }
+
+    function clock(seconds) {
+        const total = Math.max(0, Math.floor(seconds))
+        const rest = total % 60
+        return Math.floor(total / 60) + ":" + (rest < 10 ? "0" : "") + rest
+    }
 
     color: docked ? Qt.alpha(theme.surfaceContainerHighest, 0.94) : theme.surfaceContainerHigh
     radius: 28
@@ -58,6 +62,7 @@ Rectangle {
                 enabled: root.playback.isLoaded && root.playback.duration > 0
                 expressive: true
                 playing: root.playback.isLoaded && !root.playback.paused && !root.playback.audioWaiting
+                valueLabel: root.clock(value)
                 onChangedByUser: (v) => root.playback.seek(v)
             }
             Text { text: root.playback.durationText; color: root.theme.inkSurfaceVariant; font.pixelSize: 12 }
@@ -217,7 +222,7 @@ Rectangle {
                 }
             }
 
-            // Right block: volume, as wide as the left block (up to 190 px), against the right edge.
+            // Right block: volume and speed, as wide as the left block (up to 250 px), against the right edge.
             Item {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
@@ -232,14 +237,7 @@ Rectangle {
                     MIconButton {
                         glyph: root.playback.volume > 0 ? "volume" : "volume_off"
                         tip: root.playback.volume > 0 ? root.tr("tip.mute") : root.tr("tip.unmute")
-                        onClicked: {
-                            if (root.playback.volume > 0) {
-                                root.lastVolume = root.playback.volume
-                                root.playback.setVolume(0)
-                            } else {
-                                root.playback.setVolume(root.lastVolume > 0 ? root.lastVolume : 60)
-                            }
-                        }
+                        onClicked: if (Window.window && Window.window.toggleMute) Window.window.toggleMute()
                     }
                     MSlider {
                         Layout.fillWidth: true
@@ -248,6 +246,7 @@ Rectangle {
                         value: root.playback.volume
                         live: true
                         expressive: false
+                        valueLabel: Math.round(value) + "%"
                         onChangedByUser: (v) => root.playback.setVolume(Math.round(v))
                     }
                     MButton {

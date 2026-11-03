@@ -12,7 +12,9 @@ ApplicationWindow {
     minimumWidth: 720
     minimumHeight: 480
     visible: true
-    title: "Player"
+    title: playback.currentTitle !== ""
+        ? playback.currentTitle + (playback.currentArtist !== "" ? " · " + playback.currentArtist : "")
+        : "Player"
     color: appTheme.surface
 
     // The Basic style's own pieces (scroll bars, text cursors, selections) read the palette, which is light
@@ -49,6 +51,16 @@ ApplicationWindow {
     function canLikeId(id) { return libraryVm.accountState === "signedIn" && id !== "" && !/^(https?:\/\/|\/)/i.test(id) }
     function toggleLikeOf(id) { libraryVm.toggleLikeOf(id) }
     function pickPlaylist(id) { playlistPicker.show(id) }
+
+    property int lastVolume: 60
+    function toggleMute() {
+        if (playback.volume > 0) {
+            lastVolume = playback.volume
+            playback.setVolume(0)
+        } else {
+            playback.setVolume(lastVolume > 0 ? lastVolume : 60)
+        }
+    }
 
     property bool queueOpen: true
     property bool lyricsOpen: false
@@ -276,6 +288,35 @@ ApplicationWindow {
     Shortcut {
         sequence: "Ctrl+Shift+L"
         onActivated: win.lyricsOpen = !win.lyricsOpen
+    }
+    
+    Shortcut {
+        sequence: "Left"
+        enabled: !win.typing && !settings.visible && playback.isLoaded
+        onActivated: playback.seek(Math.max(0, playback.position - 5))
+    }
+    Shortcut {
+        sequence: "Right"
+        enabled: !win.typing && !settings.visible && playback.isLoaded
+        onActivated: playback.seek(Math.min(playback.duration, playback.position + 5))
+    }
+    Shortcut {
+        sequence: "Ctrl+Up"
+        onActivated: playback.setVolume(Math.min(100, playback.volume + 5))
+    }
+    Shortcut {
+        sequence: "Ctrl+Down"
+        onActivated: playback.setVolume(Math.max(0, playback.volume - 5))
+    }
+    Shortcut {
+        sequence: "M"
+        enabled: !win.typing && !settings.visible
+        onActivated: win.toggleMute()
+    }
+    // Reload the page on screen (Home, an album, an artist...).
+    Shortcut {
+        sequence: "F5"
+        onActivated: navVm.retry()
     }
 
     ColumnLayout {

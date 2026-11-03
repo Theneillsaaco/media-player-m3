@@ -3,8 +3,8 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import "../Components"
 
-// Settings: language, appearance, startup behaviour, the YouTube Music account and the Last.fm connection.
-// The dialog polls the view model while it is open so progress shows up.
+// Settings: language, appearance, startup behaviour, playback, audio cache, the YouTube Music account and the
+// Last.fm connection. The dialog polls the view model while it is open so progress shows up.
 MDialog {
     id: dialog
 
@@ -149,6 +149,61 @@ MDialog {
             target: normalizeSwitch
             property: "checked"
             value: dialog.vm.normalizeVolume
+        }
+    }
+
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: dialog.theme.outlineVariant
+    }
+    
+    Text {
+        text: dialog.tr("settings.cache")
+        color: dialog.theme.primary
+        font.pixelSize: 14
+        font.weight: Font.Medium
+    }
+
+    Text {
+        Layout.fillWidth: true
+        text: dialog.tr("settings.cacheNote")
+        color: dialog.theme.inkSurfaceVariant
+        font.pixelSize: 12
+        wrapMode: Text.Wrap
+    }
+
+    Flow {
+        Layout.fillWidth: true
+        spacing: 8
+
+        Repeater {
+            model: [0, 10, 30, 100]
+            MChip {
+                required property int modelData
+                text: modelData === 0 ? dialog.tr("cache.off") : dialog.tr("cache.songs").replace("{0}", modelData)
+                selected: dialog.vm.cacheLimit === modelData
+                onClicked: dialog.vm.chooseCacheLimit(modelData)
+            }
+        }
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 8
+        visible: dialog.vm.cacheLimit > 0
+
+        Text {
+            Layout.fillWidth: true
+            text: dialog.vm.cacheSummary
+            color: dialog.theme.inkSurfaceVariant
+            font.pixelSize: 14
+            elide: Text.ElideRight
+        }
+        MButton {
+            kind: "outlined"
+            text: dialog.tr("cache.clear")
+            onClicked: dialog.vm.clearCache()
         }
     }
 

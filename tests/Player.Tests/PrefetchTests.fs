@@ -13,8 +13,8 @@ let loaded n start = PlayQueue.replace 1 [ for i in 0 .. n - 1 -> track (string 
 let ids q = Prefetch.upcoming q |> Array.map (fun t -> t.Id) |> Array.toList
 
 [<Fact>]
-let ``upcoming gives the next two tracks`` () =
-    Assert.Equal<string list>([ "1"; "2" ], ids (loaded 5 0))
+let ``upcoming gives the next three tracks`` () =
+    Assert.Equal<string list>([ "1"; "2"; "3" ], ids (loaded 5 0))
 
 [<Fact>]
 let ``upcoming stops at the end with repeat off`` () =
@@ -23,11 +23,11 @@ let ``upcoming stops at the end with repeat off`` () =
 
 [<Fact>]
 let ``upcoming wraps with repeat all`` () =
-    Assert.Equal<string list>([ "0"; "1" ], ids (loaded 3 2 |> PlayQueue.setRepeat All))
+    Assert.Equal<string list>([ "0"; "1"; "2" ], ids (loaded 3 2 |> PlayQueue.setRepeat All))
 
 [<Fact>]
 let ``upcoming with repeat one is the current track again`` () =
-    Assert.Equal<string list>([ "1"; "1" ], ids (loaded 3 1 |> PlayQueue.setRepeat One))
+    Assert.Equal<string list>([ "1"; "1"; "1" ], ids (loaded 3 1 |> PlayQueue.setRepeat One))
 
 [<Fact>]
 let ``upcoming of an empty queue is empty`` () =
@@ -36,7 +36,7 @@ let ``upcoming of an empty queue is empty`` () =
 [<Fact>]
 let ``upcoming follows the shuffled order`` () =
     let q = loaded 10 3 |> PlayQueue.setShuffle 7 true
-    let expected = [ q.Items[q.Order[1]].Id; q.Items[q.Order[2]].Id ]
+    let expected = [ q.Items[q.Order[1]].Id; q.Items[q.Order[2]].Id; q.Items[q.Order[3]].Id ]
     Assert.Equal<string list>(expected, ids q)
 
 [<Fact>]
@@ -44,3 +44,12 @@ let ``a stream is fresh until the margin before it expires`` () =
     let stream: ResolvedStream = { Url = "u"; Headers = [||]; ExpiresAt = 1000L; Duration = 0.0 }
     Assert.True(Prefetch.isFresh 600L stream)
     Assert.False(Prefetch.isFresh 700L stream)
+
+[<Fact>]
+let ``the plan starts with the current track`` () =
+    let plan = Prefetch.plan (loaded 5 1) |> Array.map (fun t -> t.Id) |> Array.toList
+    Assert.Equal<string list>([ "1"; "2"; "3"; "4" ], plan)
+
+[<Fact>]
+let ``the plan of an empty queue is empty`` () =
+    Assert.Equal(0, (Prefetch.plan PlayQueue.empty).Length)

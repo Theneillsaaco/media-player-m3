@@ -10,6 +10,8 @@ resolve is replaced by a version that first asks yt-dlp for the audio with the v
 HLS and DASH manifests, which needs no JavaScript solving and is much cheaper; if that fails, the original
 resolve (the full set of clients) answers.
 """
+import gc
+import queue
 import re
 import sys
 import threading
@@ -20,6 +22,11 @@ PLAYLIST_ID = re.compile(r"[A-Za-z0-9_-]{2,64}")
 CHANNEL_ID = re.compile(r"[A-Za-z0-9_-]{2,100}")
 LIKED = "LM"
 LIGHT_ARGS = {"youtube": {"player_client": ["visionos"], "skip": ["hls", "dash"]}}
+
+# las que se estaban precargando. Lo usa también la reserva de YoutubeDL de abajo, así que hay como máximo 3 instancias.
+RESOLVE_SLOTS = 3
+# Cada tantas resoluciones se fuerza una pasada del recolector de basura de Python (yt-dlp deja ciclos de objetos).
+COLLECT_EVERY = 25
 
 
 def _clock(text):
@@ -41,26 +48,54 @@ def _check(value, pattern, what):
 
 
 def build(server):
-    local = threading.local()
     slow_resolve = server.METHODS["resolve"]
 
-    # ---- resolve ----
+    # guarda el JavaScript del reproductor de YouTube y sus cachés. Ahora hay una reserva de, como mucho, RESOLVE_SLOTS
+    # instancias que se prestan y se devuelven, y el semáforo de server.py se sustituye por uno del mismo tamaño.
+    server._resolving = threading.BoundedSemaphore(RESOLVE_SLOTS)
+    pool = queue.LifoQueue()
+    made = [0]
+    count = [0]
+    lock = threading.Lock()
 
-    def light():
-        """One light YoutubeDL per worker thread, reused between calls."""
-        ydl = getattr(local, "ydl", None)
-        if ydl is None:
-            from yt_dlp import YoutubeDL
-            ydl = local.ydl = YoutubeDL({
-                "format": server.AUDIO_FORMAT,
-                "noplaylist": True,
-                "quiet": True,
-                "no_warnings": True,
-                "skip_download": True,
-                "socket_timeout": 20,
-                "extractor_args": LIGHT_ARGS,
-            })
-        return ydl
+    def new_ydl():
+        from yt_dlp import YoutubeDL
+        return YoutubeDL({
+            "format": server.AUDIO_FORMAT,
+            "noplaylist": True,
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "socket_timeout": 20,
+            "extractor_args": LIGHT_ARGS,
+        })
+
+    def checkout():
+        try:
+            return pool.get_nowait()
+        except queue.Empty:
+            pass
+        with lock:
+            create = made[0] < RESOLVE_SLOTS
+            if create:
+                made[0] += 1
+        if not create:
+            return pool.get()
+        try:
+            return new_ydl()
+        except Exception:
+            with lock:
+                made[0] -= 1
+            raise
+
+    def collect():
+        with lock:
+            count[0] += 1
+            due = count[0] % COLLECT_EVERY == 0
+        if due:
+            gc.collect()
+
+    # ---- resolve ----
 
     def pick(info):
         """The format entry that holds the audio URL, or None."""
@@ -75,8 +110,13 @@ def build(server):
             raise ValueError("Invalid YouTube video ID")
         try:
             with server._resolving:
-                info = light().extract_info("https://music.youtube.com/watch?v=" + video, download=False)
+                ydl = checkout()
+                try:
+                    info = ydl.extract_info("https://music.youtube.com/watch?v=" + video, download=False)
+                finally:
+                    pool.put(ydl)
             server._remember_stats(video, info)
+            collect()
             chosen = pick(info)
             if chosen is None:
                 raise ValueError("No playable stream")
@@ -155,10 +195,10 @@ def build(server):
             raise ValueError("Falta el nombre de la lista")
         video = str(params.get("videoId") or "")
         ids = [_check(video, VIDEO_ID, "YouTube video ID")] if video else None
-        made = server.signed_in(lambda c: c.create_playlist(title[:150], "", video_ids=ids))
-        if not isinstance(made, str):  # an error comes back as the whole reply
+        made_id = server.signed_in(lambda c: c.create_playlist(title[:150], "", video_ids=ids))
+        if not isinstance(made_id, str):  # an error comes back as the whole reply
             raise ValueError("YouTube Music no creó la lista")
-        return {"id": made}
+        return {"id": made_id}
 
     def delete_playlist(params):
         pid = _check(params.get("id"), PLAYLIST_ID, "playlist ID")

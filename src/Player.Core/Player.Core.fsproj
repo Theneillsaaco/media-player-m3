@@ -22,6 +22,7 @@
     <Compile Include="Playback\PlayErrors.fs" />
     <Compile Include="Playback\Autoplay.fs" />
     <Compile Include="Playback\Sound.fs" />
+    <Compile Include="Playback\CachePolicy.fs" />
     <Compile Include="Theme\Hct.fs" />
     <Compile Include="Theme\Scheme.fs" />
     <Compile Include="Theme\Appearance.fs" />

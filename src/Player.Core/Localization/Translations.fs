@@ -161,6 +161,15 @@ module Translations =
         "error.network", "No hay conexión con YouTube. Revisa tu red.", "Cannot reach YouTube. Check your network."
         "error.unplayable", "No se pudo reproducir.", "This could not be played."
 
+        // audio cache
+        "settings.cache", "Caché de audio", "Audio cache"
+        "settings.cacheNote", "Guarda en ~/.cache/player las canciones que suenan y las que vienen después, para que arranquen al instante y no se vuelvan a descargar al repetirlas.", "Keeps the songs that play, and the ones that come next, in ~/.cache/player, so they start at once and are not downloaded again when repeated."
+        "cache.off", "Desactivada", "Off"
+        "cache.songs", "{0} canciones", "{0} songs"
+        "cache.used", "{0} canciones guardadas · {1}", "{0} songs saved · {1}"
+        "cache.empty", "Vacía", "Empty"
+        "cache.clear", "Vaciar caché", "Clear cache"
+
         // playlists and following
         "menu.addToPlaylist", "Añadir a una lista…", "Add to a playlist…"
         "picker.title", "Añadir a una lista", "Add to a playlist"
@@ -176,6 +185,7 @@ module Translations =
         "artist.follow", "Seguir", "Follow"
         "artist.following", "Siguiendo", "Following"
         "nav.followFailed", "No se pudo cambiar el seguimiento: {0}", "Could not change the follow: {0}"
+
         "settings.language", "Idioma", "Language"
         "language.es", "Español", "Español"
         "language.en", "English", "English"
