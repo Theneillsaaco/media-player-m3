@@ -23,6 +23,8 @@ type IAudioEngine =
     /// Makes this URL the single entry after the current track, so mpv opens it early and goes on
     /// into it without a gap. Replaces any entry queued before. Only call while a track is loaded.
     abstract QueueNext: source: string * headers: string[] -> unit
+    /// True once if the entry queued with QueueNext failed to open while the current track goes on.
+    abstract TakeNextFailed: unit -> bool
     /// Drops the entry queued after the current track.
     abstract ClearNext: unit -> unit
     /// Stops playback and unloads everything (the engine goes idle).

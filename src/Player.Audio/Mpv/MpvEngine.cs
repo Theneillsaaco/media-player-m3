@@ -17,17 +17,28 @@ public class MpvEngine : IAudioEngine
     {
         SetPaused(true);
         Command(LoadArgs("replace", source, headers));
+        _loadedId = EntryId(0);
+        _queuedId = 0;
     }
 
     public void QueueNext(string source, string[] headers)
     {
         Command("playlist-clear"); // keeps only the entry that is playing
         Command(LoadArgs("append", source, headers));
+        _queuedId = EntryId(1);
     }
 
-    public void ClearNext() => Command("playlist-clear");
+    public void ClearNext()
+    {
+        Command("playlist-clear");
+        _queuedId = 0;
+    }
 
-    public void Stop() => Command("stop");
+    public void Stop()
+    {
+        Command("stop");
+        _loadedId = _queuedId = 0;
+    } 
     
     public void SetPaused(bool paused) =>
         mpv_set_property_string(_h, "pause", paused ? "yes" : "no");
@@ -50,7 +61,14 @@ public class MpvEngine : IAudioEngine
         _ended = false;
         return ended;
     }
-    
+
+    public bool TakeNextFailed()
+    {
+        var failed = _nextFailed;
+        _nextFailed = false;
+        return failed;
+    }
+
     public string DrainEvents()
     {
         string? error = null;
@@ -64,9 +82,26 @@ public class MpvEngine : IAudioEngine
             {
                 var end = Marshal.PtrToStructure<MpvEndFile>(ev.Data);
                 if (end.Reason == 0)
+                {
                     _ended = true; // MPV_END_FILE_REASON_EOF: the track played to its end (mpv may have gone on into the queued one)
-                else if (end.Reason == 4)
-                    error = Describe(end.Error); // MPV_END_FILE_REASON_ERROR
+                    if (_queuedId != 0) (_loadedId, _queuedId) = (_queuedId, 0); // mpv went on into the queued entry
+                }
+                else if (end.Reason == 4) // MPV_END_FILE_REASON_ERROR
+                {
+                    var id = end.PlaylistEntyId;
+                    if (_queuedId != 0 && id == _queuedId)
+                    {
+                        _nextFailed = true; // the current track plays on
+                        _queuedId = 0;
+                    }
+                    else if (_loadedId == 0 || id == 0 || id == _loadedId)
+                    {
+                        error = Describe(end.Error);
+                        (_loadedId, _queuedId) = (0, 0);
+                        Command("stop"); // mpv already moved on to the queued entry: it must not play
+                    }
+                    // otherwise it is an entry that was already replaced: ignore
+                }
             }
         }
     }
@@ -149,11 +184,16 @@ public class MpvEngine : IAudioEngine
     
     private static string Describe(int code) => Marshal.PtrToStringUTF8(mpv_error_string(code)) ?? $"error {code}";
     
+    private long EntryId(int index) =>
+        long.TryParse(Get($"playlist/{index}/id"), out var  id) ? id : 0;
+
     #region Fields
 
     private readonly IntPtr _h;
     private bool _disposed;
     private bool _ended;
+    private long _loadedId, _queuedId;
+    private bool _nextFailed;
     
     public double Position => GetDouble("time-pos");
     public double Duration => GetDouble("duration");

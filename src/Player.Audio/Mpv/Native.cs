@@ -11,7 +11,7 @@ internal static class Native
     public struct MpvEvent { public int Id; public int Error; public ulong ReplyUserdata; public IntPtr Data; }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct MpvEndFile { public int Reason; public int Error; }
+    public struct MpvEndFile { public int Reason; public int Error; public long PlaylistEntyId; public long PlaylistInsertId; public int PlaylistInsertNumEntries; }
 
     [DllImport(Lib)] public static extern IntPtr mpv_create();
     [DllImport(Lib)] public static extern int mpv_initialize(IntPtr h);

@@ -372,33 +372,37 @@ internal sealed class PlaybackService
         var error = _engine.DrainEvents();
         var ended = _engine.TakeEnded();
 
+        if (_engine.TakeNextFailed() && _queuedNextId is { } failedNext)
+        {
+            _prefetch.Forget(failedNext);
+            _cache?.Remove(failedNext);
+            _queuedNextId = null;
+            Log.Warn("playback", "queued stream failed to open: " + failedNext);
+        }
+        
         // mpv finished a track and went on into the entry we queued: follow it in our own state.
         if (ended && _queuedNextId is not null)
             OnEngineAdvanced();
 
         if (error.Length > 0)
         {
-            if (!ended && _queuedNextId is { } queued && !_engine.Idle)
-            {
-                // The queued entry failed to open early while the current track plays on: drop it.
-                _prefetch.Forget(queued);
-                _cache?.Remove(queued);
-                _queuedNextId = null;
-                _engine.ClearNext();
-                Log.Warn("playback", "queued stream failed to open: " + error);
-            }
-            else if (TryFallback())
-            {
+            // The track that should be playing failed, and the engine already stopped.
+            _queuedNextId = null;
+            
+            if (TryFallback())
                 return;
-            }
-            else
+
+            if (PlayQueue.current(_queue) is { } failed)
             {
-                IsLoaded = false;
-                _sawActive = false;
-                Log.Warn("playback", "play failed: " + error);
-                _status.Text = ErrorText(error);
-                return;
+                _prefetch.Forget(failed.Value.Id); // so pressing play resolves it again instead of reusing the dead URL
+                _cache?.Remove(failed.Value.Id);
             }
+            
+            IsLoaded = false;
+            _sawActive = false;
+            Log.Warn("playback", "play failed: " + error);
+            _status.Text = ErrorText(error);
+            return;
         }
 
         var awaiting = _awaitingId is not null;
