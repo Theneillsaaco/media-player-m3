@@ -36,6 +36,7 @@ import time
 import browse
 import hostprofile
 from concurrent.futures import ThreadPoolExecutor
+from http.cookiejar import Cookie
 
 # Protocol output goes to the real stdout; anything a library prints goes to stderr.
 _out = sys.stdout
@@ -144,6 +145,7 @@ def auth_set(params):
     client = browser_client(cookie, int(params.get("authuser", 0)))
     name = account_name(client)
     _auth = client
+    _set_cookie_header(cookie)
     return {"name": name}
 
 
@@ -168,6 +170,7 @@ def auth_import_browser(params):
     client = browser_client(cookie, 0)
     name = account_name(client)
     _auth = client
+    _set_cookie_header(cookie)
     return {"cookie": cookie, "name": name}
 
 
@@ -180,8 +183,27 @@ def auth_status(_params):
 def auth_clear(_params):
     global _auth
     _auth = None
+    _set_cookie_header("")
     return True
 
+
+_cookie_header = ""
+
+def _set_cookie_header(header):
+    global _cookie_header
+    _cookie_header = header
+
+def apply_cookies(ydl):
+    """Mete la cookie de la sesión en un YoutubeDL; sin sesión, vuelve al cliente anónimo (visionos)."""
+    if not _cookie_header:
+        ydl.params["extractor_args"] = {"youtube": {"player_client": YT_CLIENTS}}
+        return
+    for pair in _cookie_header.split("; "):
+        name, _, value = pair.partition("=")
+        if name:
+            ydl.cookiejar.set_cookie(Cookie(0, name, value, None, False, ".youtube.com", True, True,
+                                            "/", True, True, None, False, None, None, {}))
+    ydl.params["extractor_args"] = {"youtube": {"player_client": ["default", "web_safari"]}}
 
 # ---- catalogue ----
 
@@ -282,6 +304,7 @@ def _ydl(fmt=AUDIO_FORMAT):
             "skip_download": True,
             "socket_timeout": 20,
             "extractor_args": {"youtube": {"player_client": YT_CLIENTS}},
+            "js_runtimes": {"node": {}},
         }
         ydl = cache[fmt] = YoutubeDL(options)
     return ydl
@@ -297,7 +320,9 @@ def _extract(video, fmt, codec="acodec"):
     """yt-dlp's answer for a video id in a format: (info, the format entry that holds the URL).
     `codec` says which part to take when the selection is a merge: acodec for audio, vcodec for video."""
     with _resolving:
-        info = _ydl(fmt).extract_info("https://music.youtube.com/watch?v=" + video, download=False)
+        ydl = _ydl(fmt)
+        apply_cookies(ydl)
+        info = ydl.extract_info("https://music.youtube.com/watch?v=" + video, download=False)
     _remember_stats(video, info)
     chosen = info
     url = info.get("url")

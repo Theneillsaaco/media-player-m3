@@ -67,7 +67,7 @@ def build(server):
             "no_warnings": True,
             "skip_download": True,
             "socket_timeout": 20,
-            "extractor_args": LIGHT_ARGS,
+            "js_runtimes": {"node": {}},
         })
 
     def checkout():
@@ -112,6 +112,7 @@ def build(server):
             with server._resolving:
                 ydl = checkout()
                 try:
+                    server.apply_cookies(ydl)
                     info = ydl.extract_info("https://music.youtube.com/watch?v=" + video, download=False)
                 finally:
                     pool.put(ydl)

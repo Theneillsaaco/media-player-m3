@@ -26,7 +26,7 @@ public partial class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyri
 
     public async Task<ResolvedStream> Resolve(string id)
     {
-        var result = await CallAsync("resolve", new { id }, SidecarProtocol.ResolveTimeout);
+        var result = await CallAsync("resolve", new { id }, SidecarProtocol.ResolveTimeout, withCookie: true);
         var url = Text(result, "url");
         if (url.Length == 0)
             throw new InvalidOperationException("The sidecar returned no stream URL");
@@ -64,7 +64,7 @@ public partial class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyri
     /// <summary>A video-only stream (up to 720p) of a video id.</summary>
     public async Task<VideoStream> GetVideoStream(string id)
     {
-        var result = await CallAsync("video_stream", new { id }, SidecarProtocol.ResolveTimeout);
+        var result = await CallAsync("video_stream", new { id }, SidecarProtocol.ResolveTimeout, withCookie: true);
         var url = Text(result, "url");
         if (url.Length == 0)
             throw new InvalidOperationException("The sidecar returned no video URL");
@@ -156,13 +156,13 @@ public partial class YtSidecarProvider : IMusicProvider, IAccountProvider, ILyri
         _process.Dispose();
     }
     
-    private async Task<JsonElement> CallAsync(string method, object args, TimeSpan? timeout = null, bool signedIn = false)
+    private async Task<JsonElement> CallAsync(string method, object args, TimeSpan? timeout = null, bool signedIn = false, bool withCookie = false)
     {
         string? cookie = null;
-        if (signedIn)
+        if (signedIn || withCookie)
         {
             lock (_gate) cookie = _cookie;
-            if (cookie is null) 
+            if (cookie is null && signedIn) 
                 throw new AuthExpiredException("Not signed in");
         }
         
