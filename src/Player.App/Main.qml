@@ -170,8 +170,8 @@ ApplicationWindow {
         onTriggered: searchVm.suggest(input.text)
     }
 
-    SettingsDialog { id: settings; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; localeVm: localeVm; theme: appTheme }
-
+    SettingsPage { id: settings; anchors.fill: parent; z: 90; vm: settingsVm; appearanceVm: themeVm; videoVm: videoVm; localeVm: localeVm; lyricsVm: lyricsVm; theme: appTheme }
+    
     PlaylistPicker { id: playlistPicker; vm: libraryVm; theme: appTheme }
 
     // Called by the lists and the playback bar: a name opens its page, from wherever the user is.
@@ -257,7 +257,7 @@ ApplicationWindow {
     // Escape leaves the maximized player.
     Shortcut {
         sequence: "Esc"
-        enabled: win.playerMode === "full"
+        enabled: win.playerMode === "full" && !settings.opened
         onActivated: win.playerMode = "page"
     }
     Shortcut {
