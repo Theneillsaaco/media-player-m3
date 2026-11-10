@@ -106,15 +106,18 @@ module Translations =
         "tip.later", "Mostrar después", "Show later"
         "tip.resetDelay", "Quitar el desfase", "Reset the delay"
 
-        // lyrics
-        "lyrics.title", "Letra", "Lyrics"
-        "lyrics.idle", "Reproduce una canción para ver su letra.", "Play a song to see its lyrics."
-        "lyrics.loading", "Buscando la letra…", "Looking for the lyrics…"
-        "lyrics.none", "No se encontró la letra de esta canción.", "No lyrics were found for this song."
-        "lyrics.instrumental", "Instrumental", "Instrumental"
-        "lyrics.error", "No se pudo cargar la letra.", "Could not load the lyrics."
-        "lyrics.unavailable", "Las letras no están disponibles para enlaces ni archivos.", "Lyrics are not available for links or files."
-
+        // lyrics extras and settings sections
+        "settings.lyrics", "Letras", "Lyrics"
+        "settings.section.general", "General", "General"
+        "settings.section.accounts", "Cuentas", "Accounts"
+        "lyrics.extra", "Texto bajo cada línea", "Text under each line"
+        "lyrics.extra.off", "Ninguno", "None"
+        "lyrics.extra.romaji", "Romaji", "Romaji"
+        "lyrics.extra.translation", "Traducción", "Translation"
+        "lyrics.extra.both", "Romaji + traducción", "Romaji + translation"
+        "lyrics.extraNote", "El romaji viene de NetEase y solo existe para algunas canciones japonesas (hace falta letra sincronizada). La traducción es automática: se envía la letra a Google Translate y sale en el idioma de la interfaz.", "The romaji comes from NetEase and only exists for some Japanese songs (synced lyrics are needed). The translation is automatic: the lyrics are sent to Google Translate and come out in the interface language."
+        "tip.lyricsExtra", "Romaji / traducción", "Romaji / translation"
+        
         // library and lists
         "library.loading", "Cargando biblioteca…", "Loading library…"
         "library.empty", "No hay listas en tu biblioteca", "There are no playlists in your library"

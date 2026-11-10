@@ -61,13 +61,16 @@ internal static class AppServices
                 key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "theme setting", ex); return null; } },
                 (key, value) => Db?.SetSetting(key, value));
 
+            var netease = new NetEaseClient();
             Lyrics = new LyricsService(
-                [.. new ILyricsSource?[] { Provider, new LrclibClient() }.OfType<ILyricsSource>()],
+                [.. new ILyricsSource?[] { Provider, new LrclibClient(), netease, new KugouClient() }.OfType<ILyricsSource>()],
                 id => Db?.GetLyrics(id),
                 (id, kind, source, body) => Db?.SaveLyrics(id, kind, source, body),
                 key => Db?.GetSetting(key),
                 (key, value) => Db?.SetSetting(key, value),
-                key => Db?.RemoveSetting(key));
+                key => Db?.RemoveSetting(key),
+                romajiSources: [netease],
+                translator: new GoogleTranslateClient());
 
             Video = new VideoService(
                 Provider,

@@ -19,3 +19,11 @@ type LyricsResult = {
 type ILyricsSource =
     abstract Name: string
     abstract Find: track: Track -> Task<LyricsResult>
+    
+/// A source that can also give the romanised lyrics of a track, as LRC with the lines of the original ("" when it has none).
+type IRomajiSource =
+    abstract FindRomaji: track: Track -> Task<string>
+    
+/// Translates lines of text into a language ("es", "en"). The result has one entry per input line ("" for none).
+type ILineTranslator =
+    abstract Translate: lines: string[] * language: string -> Task<string[]>

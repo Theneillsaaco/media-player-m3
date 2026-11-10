@@ -8,6 +8,9 @@ public class LyricRow
     public string Text { get; set; } = "";
 
     public double Start { get; set; } = -1;
+    
+    /// <summary>Romaji and/or translation shown under the line.</summary>
+    public string Sub { get; set; } = "";
 }
 
 public class LyricsListModel : ListModel<LyricRow>

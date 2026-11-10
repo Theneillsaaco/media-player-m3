@@ -41,6 +41,7 @@ Rectangle {
 
             MButton { kind: "text"; text: "A−"; ToolTip.visible: hovered; ToolTip.text: root.tr("tip.smaller"); onClicked: root.vm.shrinkText() }
             MButton { kind: "text"; text: "A+"; ToolTip.visible: hovered; ToolTip.text: root.tr("tip.bigger"); onClicked: root.vm.growText() }
+            MButton { kind: "text"; text: root.tr("lyrics.extra." + root.vm.extraMode); ToolTip.visible: hovered; ToolTip.text: root.tr("tip.lyricsExtra"); onClicked: root.vm.cycleExtra() }
             Item { Layout.fillWidth: true }
             MButton { visible: root.vm.synced; kind: "text"; text: "−0,5"; ToolTip.visible: hovered; ToolTip.text: root.tr("tip.sooner"); onClicked: root.vm.nudgeOffset(-0.5) }
             MButton {
@@ -99,20 +100,34 @@ Rectangle {
                     readonly property bool current: root.vm.synced && index === root.vm.currentIndex
 
                     width: ListView.view.width
-                    height: Math.max(label.implicitHeight, root.vm.fontSize) + 14
+                    height: textColumn.implicitHeight + 14
 
-                    Text {
-                        id: label
+                    Column {
+                        id: textColumn
                         x: 20
                         width: parent.width - 40
                         anchors.verticalCenter: parent.verticalCenter
-                        text: row.model.text
-                        wrapMode: Text.Wrap
-                        font.pixelSize: root.vm.fontSize
-                        font.weight: row.current ? Font.DemiBold : Font.Normal
-                        color: root.theme ? (row.current || !root.vm.synced ? root.theme.inkSurface : root.theme.inkSurfaceVariant) : "#1D1B20"
+                        spacing: 2
                         opacity: row.current || !root.vm.synced ? 1 : 0.6
                         Behavior on opacity { NumberAnimation { duration: 200 } }
+
+                        Text {
+                            width: parent.width
+                            height: Math.max(implicitHeight, root.vm.fontSize)
+                            text: row.model.text
+                            wrapMode: Text.Wrap
+                            font.pixelSize: root.vm.fontSize
+                            font.weight: row.current ? Font.DemiBold : Font.Normal
+                            color: root.theme ? (row.current || !root.vm.synced ? root.theme.inkSurface : root.theme.inkSurfaceVariant) : "#1D1B20"
+                        }
+                        Text {
+                            visible: text.length > 0
+                            width: parent.width
+                            text: row.model.sub
+                            wrapMode: Text.Wrap
+                            font.pixelSize: Math.round(root.vm.fontSize * 0.75)
+                            color: root.theme ? root.theme.primary : "#6750A4"
+                        }
                     }
                     MouseArea {
                         anchors.fill: parent

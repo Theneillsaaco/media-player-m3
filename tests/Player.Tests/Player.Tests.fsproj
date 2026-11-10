@@ -36,6 +36,7 @@
       <Compile Include="ThemeTests.fs" />
       <Compile Include="VideoTests.fs" />
       <Compile Include="CachePolicyTests.fs" />
+      <Compile Include="LyricsExtrasTests.fs" />
       <Content Include="Data\m3color-oracle.json" />
     </ItemGroup>
 

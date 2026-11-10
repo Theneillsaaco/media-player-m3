@@ -25,12 +25,15 @@ public class LyricsViewModel : INotifyPropertyChanged
     {
         AppServices.EnsureStarted();
         FontSize = AppServices.Lyrics.FontSize;
+        ExtraMode = AppServices.Lyrics.Extra;
         Message = MessageFor("idle");
         AppServices.Playback.Changed += Poll;
         AppServices.LanguageChanged += () =>
         {
             Message = MessageFor(State);
             ShowOffset(Offset);
+            if (ExtraMode is "translation" or "both") 
+                Retry();
         };
     }
 
@@ -55,6 +58,7 @@ public class LyricsViewModel : INotifyPropertyChanged
     /// <summary>Seconds later than the music this track's lyrics are shown (negative: sooner).</summary>
     public double Offset { get; private set => Set(ref field, value); }
     public string OffsetText { get; private set => Set(ref field, value); } = "0,0 s";
+    public string ExtraMode { get; private set => Set(ref field, value); } = "off";
 
     /// <summary>QML tells the view model whether the panel is open.</summary>
     public void PanelShown(bool shown)
@@ -110,6 +114,21 @@ public class LyricsViewModel : INotifyPropertyChanged
     public void GrowText() => ChangeFontSize(2);
 
     public void ShrinkText() => ChangeFontSize(-2);
+    
+    public void ChooseExtra(string mode)
+    {
+        AppServices.Lyrics.SaveExtra(mode);
+        ExtraMode = AppServices.Lyrics.Extra;
+        Retry();
+    }
+
+    public void CycleExtra() => ChooseExtra(ExtraMode switch
+    {
+        "off" => "romaji",
+        "romaji" => "translation",
+        "translation" => "both",
+        _ => "off",
+    });
 
     /// <summary>Looks again after an error.</summary>
     public void Retry()
@@ -141,7 +160,7 @@ public class LyricsViewModel : INotifyPropertyChanged
         Synced = stage == LyricsStage.Synced;
         CurrentIndex = -1;
         Countdown = 0;
-        Lines.Replace(_lines.Select(l => new LyricRow { Text = l.Text, Start = l.Start }));
+        Lines.Replace(_lines.Select((l, i) => new LyricRow { Text = l.Text, Start = l.Start, Sub = SubOf(i, snapshot.Romaji, snapshot.Translation) }));
     }
 
     private void Follow()
@@ -154,6 +173,13 @@ public class LyricsViewModel : INotifyPropertyChanged
         Countdown = LyricsSync.introCountdown(_lines, position) is { IsSome: true } left ? (int)Math.Ceiling(left.Value) : 0;
     }
 
+    private static string SubOf(int i, string[]? romaji, string[]? translation)
+    {
+        var a = romaji is not null && i < romaji.Length ? romaji[i] : "";
+        var b = translation is not null && i < translation.Length ? translation[i] : "";
+        return a.Length > 0 && b.Length > 0 ? a + "\n" + b : a + b;
+    }
+    
     private void ChangeOffset(double seconds)
     {
         if (_requested.Length == 0)
