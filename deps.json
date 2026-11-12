@@ -5,14 +5,19 @@
     "hash": "sha256-UYJ9bh3HxXqAnLCp2k1FbvWgtaWDpz2byTJO6Cuzyr8="
   },
   {
+    "pname": "FSharp.Core",
+    "version": "10.1.404",
+    "hash": "sha256-xBSpqWuNRDX1GGhAC9g590q4XN5Bzw7LraGcNiWhUjY="
+  },
+  {
     "pname": "Microsoft.Data.Sqlite",
-    "version": "10.0.14",
-    "hash": "sha256-NO54SJI4cty/NB6JtsGSFw8iKBXLnLJgSscHslt/sLQ="
+    "version": "10.0.15",
+    "hash": "sha256-EN3q/t/f+idvJoZ6QAvdkpChKmZ1UUMd2xqpzJZpp5s="
   },
   {
     "pname": "Microsoft.Data.Sqlite.Core",
-    "version": "10.0.14",
-    "hash": "sha256-3wgo44YaHgJAyaPsGJHNwZQs3Ee2HI0vs2ziVC8CsJI="
+    "version": "10.0.15",
+    "hash": "sha256-VkeQmBIbfQ/rL+0RvsR0a5rkrhQQYB7LSpVMC4n5N8M="
   },
   {
     "pname": "QtGroup.Qt.Bridge.CSharp.linux-x64",
