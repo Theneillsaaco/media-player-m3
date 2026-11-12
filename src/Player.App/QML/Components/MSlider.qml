@@ -4,9 +4,8 @@ import QtQuick.Shapes
 
 // Material 3 slider. Two looks:
 //   expressive: false  a flat track (volume).
-//   expressive: true   the progress is a wave that moves while `playing` and goes flat when it is not (the seek bar).
-// Both have an active and an inactive track with a gap around the handle, a 4 dp handle that narrows only while it
-// is pressed, and a stop dot at the end.
+//   expressive: true   the progress is a wave that moves while `playing` and fades to flat when it is not (the seek bar).
+// The wave path is built once per width and only slid sideways, so playing costs one animated number.
 Slider {
     id: slider
 
@@ -45,8 +44,8 @@ Slider {
 
     // ---- the wave ----
 
-    property real amp: playing ? amplitude : 0
-    Behavior on amp { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+    property real waveMix: playing ? 1 : 0 // 1 = wave, 0 = flat line
+    Behavior on waveMix { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
     property real shift: 0 // how far the wave has slid, 0 .. wavelength
 
@@ -58,22 +57,19 @@ Slider {
         running: slider.expressive && slider.playing && slider.visible
     }
 
-    function buildWave(a, width, wl, box, sh) {
+    function buildWave(width, wl, box, a) {
         if (width <= 0) return []
         const points = []
-        
-        for (let x = 0; x <= width; x += 2) {
-            points.push(Qt.point(x, box / 2 + a * Math.sin(2 * Math.PI * (x + sh) / wl)))
-        }
-        
-        if (points.length === 0 || points[points.length - 1].x !== width) {
-            points.push(Qt.point(width, box / 2 + a * Math.sin(2 * Math.PI * (width + sh) / wl)))
-        }
-        
+        for (let x = 0; x <= width; x += 2)
+            points.push(Qt.point(x, box / 2 + a * Math.sin(2 * Math.PI * x / wl)))
         return points
     }
 
-    readonly property var wavePath: expressive ? buildWave(amp, activeEnd, wavelength, waveBox, shift) : []
+    // Depends only on the width: the movement is a translation of the whole shape.
+    readonly property var wavePath: expressive && availableWidth > 0
+        ? buildWave(availableWidth + wavelength, wavelength, waveBox, amplitude) : []
+
+    function waveY(x) { return waveBox / 2 + amplitude * Math.sin(2 * Math.PI * (x + shift) / wavelength) }
 
     onMoved: {
         if (slider.live) slider.changedByUser(slider.value)
@@ -88,9 +84,10 @@ Slider {
         width: slider.availableWidth
         height: slider.trackHeight
 
-        // active track, flat (expressive: false)
+        // active track, flat (the volume, and the seek bar while it is not playing)
         Rectangle {
-            visible: !slider.expressive && slider.activeEnd > 0.5
+            visible: slider.activeEnd > 0.5 && opacity > 0.01
+            opacity: slider.expressive ? 1 - slider.waveMix : 1
             width: slider.activeEnd
             height: parent.height
             radius: height / 2
@@ -99,26 +96,51 @@ Slider {
             color: slider.cPrimary
         }
 
-        // active track, wave (expressive: true)
+        // active track, wave
         Item {
-            visible: slider.expressive && slider.activeEnd > 0.5
+            visible: slider.expressive && slider.activeEnd > 0.5 && slider.waveMix > 0.01
+            opacity: slider.waveMix
             y: (parent.height - slider.waveBox) / 2
             width: slider.activeEnd
             height: slider.waveBox
 
-            Shape {
-                width: slider.activeEnd
-                height: slider.waveBox
-                preferredRendererType: Shape.CurveRenderer
+            Item { // clips the sliding shape to the active part
+                anchors.fill: parent
+                clip: true
 
-                ShapePath {
-                    strokeColor: slider.cPrimary
-                    strokeWidth: slider.trackHeight
-                    fillColor: "transparent"
-                    capStyle: ShapePath.RoundCap
-                    joinStyle: ShapePath.RoundJoin
-                    PathPolyline { path: slider.wavePath }
+                Shape {
+                    x: -slider.shift
+                    width: slider.availableWidth + slider.wavelength
+                    height: slider.waveBox
+                    preferredRendererType: Shape.CurveRenderer
+
+                    ShapePath {
+                        strokeColor: slider.cPrimary
+                        strokeWidth: slider.trackHeight
+                        fillColor: "transparent"
+                        capStyle: ShapePath.FlatCap
+                        joinStyle: ShapePath.RoundJoin
+                        PathPolyline { path: slider.wavePath }
+                    }
                 }
+            }
+
+            // round caps, which the clip would cut
+            Rectangle {
+                x: -slider.trackHeight / 2
+                y: slider.waveY(0) - slider.trackHeight / 2
+                width: slider.trackHeight
+                height: width
+                radius: width / 2
+                color: slider.cPrimary
+            }
+            Rectangle {
+                x: slider.activeEnd - slider.trackHeight / 2
+                y: slider.waveY(slider.activeEnd) - slider.trackHeight / 2
+                width: slider.trackHeight
+                height: width
+                radius: width / 2
+                color: slider.cPrimary
             }
         }
 
@@ -166,13 +188,13 @@ Slider {
         x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
         y: -height - 12
         padding: 8
-        
+
         contentItem: Text {
             text: slider.valueLabel
             color: slider.cOnInverse
             font.pixelSize: 12
         }
-        
+
         background: Rectangle {
             color: slider.cInverse
             radius: height / 2

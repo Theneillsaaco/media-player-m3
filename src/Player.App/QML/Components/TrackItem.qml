@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
 // Material 3 two-line list item with a cover. Click plays or opens; right click or the ⋮ button opens a menu.
+// The menu is built the first time it is opened (a Popup with five items per row is heavy while scrolling).
 // showAdd: the item can be added to the queue (a + button and "play next" / "add to queue" in the menu).
 // showRemove: the menu also offers "remove from queue". draggable: a grip on the left that reorders (the queue).
 // With a videoId the second line is a link to the artist's page. round: circular cover (artists).
@@ -23,6 +24,7 @@ Item {
     property bool draggable: false
     property bool dimmed: false
     property bool round: false
+    property color backdrop: theme ? theme.surfaceContainer : "#F2ECF4"
     property color cPrimary: theme ? theme.primary : "#6750A4"
     property color cOnSurface: theme ? theme.inkSurface : "#1D1B20"
     property color cOnSurfaceVariant: theme ? theme.inkSurfaceVariant : "#49454F"
@@ -53,6 +55,16 @@ Item {
             Window.window.toast(row.tr(key))
     }
 
+    // Opens the menu next to `target` (the ⋮ button) or at the pointer when there is none.
+    function openMenu(target, x, y) {
+        if (!menuHost.item)
+            menuHost.sourceComponent = menuComp
+        if (target)
+            menuHost.item.popup(target, x, y)
+        else
+            menuHost.item.popup()
+    }
+
     implicitHeight: 64
     opacity: dimmed ? 0.4 : 1
 
@@ -81,7 +93,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onClicked: (mouse) => {
             if (mouse.button === Qt.RightButton && row.hasMenu)
-                menu.popup()
+                row.openMenu(null, 0, 0)
             else if (mouse.button === Qt.LeftButton)
                 row.activated()
         }
@@ -191,51 +203,56 @@ Item {
             visible: row.hasMenu
             glyph: "more"
             tip: row.tr("tip.more")
-            onClicked: menu.popup(more, 0, more.height)
+            onClicked: row.openMenu(more, 0, more.height)
         }
     }
 
-    MMenu {
-        id: menu
-        onAboutToShow: row.liked = row.Window.window && row.Window.window.isLiked ? row.Window.window.isLiked(row.videoId) : false
+    // The menu only exists once someone opens it.
+    Loader { id: menuHost }
 
-        MMenuItem {
-            visible: row.showAdd
-            glyph: "playlist_add"
-            text: row.tr("menu.playNext")
-            onTriggered: { row.playNextRequested(); row.toast("queue.addedNext") }
-        }
-        MMenuItem {
-            visible: row.showAdd
-            glyph: "add"
-            text: row.tr("menu.addToQueue")
-            onTriggered: { row.addRequested(); row.toast("queue.added") }
-        }
-        MMenuItem {
-            visible: row.canLike
-            glyph: row.liked ? "favorite" : "favorite_border"
-            text: row.liked ? row.tr("menu.unlike") : row.tr("menu.like")
-            onTriggered: {
-                row.toast(row.liked ? "like.removed" : "like.added")
-                const w = row.Window.window
-                if (w) w.toggleLikeOf(row.videoId)
-            }
-        }
-        MMenuItem {
-            visible: row.canLike
-            glyph: "playlist_add"
-            text: row.tr("menu.addToPlaylist")
-            onTriggered: {
-                const w = row.Window.window
-                if (w && w.pickPlaylist) w.pickPlaylist(row.videoId)
-            }
-        }
+    Component {
+        id: menuComp
 
-        MMenuItem {
-            visible: row.showRemove
-            glyph: "delete"
-            text: row.tr("menu.removeFromQueue")
-            onTriggered: row.removeRequested()
+        MMenu {
+            onAboutToShow: row.liked = row.Window.window && row.Window.window.isLiked ? row.Window.window.isLiked(row.videoId) : false
+
+            MMenuItem {
+                visible: row.showAdd
+                glyph: "playlist_add"
+                text: row.tr("menu.playNext")
+                onTriggered: { row.playNextRequested(); row.toast("queue.addedNext") }
+            }
+            MMenuItem {
+                visible: row.showAdd
+                glyph: "add"
+                text: row.tr("menu.addToQueue")
+                onTriggered: { row.addRequested(); row.toast("queue.added") }
+            }
+            MMenuItem {
+                visible: row.canLike
+                glyph: row.liked ? "favorite" : "favorite_border"
+                text: row.liked ? row.tr("menu.unlike") : row.tr("menu.like")
+                onTriggered: {
+                    row.toast(row.liked ? "like.removed" : "like.added")
+                    const w = row.Window.window
+                    if (w) w.toggleLikeOf(row.videoId)
+                }
+            }
+            MMenuItem {
+                visible: row.canLike
+                glyph: "playlist_add"
+                text: row.tr("menu.addToPlaylist")
+                onTriggered: {
+                    const w = row.Window.window
+                    if (w && w.pickPlaylist) w.pickPlaylist(row.videoId)
+                }
+            }
+            MMenuItem {
+                visible: row.showRemove
+                glyph: "delete"
+                text: row.tr("menu.removeFromQueue")
+                onTriggered: row.removeRequested()
+            }
         }
     }
 }

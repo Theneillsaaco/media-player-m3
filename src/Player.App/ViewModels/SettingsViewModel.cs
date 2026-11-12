@@ -53,6 +53,13 @@ public class SettingsViewModel : ViewModelBase
     /// <summary>True while a sign-in or a connection check is running, so the UI timer keeps polling.</summary>
     public bool Busy { get; private set => Set(ref field, value); }
 
+    /// <summary>Only the account and Last.fm state (keeps <see cref="Busy"/> honest). Main.qml calls it while settings are closed.</summary>
+    public void PollLight()
+    {
+        SyncScrobbler();
+        SyncAccount();
+    }
+    
     /// <summary>Re-reads both services. The dialog and Main.qml call it from a Timer.</summary>
     public void Poll()
     {

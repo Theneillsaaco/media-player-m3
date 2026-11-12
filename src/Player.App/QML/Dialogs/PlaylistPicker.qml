@@ -36,6 +36,7 @@ MDialog {
             visible: addable
             width: ListView.view.width
             height: addable ? implicitHeight : 0
+            backdrop: dialog.theme.surfaceContainerHigh
             heading: model.title
             supporting: model.artist
             artUrl: model.artUrl

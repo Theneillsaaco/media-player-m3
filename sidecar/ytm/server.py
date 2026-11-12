@@ -315,15 +315,16 @@ def _expires_at(url):
     found = re.search(r"[?&]expire=(\d+)", url) or re.search(r"/expire/(\d+)", url)
     return int(found.group(1)) if found else int(time.time()) + 3600
 
+_video_slot = threading.BoundedSemaphore(1)  # video never waits behind audio resolves
 
-def _extract(video, fmt, codec="acodec"):
+def _extract(video, fmt, codec="acodec", slot=None):
     """yt-dlp's answer for a video id in a format: (info, the format entry that holds the URL).
     `codec` says which part to take when the selection is a merge: acodec for audio, vcodec for video."""
-    with _resolving:
+    with (slot if slot is not None else _resolving):
         ydl = _ydl(fmt)
         apply_cookies(ydl)
         info = ydl.extract_info("https://music.youtube.com/watch?v=" + video, download=False)
-    _remember_stats(video, info)
+        _remember_stats(video, info)
     chosen = info
     url = info.get("url")
     if not url:  # a merged selection lists its parts
@@ -418,7 +419,10 @@ def video_stream(params):
     video = str(params.get("id", ""))
     if not VIDEO_ID.fullmatch(video):
         raise ValueError("Invalid YouTube video ID")
-    info, chosen, url = _extract(video, VIDEO_FORMAT, codec="vcodec")
+    started = time.time()
+    info, chosen, url = _extract(video, VIDEO_FORMAT, codec="vcodec", slot=_video_slot)
+    print(f"video_stream {video}: {time.time() - started:.1f}s format={chosen.get('format_id')} "
+          f"protocol={chosen.get('protocol')} {chosen.get('height')}p", file=sys.stderr)
     return {
         "url": url,
         "expires_at": _expires_at(url),
@@ -555,14 +559,14 @@ def handle(line):
             payload["code"] = exc.code
         reply(payload)
 
-
 def main():
+    # The first search or Home no longer pays the ytmusicapi import: it loads while the app starts.
+    api()
     with ThreadPoolExecutor(max_workers=WORKERS, thread_name_prefix="ytm") as pool:
         for line in sys.stdin:
             line = line.strip()
             if line:
                 pool.submit(handle, line)
-
 
 if __name__ == "__main__":
     main()

@@ -304,6 +304,9 @@ internal sealed class PlaybackService
         AfterQueueEdit();
         Poll();
     }
+    
+    /// <summary>The next tracks in play order (shuffle and repeat respected), at most <paramref name="count"/>.</summary>
+    public IReadOnlyList<Track> UpcomingTracks(int count) => [.. Prefetch.upcoming(_queue).Take(count)];
 
     #endregion
 

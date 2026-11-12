@@ -31,6 +31,7 @@ internal sealed class VideoService(
     private readonly Dictionary<string, VideoStream> _streams = [];
     private readonly List<string> _streamOrder = []; // oldest first
     private readonly HashSet<string> _inflight = [];
+    private HashSet<string> _warm = [];
     private readonly Dictionary<string, long> _failedAt = [];
     private readonly Dictionary<string, string> _errors = [];
     private string _trackId = "";
@@ -107,6 +108,26 @@ internal sealed class VideoService(
         _ = Task.Run(() => FetchStreamAsync(videoId));
     }
 
+    /// <summary>
+    /// Says which tracks are about to matter (the current one and the next). With the automatic setting on, the
+    /// stream of every official music video among them is fetched ahead of time, so it is there when the track starts.
+    /// </summary>
+    public void Warm(IReadOnlyList<Track> tracks)
+    {
+        var ids = tracks
+            .Select(t => t.Id)
+            .Where(id => id.Length > 0 && !TrackSource.IsDirect(id))
+            .ToHashSet();
+
+        lock (_gate) _warm = ids;
+
+        foreach (var id in ids)
+        {
+            EnsureInfo(id);
+            WarmStream(id);
+        }
+    }
+    
     /// <summary>The player could not play this stream (expired, refused): drop it and leave it alone for a while.</summary>
     public void ReportFailure(string videoId, string message)
     {
@@ -135,6 +156,31 @@ internal sealed class VideoService(
 
         EnsureInfo(id);
         EnsureStream();
+    }
+    
+    /// <summary>Starts the stream of this track's video when it is a wanted official video and it is not here yet.</summary>
+    private void WarmStream(string id)
+    {
+        if (!Auto)
+            return;
+
+        string videoId;
+        
+        lock (_gate)
+        {
+            if (!_warm.Contains(id) || !_info.TryGetValue(id, out var info))
+                return;
+            if (Video.plan(info) is not { Available: true, Automatic: true } plan)
+                return;
+
+            videoId = plan.VideoId;
+            if(_streams.TryGetValue(videoId, out var cached) && Video.isFresh(Now(), cached))
+                return;
+            if (!StartAllowed("s:" + videoId))
+                return;
+        }
+
+        _ = Task.Run(() => FetchStreamAsync(videoId));
     }
 
     private void EnsureInfo(string id)
@@ -174,6 +220,8 @@ internal sealed class VideoService(
                 _info[id] = info;
                 Finish("i:" + id, null);
             }
+            
+            WarmStream(id); // the info arrived: if it is an official video that is wanted, fetch its stream now
         }
         catch (Exception ex)
         {

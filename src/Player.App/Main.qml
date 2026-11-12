@@ -169,7 +169,7 @@ ApplicationWindow {
     }
 
     function pollAll() {
-        settingsVm.poll()
+        settingsVm.pollLight()
         searchVm.poll()
         libraryVm.poll()
         lyricsVm.poll()

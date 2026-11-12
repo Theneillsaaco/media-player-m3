@@ -1,5 +1,6 @@
 using Player.App.Services;
 using Player.App.ViewModels.Base;
+using Player.Core.Domain;
 using Player.Core.Playback;
 
 namespace Player.App.ViewModels;
@@ -17,6 +18,7 @@ public class VideoViewModel : ViewModelBase
     private string _trackId = "";
     private VideoChoice _choice = VideoChoice.Unset;
     private VideoPlan _plan = Video.none;
+    private string _warmKey = "";
 
     public VideoViewModel()
     {
@@ -53,6 +55,7 @@ public class VideoViewModel : ViewModelBase
         AppServices.Video.SaveAuto(on);
         AutoShow = on;
         _choice = VideoChoice.Unset;
+        _warmKey = ""; // the setting changed: decide again what to fetch ahead
         Poll();
     }
 
@@ -96,6 +99,17 @@ public class VideoViewModel : ViewModelBase
         }
 
         AppServices.Video.Select(track);
+        
+        // Current + next track: their official videos are fetched before they are needed. Only when something changed.
+        var warmKey = id + "|" + AppServices.Playback.QueueRevision;
+        if (warmKey != _warmKey)
+        {
+            _warmKey = warmKey;
+            List<Track> wanted = track is null ? [] : [track];
+            wanted.AddRange(AppServices.Playback.UpcomingTracks(1));
+            AppServices.Video.Warm(wanted);
+        }
+        
         var snapshot = AppServices.Video.Snapshot;
         _plan = snapshot.Plan;
 

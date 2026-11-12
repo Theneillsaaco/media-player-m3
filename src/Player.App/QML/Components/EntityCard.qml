@@ -89,7 +89,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onClicked: (mouse) => {
             if (mouse.button === Qt.RightButton && card.hasMenu)
-                menu.popup()
+                card.openMenu(null, 0, 0)
             else if (mouse.button === Qt.LeftButton)
                 card.activated()
         }
@@ -114,40 +114,54 @@ Item {
         glyph: "more"
         tip: card.tr("tip.more")
         cOnSurfaceVariant: card.cOnSurface
-        onClicked: menu.popup(more, 0, more.height)
+        onClicked: card.openMenu(more, 0, more.height)
     }
 
-    MMenu {
-        id: menu
-        onAboutToShow: card.liked = card.Window.window && card.Window.window.isLiked ? card.Window.window.isLiked(card.videoId) : false
+    function openMenu(target, x, y) {
+        if (!menuHost.item)
+            menuHost.sourceComponent = menuComp
+        if (target)
+            menuHost.item.popup(target, x, y)
+        else
+            menuHost.item.popup()
+    }
 
-        MMenuItem {
-            glyph: "playlist_add"
-            text: card.tr("menu.playNext")
-            onTriggered: { card.playNextRequested(); card.toast("queue.addedNext") }
-        }
-        MMenuItem {
-            glyph: "add"
-            text: card.tr("menu.addToQueue")
-            onTriggered: { card.addRequested(); card.toast("queue.added") }
-        }
-        MMenuItem {
-            visible: card.canLike
-            glyph: card.liked ? "favorite" : "favorite_border"
-            text: card.liked ? card.tr("menu.unlike") : card.tr("menu.like")
-            onTriggered: {
-                card.toast(card.liked ? "like.removed" : "like.added")
-                const w = card.Window.window
-                if (w) w.toggleLikeOf(card.videoId)
+    Loader { id: menuHost }
+
+    Component {
+        id: menuComp
+
+        MMenu {
+            onAboutToShow: card.liked = card.Window.window && card.Window.window.isLiked ? card.Window.window.isLiked(card.videoId) : false
+
+            MMenuItem {
+                glyph: "playlist_add"
+                text: card.tr("menu.playNext")
+                onTriggered: { card.playNextRequested(); card.toast("queue.addedNext") }
             }
-        }
-        MMenuItem {
-            visible: card.canLike
-            glyph: "playlist_add"
-            text: card.tr("menu.addToPlaylist")
-            onTriggered: {
-                const w = card.Window.window
-                if (w && w.pickPlaylist) w.pickPlaylist(card.videoId)
+            MMenuItem {
+                glyph: "add"
+                text: card.tr("menu.addToQueue")
+                onTriggered: { card.addRequested(); card.toast("queue.added") }
+            }
+            MMenuItem {
+                visible: card.canLike
+                glyph: card.liked ? "favorite" : "favorite_border"
+                text: card.liked ? card.tr("menu.unlike") : card.tr("menu.like")
+                onTriggered: {
+                    card.toast(card.liked ? "like.removed" : "like.added")
+                    const w = card.Window.window
+                    if (w) w.toggleLikeOf(card.videoId)
+                }
+            }
+            MMenuItem {
+                visible: card.canLike
+                glyph: "playlist_add"
+                text: card.tr("menu.addToPlaylist")
+                onTriggered: {
+                    const w = card.Window.window
+                    if (w && w.pickPlaylist) w.pickPlaylist(card.videoId)
+                }
             }
         }
     }
