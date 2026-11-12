@@ -271,6 +271,6 @@ internal sealed class AccountService(IAccountProvider? provider, PlayerDatabase 
     }
 
     // Never log the cookie: only our own messages and exception texts, which do not contain it.
-    private static void Log(string message, Exception e) =>
-        Console.Error.WriteLine("[account] " + message + ": " + e.Message);
+    private static void Log(string message, Exception e) => 
+        Core.Log.Warn("account", message, e);
 }

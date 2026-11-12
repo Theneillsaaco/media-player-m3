@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Player.Core;
+using Player.Storage;
 
 namespace Player.App.Services;
 
@@ -170,42 +171,8 @@ public class SystemColorScheme : IDisposable
     /// <summary>Standard output of a finished command, or null when it is missing, fails or takes too long.</summary>
     private static async Task<string?> RunAsync(string file, string[] args, CancellationToken token)
     {
-        var info = new ProcessStartInfo(file)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var arg in args)
-            info.ArgumentList.Add(arg);
-        
-        Process? process = null;
-        try
-        {
-            process = Process.Start(info);
-            if (process is null) 
-                return null;
-            
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeout.CancelAfter(ToolTimeout);
-
-            var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
-            _ = process.StandardError.ReadToEndAsync(timeout.Token);
-            await process.WaitForExitAsync(timeout.Token);
-
-            return process.ExitCode == 0 ? await output : null;
-        }
-        catch (Win32Exception) { return null; }
-        catch (IOException) { return null; }
-        catch (OperationCanceledException) when (!token.IsCancellationRequested)
-        {
-            try { process?.Kill(true); } catch { /* already gone */ }
-            return null;
-        }
-        finally
-        {
-            process?.Dispose();
-        }
+        var result = await ProcessTool.RunAsync(file, args, input: null, timeout: ToolTimeout, ct: token);
+        return result is { ExitCode: 0 } r ? r.Output : null;
     }
     
     #region Fields

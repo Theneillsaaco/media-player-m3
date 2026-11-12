@@ -12,7 +12,7 @@ module I18n =
     
     let languages = [| "es"; "en" |]
     
-    /// "en" or "es"; anything else gives Spanish.
+    /// "en" or "es"; anything else gives English.
     let normalize (value: string) =
         match value with
         | "es" -> "es"

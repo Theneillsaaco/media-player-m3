@@ -352,7 +352,7 @@ public sealed class AudioCache : IDisposable
             if (name.Equals("Cookie", StringComparison.OrdinalIgnoreCase)
                 || name.Equals("Host", StringComparison.OrdinalIgnoreCase)
                 || name.Equals("Range", StringComparison.OrdinalIgnoreCase)
-                || name.Equals("Content-", StringComparison.OrdinalIgnoreCase))
+                || name.StartsWith("Content-", StringComparison.OrdinalIgnoreCase))
                 continue;
             
             hasAgent |= name.Equals("User-Agent", StringComparison.OrdinalIgnoreCase);

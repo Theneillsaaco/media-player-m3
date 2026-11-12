@@ -11,7 +11,9 @@ namespace Player.Storage.Secrets;
 /// </summary>
 public  sealed class SecretStore(string application = "player")
 {
-    public async Task<string> GetAsync(string name)
+    private static readonly TimeSpan ToolTimeout = TimeSpan.FromSeconds(10);
+    
+    public async Task<string?> GetAsync(string name)
     {
         var (ok, output) = await RunTool(["lookup", "application", application, "account", name], null);
         
@@ -59,71 +61,14 @@ public  sealed class SecretStore(string application = "player")
         if (File.Exists(path)) File.Delete(path);
     }
     
-    private static string FilePath(string name)
-    {
-        if (Path.GetFileName(name) != name)
-            throw new ArgumentException("Invalid secret name", nameof(name));
-
-        return AppPaths.ConfigFile(Path.Combine("secrets", name));
-    }
+    private static string FilePath(string name) => 
+        Path.GetFileName(name) != name ? 
+            throw new ArgumentException("Invalid secret name", nameof(name)) 
+            : AppPaths.ConfigFile(Path.Combine("secrets", name));
     
     private static async Task<(bool Ok, string Output)> RunTool(string[] args, string? input)
     {
-        var info = new ProcessStartInfo("secret-tool")
-        {
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var arg in args) info.ArgumentList.Add(arg);
-
-        Process? process = null;
-
-        try
-        {
-            process = Process.Start(info);
-            
-            if (process is null)
-                return (false, "");
-            
-            using var timeout = new CancellationTokenSource(ToolTimeout);
-
-            if (input is not null)
-                await process.StandardInput.WriteAsync(input.AsMemory(), timeout.Token);
-            
-            process.StandardInput.Close();
-            
-            var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
-            var errors  = process.StandardError.ReadToEndAsync(timeout.Token); // drained so it cannot block
-            
-            await process.WaitForExitAsync(timeout.Token);
-            await errors;
-
-            return (process.ExitCode == 0, await output);
-        }
-        catch (Win32Exception) // secret-tool is not installed
-        {
-            return (false, "");
-        }
-        catch (OperationCanceledException)
-        {
-            try { process?.Kill(true); } catch { /* already gone */ }
-            return (false, "");
-        }
-        catch (IOException)
-        {
-            return (false, "");
-        }
-        finally
-        {
-            process?.Dispose();
-        }
+        var result = await ProcessTool.RunAsync("secret-tool", args, input, ToolTimeout);
+        return result is { } r ? (r.ExitCode == 0, r.Output) : (false, "");
     }
-    
-    #region Fields
-
-    private static readonly TimeSpan ToolTimeout = TimeSpan.FromSeconds(10);
-
-    #endregion
 }

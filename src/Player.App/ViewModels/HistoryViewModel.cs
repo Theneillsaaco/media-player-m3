@@ -1,8 +1,7 @@
-using System.ComponentModel;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Player.App.Models;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core;
 using Player.Core.Domain;
 using Player.Storage.Database;
@@ -13,7 +12,7 @@ namespace Player.App.ViewModels;
 /// The history page: the songs that counted as a listen, newest first. Instantiated once from Main.qml as
 /// <c>HistoryViewModel { id: historyVm }</c>; Main.qml calls <see cref="Load"/> when the page is opened.
 /// </summary>
-public class HistoryViewModel : INotifyPropertyChanged
+public class HistoryViewModel : ViewModelBase
 {
     private const int Limit = 300;
 
@@ -24,8 +23,6 @@ public class HistoryViewModel : INotifyPropertyChanged
         AppServices.EnsureStarted();
         AppServices.LanguageChanged += Load; // the dates are written in the language of the interface
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public TrackListModel Items { get; } = new();
     public int Count { get; private set => Set(ref field, value); }
@@ -81,12 +78,5 @@ public class HistoryViewModel : INotifyPropertyChanged
             Duration = TimeFormat.Clock(e.Duration),
             ArtUrl = ArtOf(e.TrackId)
         };
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

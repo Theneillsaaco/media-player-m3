@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="FSharp.Core" Version="10.1.403" />
-      <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
+      <PackageReference Include="FSharp.Core" Version="10.1.404" />
+      <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15" />
     </ItemGroup>
 
     <ItemGroup>

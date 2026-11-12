@@ -1,11 +1,10 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using Player.App.Models;
+using Player.App.ViewModels.Base;
 
 namespace Player.App.ViewModels;
 
 /// <summary>The queue panel: rows in play order, how many there are and which one is playing.</summary>
-public class QueueViewModel : INotifyPropertyChanged
+public class QueueViewModel : ViewModelBase
 {
     private int _revision = -1;
 
@@ -15,8 +14,6 @@ public class QueueViewModel : INotifyPropertyChanged
         AppServices.Playback.Changed += Refresh;
         Refresh();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public TrackListModel Items { get; } = new();
     public int Count { get; private set => Set(ref field, value); }
@@ -42,12 +39,5 @@ public class QueueViewModel : INotifyPropertyChanged
         }
         Count = p.QueueCount;
         Position = p.QueuePosition;
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

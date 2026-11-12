@@ -1,8 +1,7 @@
-using System.ComponentModel;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Player.App.Models;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core.Localization;
 using Player.Core.Lyrics;
 
@@ -14,7 +13,7 @@ namespace Player.App.ViewModels;
 /// update moves the highlighted line. Method names avoid the Set/Reset prefixes: the bridge reads those as the
 /// setter or reset of the property they name.
 /// </summary>
-public class LyricsViewModel : INotifyPropertyChanged
+public class LyricsViewModel : ViewModelBase
 {
     private LyricLine[] _lines = [];
     private bool _shown;
@@ -36,8 +35,6 @@ public class LyricsViewModel : INotifyPropertyChanged
                 Retry();
         };
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public LyricsListModel Lines { get; } = new();
 
@@ -211,11 +208,4 @@ public class LyricsViewModel : INotifyPropertyChanged
         "unavailable" => Tr.T("lyrics.unavailable"),
         _ => Tr.T("lyrics.idle"),
     };
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
 }

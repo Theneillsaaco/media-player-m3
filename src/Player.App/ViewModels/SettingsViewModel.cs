@@ -1,14 +1,13 @@
-using System.ComponentModel;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core;
 using Player.Core.Playback;
 
 namespace Player.App.ViewModels;
 
 /// <summary>The settings dialog: startup behaviour, playback, audio cache, YouTube Music account and Last.fm connection (state, status, commands).</summary>
-public class SettingsViewModel : INotifyPropertyChanged
+public class SettingsViewModel : ViewModelBase
 {
     public SettingsViewModel()
     {
@@ -22,8 +21,6 @@ public class SettingsViewModel : INotifyPropertyChanged
         SyncScrobbler();
         SyncAccount();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>What happens to the saved session at start: "continue", "fromStart" (default) or "none".</summary>
     public string Startup { get; private set => Set(ref field, value); } = "fromStart";
@@ -172,12 +169,5 @@ public class SettingsViewModel : INotifyPropertyChanged
         AccountStatus = s.Status;
         AccountBusy = s.Busy;
         Busy = ScrobbleBusy || AccountBusy;
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

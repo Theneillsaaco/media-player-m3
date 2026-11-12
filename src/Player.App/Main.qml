@@ -130,26 +130,6 @@ ApplicationWindow {
         onFound: (hex) => themeVm.useCoverColor(hex)
     }
 
-    Component {
-        id: queueComp
-        QueuePanel {
-            radius: 28
-            color: appTheme.surfaceContainer
-            clip: true
-            vm: queueVm
-        }
-    }
-
-    Component {
-        id: lyricsComp
-        LyricsPanel {
-            radius: 28
-            color: appTheme.surfaceContainer
-            clip: true
-            vm: lyricsVm
-        }
-    }
-
     SearchSuggestions {
         id: suggestions
         field: input

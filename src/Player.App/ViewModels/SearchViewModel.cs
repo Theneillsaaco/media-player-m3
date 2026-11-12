@@ -1,8 +1,7 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Player.App.Models;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core;
 using Player.Core.Contracts;
 using Player.Core.Domain;
@@ -15,7 +14,7 @@ namespace Player.App.ViewModels;
 /// leaves its result in a field under a lock; <see cref="Poll"/> picks it up. The suggestions under the box work
 /// the same way and are kept per text, so typing back over a text does not ask again.
 /// </summary>
-public class SearchViewModel : INotifyPropertyChanged
+public class SearchViewModel : ViewModelBase
 {
     private static readonly string[] Filters = ["songs", "videos", "albums", "artists", "playlists"];
 
@@ -43,9 +42,7 @@ public class SearchViewModel : INotifyPropertyChanged
         AppServices.Status.Changed += Refresh;
         Refresh();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
+    
     /// <summary>Songs and videos.</summary>
     public TrackListModel Results { get; } = new();
     /// <summary>Albums, artists and playlists.</summary>
@@ -234,11 +231,4 @@ public class SearchViewModel : INotifyPropertyChanged
     }
 
     private void Refresh() => Status = AppServices.Status.Text;
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
 }

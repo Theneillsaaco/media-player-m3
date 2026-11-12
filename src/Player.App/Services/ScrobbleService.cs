@@ -377,7 +377,7 @@ internal sealed partial class ScrobbleService : IDisposable
     }
 
     private static void Log(string message, Exception? e) =>
-        Console.Error.WriteLine("[scrobble] " + message + (e is null ? "" : ": " + e.Message));
+        Core.Log.Warn("scrobble", message, e);
 
     public void Dispose()
     {

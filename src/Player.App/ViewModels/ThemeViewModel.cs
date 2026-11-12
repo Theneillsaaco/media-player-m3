@@ -1,5 +1,4 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using Player.App.ViewModels.Base;
 
 namespace Player.App.ViewModels;
 
@@ -8,15 +7,13 @@ namespace Player.App.ViewModels;
 /// component there turns <see cref="TokensJson"/> into color properties. The Choose methods are not called
 /// SetX on purpose: the bridge would read SetMode as the setter of the Mode property.
 /// </summary>
-public class ThemeViewModel : INotifyPropertyChanged
+public class ThemeViewModel : ViewModelBase
 {
     public ThemeViewModel()
     {
         AppServices.EnsureStarted();
         Sync();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>"system", "light" or "dark".</summary>
     public string Mode { get; private set => Set(ref field, value); } = "system";
@@ -63,12 +60,5 @@ public class ThemeViewModel : INotifyPropertyChanged
         IsDark = s.IsDark;
         Dynamic = s.Dynamic;
         TokensJson = s.Tokens;
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

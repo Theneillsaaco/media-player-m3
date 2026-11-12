@@ -50,7 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="10.1.403" />
+    <PackageReference Include="FSharp.Core" Version="10.1.404" />
   </ItemGroup>
 
 </Project>

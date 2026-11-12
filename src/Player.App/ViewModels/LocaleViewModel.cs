@@ -1,5 +1,4 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using Player.App.ViewModels.Base;
 using Player.Core.Localization;
 
 namespace Player.App.ViewModels;
@@ -8,15 +7,13 @@ namespace Player.App.ViewModels;
 /// The interface language for QML. Instantiated once from Main.qml as <c>LocaleViewModel { id: localeVm }</c>; the
 /// Tr component there turns <see cref="StringsJson"/> into texts. Choose, not Set: the bridge would read SetX as a setter.
 /// </summary>
-public class LocaleViewModel : INotifyPropertyChanged
+public class LocaleViewModel : ViewModelBase
 {
     public LocaleViewModel()
     {
         AppServices.EnsureStarted();
         Sync();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>"es" or "en".</summary>
     public string Language { get; private set => Set(ref field, value); } = "en";
@@ -34,12 +31,5 @@ public class LocaleViewModel : INotifyPropertyChanged
     {
         Language = I18n.current();
         StringsJson = I18n.tableJson(Language);
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

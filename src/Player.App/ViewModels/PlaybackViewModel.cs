@@ -1,7 +1,6 @@
-using System.ComponentModel;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core.Contracts;
 using Player.Core.Playback;
 
@@ -11,7 +10,7 @@ namespace Player.App.ViewModels;
 /// Transport and now-playing for QML. Instantiated from Main.qml as <c>PlaybackViewModel { id: playback }</c>.
 /// State lives in <see cref="PlaybackService"/>; this copies it into properties whenever the service says it changed.
 /// </summary>
-public class PlaybackViewModel : INotifyPropertyChanged
+public class PlaybackViewModel : ViewModelBase
 {
     public PlaybackViewModel()
     {
@@ -19,8 +18,6 @@ public class PlaybackViewModel : INotifyPropertyChanged
         AppServices.Playback.Changed += Refresh;
         Refresh();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public double Position { get; private set => Set(ref field, value); }
     public double Duration { get; private set => Set(ref field, value); }
@@ -130,12 +127,5 @@ public class PlaybackViewModel : INotifyPropertyChanged
         var value = n / divisor;
         return (value >= 100 ? Math.Round(value).ToString("0", CultureInfo.InvariantCulture)
                              : value.ToString("0.#", CultureInfo.InvariantCulture)) + suffix;
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

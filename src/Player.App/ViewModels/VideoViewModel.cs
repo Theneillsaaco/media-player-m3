@@ -1,6 +1,5 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core.Playback;
 
 namespace Player.App.ViewModels;
@@ -13,7 +12,7 @@ namespace Player.App.ViewModels;
 /// when the user asks for the video of a studio recording does the sound switch to the video's own audio, so
 /// both are the same performance. Method names avoid Set/Reset: the bridge reads those as property setters.
 /// </summary>
-public class VideoViewModel : INotifyPropertyChanged
+public class VideoViewModel : ViewModelBase
 {
     private string _trackId = "";
     private VideoChoice _choice = VideoChoice.Unset;
@@ -25,8 +24,6 @@ public class VideoViewModel : INotifyPropertyChanged
         Sync();
         AppServices.Playback.Changed += Poll;
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The track has a video (its own, or a counterpart): the MV button shows.</summary>
     public bool Available { get; private set => Set(ref field, value); }
@@ -117,12 +114,5 @@ public class VideoViewModel : INotifyPropertyChanged
         var audio = Video.audioFrom(_plan, _choice);
         if (audio != (AppServices.Playback.AudioOverride ?? ""))
             AppServices.Playback.SwapAudio(audio.Length > 0 ? audio : null);
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

@@ -1,8 +1,7 @@
-using System.ComponentModel;
 using System.Text.Json;
-using System.Runtime.CompilerServices;
 using Player.App.Models;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core.Contracts;
 using Player.Core.Domain;
 
@@ -15,7 +14,7 @@ namespace Player.App.ViewModels;
 /// for a few minutes, so going back is instant; <see cref="Poll"/> applies what arrived, on the Qt thread.
 /// Method names avoid Set/Reset: the bridge reads those as property setters.
 /// </summary>
-public class NavigationViewModel : INotifyPropertyChanged
+public class NavigationViewModel : ViewModelBase
 {
     private readonly record struct Entry(string Page, string Id);
 
@@ -38,8 +37,6 @@ public class NavigationViewModel : INotifyPropertyChanged
         AppServices.EnsureStarted();
         Show(); // starts on Home
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The root section ("home", "search" or "library") the current page belongs to.</summary>
     public string Section { get; private set => Set(ref field, value); } = "home";
@@ -392,11 +389,4 @@ public class NavigationViewModel : INotifyPropertyChanged
     }
 
     private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
 }

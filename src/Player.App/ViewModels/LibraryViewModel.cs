@@ -1,8 +1,7 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Player.App.Models;
 using Player.App.Services;
+using Player.App.ViewModels.Base;
 using Player.Core;
 using Player.Core.Contracts;
 using Player.Core.Domain;
@@ -14,7 +13,7 @@ namespace Player.App.ViewModels;
 /// playing track or of any song of a list. Background work leaves results in a queue that <see cref="Poll"/>
 /// applies on the Qt thread.
 /// </summary>
-public class LibraryViewModel : INotifyPropertyChanged
+public class LibraryViewModel : ViewModelBase
 {
     private const string LikedList = "LM"; // YouTube Music's automatic Liked Music playlist
 
@@ -34,8 +33,6 @@ public class LibraryViewModel : INotifyPropertyChanged
         AppServices.LanguageChanged += RefreshLibrary;
         SyncAccount();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The user's playlists (title, "N canciones", cover).</summary>
     public TrackListModel Library { get; } = new();
@@ -319,12 +316,5 @@ public class LibraryViewModel : INotifyPropertyChanged
             Log.Warn("library", "cache", e);
             return default;
         }
-    }
-
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
