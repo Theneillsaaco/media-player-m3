@@ -42,6 +42,7 @@
     <ProjectReference Include="..\Player.Providers\Player.Providers.csproj" />
     <ProjectReference Include="..\Player.Scrobble\Player.Scrobble.fsproj" />
     <ProjectReference Include="..\Player.Storage\Player.Storage.csproj" />
+    <InternalsVisibleTo Include="Player.Integration.Tests" />
   </ItemGroup>
 
   <ItemGroup>

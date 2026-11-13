@@ -6,6 +6,7 @@
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\Player.Core\Player.Core.fsproj" />
+        <InternalsVisibleTo Include="Player.Integration.Tests" />
     </ItemGroup>
     <ItemGroup>
       <PackageReference Include="FSharp.Core" Version="10.1.404" />
