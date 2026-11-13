@@ -64,6 +64,7 @@ ApplicationWindow {
 
     property bool queueOpen: true
     property bool lyricsOpen: false
+    readonly property bool playingNow: playback.isLoaded && !playback.paused
 
     // The player: "mini" (the picture lives in the playback bar and the pages show), "page" (the player takes the
     // left area) or "full" (maximized: the playback bar floats over the picture).
@@ -133,7 +134,11 @@ ApplicationWindow {
     SearchSuggestions {
         id: suggestions
         field: input
-        entries: searchVm.suggestionsJson.length > 0 ? JSON.parse(searchVm.suggestionsJson) : []
+        recent: input.text.trim().length === 0
+        entries: input.text.trim().length === 0
+            ? (searchVm.recentJson.length > 0 ? JSON.parse(searchVm.recentJson) : [])
+            : (searchVm.suggestionsJson.length > 0 ? JSON.parse(searchVm.suggestionsJson) : [])
+        onClearRecent: searchVm.clearRecent()
         onChosen: (text) => {
             input.text = text
             close()

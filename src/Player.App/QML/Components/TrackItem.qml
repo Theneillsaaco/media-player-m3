@@ -7,6 +7,7 @@ import QtQuick.Controls.Basic
 // showAdd: the item can be added to the queue (a + button and "play next" / "add to queue" in the menu).
 // showRemove: the menu also offers "remove from queue". draggable: a grip on the left that reorders (the queue).
 // With a videoId the second line is a link to the artist's page. round: circular cover (artists).
+// The current row shows dancing bars over its cover; they move while Window.window.playingNow is true.
 Item {
     id: row
 
@@ -31,6 +32,7 @@ Item {
     property color cSecondaryContainer: theme ? theme.secondaryContainer : "#E8DEF8"
     property color cOnSecondaryContainer: theme ? theme.inkSecondaryContainer : "#1D192B"
 
+    readonly property bool playing: current && Window.window && Window.window.playingNow === true
     readonly property bool linkable: videoId !== "" && supporting !== ""
     readonly property bool hasMenu: showAdd || showRemove || canLike
     // A real YouTube id and a signed-in account (Main.qml decides). `liked` is read when the menu opens.
@@ -76,12 +78,14 @@ Item {
         anchors.bottomMargin: 2
         radius: 14
         color: row.current ? row.cSecondaryContainer : "transparent"
+        Behavior on color { ColorAnimation { duration: 200 } }
 
         Rectangle { // state layer
             anchors.fill: parent
             radius: parent.radius
             color: row.current ? row.cOnSecondaryContainer : row.cOnSurface
             opacity: area.pressed ? 0.10 : area.containsMouse ? 0.08 : 0
+            Behavior on opacity { NumberAnimation { duration: 100 } }
         }
     }
 
@@ -137,10 +141,27 @@ Item {
         }
 
         Cover {
+            id: coverArt
             Layout.preferredWidth: 48
             Layout.preferredHeight: 48
             radius: row.round ? 24 : 8
             source: row.artUrl
+
+            // The current row: a scrim with dancing bars over the cover.
+            Rectangle {
+                anchors.fill: parent
+                radius: coverArt.radius
+                color: Qt.rgba(0, 0, 0, 0.45)
+                opacity: row.current ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { Anim { type: Anim.FastEffects } }
+
+                EqualizerBars {
+                    anchors.centerIn: parent
+                    running: row.playing
+                    color: "#FFFFFF"
+                }
+            }
         }
 
         ColumnLayout {

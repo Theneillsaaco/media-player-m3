@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
 // Material 3 navigation rail: 80dp wide, icon in a 56x32 pill (secondary container when active) and a label.
+// The active pill grows out of the icon along a spring, and the colors fade instead of switching.
 // current is the key of the active destination; chosen(key) fires on a click.
 Item {
     id: rail
@@ -56,18 +57,28 @@ Item {
                 contentItem: ColumnLayout {
                     spacing: 4
 
-                    Rectangle {
+                    Item {
                         Layout.alignment: Qt.AlignHCenter
                         Layout.preferredWidth: 56
                         Layout.preferredHeight: 32
-                        radius: 16
-                        color: dest.active ? rail.cActive : "transparent"
 
-                        Rectangle { // state layer
+                        Rectangle { // state layer, the full pill
                             anchors.fill: parent
-                            radius: parent.radius
+                            radius: 16
                             color: rail.cOnSurface
                             opacity: dest.active ? 0 : dest.down ? 0.10 : dest.visualFocus ? 0.10 : dest.hovered ? 0.08 : 0
+                            Behavior on opacity { NumberAnimation { duration: 100 } }
+                        }
+
+                        Rectangle { // active indicator: grows from the middle with a little overshoot
+                            anchors.centerIn: parent
+                            width: dest.active ? 56 : 24
+                            height: 32
+                            radius: 16
+                            color: rail.cActive
+                            opacity: dest.active ? 1 : 0
+                            Behavior on width { Anim { type: Anim.DefaultSpatial } }
+                            Behavior on opacity { Anim { type: Anim.FastEffects } }
                         }
 
                         Icon {
@@ -75,6 +86,9 @@ Item {
                             name: dest.modelData.glyph
                             size: 24
                             tint: dest.active ? rail.cOnActive : rail.cOnSurfaceVariant
+                            scale: dest.down ? 0.88 : 1
+                            Behavior on scale { Anim { type: Anim.FastSpatial } }
+                            Behavior on tint { ColorAnimation { duration: 150 } }
                         }
                     }
 
@@ -84,6 +98,7 @@ Item {
                         font.pixelSize: 12
                         font.weight: dest.active ? Font.DemiBold : Font.Medium
                         color: dest.active ? rail.cOnSurface : rail.cOnSurfaceVariant
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
                 }
             }

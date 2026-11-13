@@ -3,6 +3,7 @@ import QtQuick.Shapes
 
 // Cover art with rounded corners and a placeholder while it loads. The picture is the fill of a rounded shape:
 // real clipping, so it does not depend on the color behind it and costs no extra texture.
+// The picture fades in when it is ready, so a new cover does not pop.
 Item {
     id: root
 
@@ -55,8 +56,11 @@ Item {
 
     Shape {
         anchors.fill: parent
-        visible: img.status === Image.Ready
+        opacity: img.status === Image.Ready ? 1 : 0
+        visible: opacity > 0
         preferredRendererType: Shape.CurveRenderer
+
+        Behavior on opacity { Anim { type: Anim.DefaultEffects } }
 
         ShapePath {
             strokeColor: "transparent"

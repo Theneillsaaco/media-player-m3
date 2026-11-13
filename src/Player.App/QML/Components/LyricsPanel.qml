@@ -3,7 +3,8 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
 // The lyrics of the playing track. vm is the LyricsViewModel. Timed lyrics follow the music: the current line
-// is centred and bold and a click on a line jumps there. Plain lyrics just scroll.
+// is centred, bold and full size, the others shrink and fade with their distance from it, and a click on a line
+// jumps there. Plain lyrics just scroll. The top and bottom edges fade out.
 Rectangle {
     id: root
 
@@ -80,16 +81,40 @@ Rectangle {
                 bottomMargin: height * 0.4
                 ScrollBar.vertical: ScrollBar {}
 
-                // Countdown during a long intro
+                // Countdown during a long intro: three dots that fill in one by one
                 header: Item {
                     width: list.width
                     height: root.vm.countdown > 0 ? 48 : 0
                     visible: height > 0
-                    Text {
+
+                    Row {
                         anchors.centerIn: parent
-                        text: "● ● ●   " + root.vm.countdown + " s"
-                        color: root.theme ? root.theme.primary : "#6750A4"
-                        font.pixelSize: 14
+                        spacing: 10
+
+                        Repeater {
+                            model: 3
+
+                            Rectangle {
+                                required property int index
+                                // 3 s left: no dot lit yet; the dots light up as the time runs out
+                                readonly property bool lit: root.vm.countdown <= 3 - index
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: root.theme ? root.theme.primary : "#6750A4"
+                                opacity: lit ? 1 : 0.3
+                                scale: lit ? 1.15 : 0.85
+                                Behavior on opacity { Anim { type: Anim.FastEffects } }
+                                Behavior on scale { Anim { type: Anim.FastSpatial } }
+                            }
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.vm.countdown + " s"
+                            color: root.theme ? root.theme.primary : "#6750A4"
+                            font.pixelSize: 14
+                        }
                     }
                 }
 
@@ -98,6 +123,7 @@ Rectangle {
                     required property int index
                     required property var model
                     readonly property bool current: root.vm.synced && index === root.vm.currentIndex
+                    readonly property int distance: Math.abs(index - root.vm.currentIndex)
 
                     width: ListView.view.width
                     height: textColumn.implicitHeight + 14
@@ -108,8 +134,12 @@ Rectangle {
                         width: parent.width - 40
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 2
-                        opacity: row.current || !root.vm.synced ? 1 : 0.6
-                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                        transformOrigin: Item.Left
+                        // The line being sung is full size and opaque; the others recede with their distance.
+                        scale: row.current || !root.vm.synced ? 1 : 0.94
+                        opacity: row.current || !root.vm.synced ? 1 : Math.max(0.28, 0.62 - 0.09 * row.distance)
+                        Behavior on scale { Anim { type: Anim.DefaultSpatial } }
+                        Behavior on opacity { Anim { type: Anim.DefaultEffects } }
 
                         Text {
                             width: parent.width
@@ -119,6 +149,7 @@ Rectangle {
                             font.pixelSize: root.vm.fontSize
                             font.weight: row.current ? Font.DemiBold : Font.Normal
                             color: root.theme ? (row.current || !root.vm.synced ? root.theme.inkSurface : root.theme.inkSurfaceVariant) : "#1D1B20"
+                            Behavior on color { ColorAnimation { duration: 200 } }
                         }
                         Text {
                             visible: text.length > 0
@@ -134,6 +165,30 @@ Rectangle {
                         enabled: root.vm.synced
                         onClicked: root.vm.seekToLine(row.index)
                     }
+                }
+            }
+
+            // Edges that fade out, so the lines come and go instead of being cut.
+            Rectangle {
+                visible: root.hasLines
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 28
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: root.color }
+                    GradientStop { position: 1.0; color: Qt.alpha(root.color, 0) }
+                }
+            }
+            Rectangle {
+                visible: root.hasLines
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 48
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Qt.alpha(root.color, 0) }
+                    GradientStop { position: 1.0; color: root.color }
                 }
             }
 

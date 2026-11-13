@@ -12,15 +12,20 @@ namespace Player.App.ViewModels;
 /// Search box and results. A link or absolute path plays directly; anything else is searched on YouTube Music,
 /// as songs, videos, albums, artists or playlists (<see cref="Filter"/>). The search runs on the thread pool and
 /// leaves its result in a field under a lock; <see cref="Poll"/> picks it up. The suggestions under the box work
-/// the same way and are kept per text, so typing back over a text does not ask again.
+/// the same way and are kept per text, so typing back over a text does not ask again. The last searches are kept in
+/// the settings table and offered when the box is empty.
 /// </summary>
 public class SearchViewModel : ViewModelBase
 {
     private static readonly string[] Filters = ["songs", "videos", "albums", "artists", "playlists"];
 
+    private const string RecentKey = "search.recent";
+    private const int RecentMax = 8;
+
     private readonly Lock _gate = new();
     private IReadOnlyList<Track> _results = [];
     private string _lastQuery = "";
+    private List<string> _recent = [];
 
     // Written by the search task, read by Poll.
     private bool _pendingReady;
@@ -40,6 +45,7 @@ public class SearchViewModel : ViewModelBase
     {
         AppServices.EnsureStarted();
         AppServices.Status.Changed += Refresh;
+        LoadRecent();
         Refresh();
     }
     
@@ -57,6 +63,8 @@ public class SearchViewModel : ViewModelBase
 
     /// <summary>A JSON array of texts to offer under the search box.</summary>
     public string SuggestionsJson { get; private set => Set(ref field, value); } = "[]";
+    /// <summary>A JSON array with the last searches, newest first. Offered while the box is empty.</summary>
+    public string RecentJson { get; private set => Set(ref field, value); } = "[]";
     /// <summary>Waiting for suggestions, so the UI timer keeps polling.</summary>
     public bool Suggesting { get; private set => Set(ref field, value); }
 
@@ -71,8 +79,16 @@ public class SearchViewModel : ViewModelBase
             return;
         }
 
+        Remember(query);
         _lastQuery = query;
         RunSearch(query);
+    }
+
+    /// <summary>Forgets the recent searches.</summary>
+    public void ClearRecent()
+    {
+        _recent = [];
+        SaveRecent();
     }
 
     /// <summary>Asks for the suggestions of what is typed. Links, paths and one letter get none.</summary>
@@ -228,6 +244,44 @@ public class SearchViewModel : ViewModelBase
                 _pendingReady = true;
             }
         });
+    }
+
+    // ---- recent searches ----
+
+    private void LoadRecent()
+    {
+        try
+        {
+            if (AppServices.Db?.GetSetting(RecentKey) is { Length: > 0 } json)
+                _recent = [.. (JsonSerializer.Deserialize<string[]>(json) ?? []).Take(RecentMax)];
+        }
+        catch (Exception e)
+        {
+            Log.Warn("search", "read recent", e);
+            _recent = [];
+        }
+
+        RecentJson = JsonSerializer.Serialize(_recent);
+    }
+
+    /// <summary>Puts a query first in the list, without a repeat and with at most <see cref="RecentMax"/> entries.</summary>
+    private void Remember(string query)
+    {
+        _recent.RemoveAll(q => string.Equals(q, query, StringComparison.OrdinalIgnoreCase));
+        _recent.Insert(0, query);
+
+        if (_recent.Count > RecentMax)
+            _recent.RemoveRange(RecentMax, _recent.Count - RecentMax);
+
+        SaveRecent();
+    }
+
+    private void SaveRecent()
+    {
+        RecentJson = JsonSerializer.Serialize(_recent);
+
+        try { AppServices.Db?.SetSetting(RecentKey, RecentJson); }
+        catch (Exception e) { Log.Warn("search", "save recent", e); }
     }
 
     private void Refresh() => Status = AppServices.Status.Text;

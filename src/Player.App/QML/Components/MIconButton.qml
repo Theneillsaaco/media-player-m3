@@ -3,6 +3,8 @@ import QtQuick.Controls.Basic
 
 // Material 3 icon button: 40dp container, 24dp icon. State layers: hover 8%, focus/pressed 10%.
 // filled: primary container (play/pause). selected: tonal container (toggle that is on).
+// Expressive motion: the shape shows the state. A toggle that is on is a rounded square, one that is off a circle,
+// and a pressed button squares off and shrinks along a spring.
 // tip: the tooltip (and the accessible name). Imports the Basic style explicitly so no system style can change it.
 Button {
     id: control
@@ -24,6 +26,13 @@ Button {
     readonly property color content: filled ? cOnPrimary
         : selected ? cOnSecondaryContainer : cOnSurfaceVariant
 
+    readonly property real restRadius: selected && !filled ? containerSize * 0.32 : containerSize / 2
+    property real shapeRadius: down ? containerSize * 0.28 : restRadius
+    Behavior on shapeRadius { Anim { type: Anim.FastSpatial } }
+
+    scale: down ? 0.92 : 1
+    Behavior on scale { Anim { type: Anim.FastSpatial } }
+
     implicitWidth: containerSize
     implicitHeight: containerSize
     padding: 0
@@ -41,14 +50,17 @@ Button {
             name: control.glyph
             size: 24
             tint: control.enabled ? control.content : Qt.alpha(control.cOnSurface, 0.38)
+            Behavior on tint { ColorAnimation { duration: 150 } }
         }
     }
 
     background: Rectangle {
-        radius: height / 2
+        radius: Math.max(0, control.shapeRadius)
         color: !control.enabled ? (control.filled ? Qt.alpha(control.cOnSurface, 0.12) : "transparent")
             : control.filled ? control.cPrimary
                 : control.selected ? control.cSecondaryContainer : "transparent"
+
+        Behavior on color { ColorAnimation { duration: 150 } }
 
         Rectangle { // state layer
             anchors.fill: parent
@@ -58,11 +70,12 @@ Button {
                 : control.down ? 0.10
                     : control.visualFocus ? 0.10
                         : control.hovered ? 0.08 : 0
+            Behavior on opacity { NumberAnimation { duration: 100 } }
         }
         Rectangle { // focus ring
             anchors.fill: parent
             anchors.margins: -5
-            radius: height / 2
+            radius: parent.radius + 5
             color: "transparent"
             border.width: 3
             border.color: control.cPrimary
