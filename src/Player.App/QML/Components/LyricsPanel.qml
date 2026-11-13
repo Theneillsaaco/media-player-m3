@@ -79,7 +79,7 @@ Rectangle {
 
                 topMargin: 16
                 bottomMargin: height * 0.4
-                ScrollBar.vertical: ScrollBar {}
+                ScrollBar.vertical: MScrollBar {}
 
                 // Countdown during a long intro: three dots that fill in one by one
                 header: Item {
@@ -137,7 +137,7 @@ Rectangle {
                         transformOrigin: Item.Left
                         // The line being sung is full size and opaque; the others recede with their distance.
                         scale: row.current || !root.vm.synced ? 1 : 0.94
-                        opacity: row.current || !root.vm.synced ? 1 : Math.max(0.28, 0.62 - 0.09 * row.distance)
+                        opacity: row.current || !root.vm.synced ? 1 : Math.max(0.5, 0.74 - 0.08 * row.distance)
                         Behavior on scale { Anim { type: Anim.DefaultSpatial } }
                         Behavior on opacity { Anim { type: Anim.DefaultEffects } }
 
@@ -148,7 +148,7 @@ Rectangle {
                             wrapMode: Text.Wrap
                             font.pixelSize: root.vm.fontSize
                             font.weight: row.current ? Font.DemiBold : Font.Normal
-                            color: root.theme ? (row.current || !root.vm.synced ? root.theme.inkSurface : root.theme.inkSurfaceVariant) : "#1D1B20"
+                            color: root.theme ? root.theme.inkSurface : "#1D1B20"
                             Behavior on color { ColorAnimation { duration: 200 } }
                         }
                         Text {
@@ -221,5 +221,13 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // The rounded corners of the card, over the lines.
+    CornerMask {
+        anchors.fill: parent
+        z: 20
+        radius: root.radius
+        color: root.theme ? root.theme.surface : "#FDF7FF"
     }
 }

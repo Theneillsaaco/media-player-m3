@@ -33,9 +33,10 @@ Item {
         id: list
         anchors.fill: parent
         clip: true
+        bottomMargin: 12
         boundsBehavior: Flickable.StopAtBounds
         model: root.nav.collection
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.vertical: MScrollBar {}
 
         // The rows come in one after the other when the list is filled.
         populate: Transition {
@@ -81,12 +82,12 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
 
                     // A soft shadow made of two translucent layers
-                    Rectangle { x: -2; y: 6; width: parent.width + 4; height: parent.height; radius: 20; color: "#000000"; opacity: 0.10 }
-                    Rectangle { x: 4; y: 12; width: parent.width - 8; height: parent.height; radius: 20; color: "#000000"; opacity: 0.08 }
+                    Rectangle { x: -2; y: 6; width: parent.width + 4; height: parent.height; radius: 24; color: "#000000"; opacity: 0.10 }
+                    Rectangle { x: 4; y: 12; width: parent.width - 8; height: parent.height; radius: 24; color: "#000000"; opacity: 0.08 }
 
                     Cover {
                         anchors.fill: parent
-                        radius: 16
+                        radius: 20
                         source: root.nav.collectionArt
                         pixels: 368
                     }
@@ -204,7 +205,7 @@ Item {
             Cover {
                 Layout.preferredWidth: 36
                 Layout.preferredHeight: 36
-                radius: 8
+                radius: 12
                 source: root.nav.collectionArt
                 opacity: root.artIn
                 scale: 0.8 + 0.2 * root.artIn

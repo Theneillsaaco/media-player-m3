@@ -76,7 +76,7 @@ Item {
         anchors.rightMargin: 8
         anchors.topMargin: 2
         anchors.bottomMargin: 2
-        radius: 14
+        radius: 16
         color: row.current ? row.cSecondaryContainer : "transparent"
         Behavior on color { ColorAnimation { duration: 200 } }
 
@@ -106,7 +106,7 @@ Item {
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: row.draggable ? 8 : 16
-        anchors.rightMargin: 12
+        anchors.rightMargin: 16
         spacing: 12
 
         Item { // grip
@@ -144,7 +144,7 @@ Item {
             id: coverArt
             Layout.preferredWidth: 48
             Layout.preferredHeight: 48
-            radius: row.round ? 24 : 8
+            radius: row.round ? 24 : 12
             source: row.artUrl
 
             // The current row: a scrim with dancing bars over the cover.

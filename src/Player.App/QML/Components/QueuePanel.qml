@@ -4,6 +4,7 @@ import QtQuick.Controls.Basic
 
 // The play queue. vm is the QueueViewModel. Main.qml gives it rounded corners (it is a card next to the pages).
 // Drag the grip of a row to reorder: a line shows where it lands; near the top or bottom edge the list scrolls.
+// CornerMask draws the rounded corners over the rows: a clip would cut them square.
 Rectangle {
     id: root
 
@@ -99,9 +100,10 @@ Rectangle {
                 id: queueView
                 anchors.fill: parent
                 clip: true
+                bottomMargin: 12
                 boundsBehavior: Flickable.StopAtBounds
                 model: root.vm.items
-                ScrollBar.vertical: ScrollBar {}
+                ScrollBar.vertical: MScrollBar {}
                 delegate: TrackItem {
                     required property int index
                     required property var model
@@ -164,7 +166,7 @@ Rectangle {
                 x: 8
                 width: parent.width - 16
                 height: 48
-                radius: 12
+                radius: 16
                 z: 10
                 opacity: 0.92
                 color: root.theme ? root.theme.secondaryContainer : "#E8DEF8"
@@ -202,5 +204,13 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // The rounded corners of the card, over the rows.
+    CornerMask {
+        anchors.fill: parent
+        z: 20
+        radius: root.radius
+        color: root.theme ? root.theme.surface : "#FDF7FF"
     }
 }

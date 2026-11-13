@@ -70,7 +70,7 @@ Popup {
             contentHeight: body.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar {}
+            ScrollBar.vertical: MScrollBar {}
 
             ColumnLayout {
                 id: body

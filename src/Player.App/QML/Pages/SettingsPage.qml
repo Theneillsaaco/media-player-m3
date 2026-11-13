@@ -77,7 +77,7 @@ Rectangle {
         contentWidth: width
         contentHeight: column.implicitHeight + 48
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.vertical: MScrollBar {}
 
         ColumnLayout {
             id: column

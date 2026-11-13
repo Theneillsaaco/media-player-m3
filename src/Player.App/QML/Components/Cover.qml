@@ -10,7 +10,7 @@ Item {
     readonly property var theme: Window.window ? Window.window.theme : null
 
     property string source: ""
-    property real radius: 8
+    property real radius: 12
     property int pixels: 96
     property string icon: "music"
     property color backdrop: "transparent" // kept so existing callers still compile; no longer used

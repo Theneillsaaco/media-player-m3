@@ -51,7 +51,7 @@ Item {
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: root.vm.items
-            ScrollBar.vertical: ScrollBar {}
+            ScrollBar.vertical: MScrollBar {}
 
             delegate: TrackItem {
                 required property int index

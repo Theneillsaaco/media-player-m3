@@ -70,7 +70,7 @@ Item {
         contentWidth: width
         contentHeight: column.implicitHeight + 32
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.vertical: MScrollBar {}
 
         ColumnLayout {
             id: column

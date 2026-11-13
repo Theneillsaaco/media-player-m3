@@ -7,6 +7,8 @@ import "../Components"
 // songs only ("Quick picks") is a grid of four rows that scrolls sideways; every other shelf is a strip of cards.
 // Songs play (the queue becomes their shelf); albums, artists and playlists open their page (entityActivated).
 // nav is the NavigationViewModel; its homeJson is [{title, layout, items:[{kind, id, index, title, subtitle, art}]}].
+// The list fills the whole card (the card and its corner mask do the rounded clipping) and the breathing room is
+// margin inside the lists, so nothing is cut in a square a few pixels inside the card.
 Item {
     id: root
 
@@ -22,15 +24,24 @@ Item {
     ListView {
         id: list
         anchors.fill: parent
-        anchors.topMargin: 10
-        anchors.bottomMargin: 10
-        anchors.leftMargin: 10
-        anchors.rightMargin: 10
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        topMargin: 0
-        bottomMargin: 8
+        topMargin: 10
+        bottomMargin: 20
         model: root.shelves
+        ScrollBar.vertical: MScrollBar {}
+
+        // The shelves come in one after the other when Home is filled.
+        populate: Transition {
+            SequentialAnimation {
+                PropertyAction { property: "opacity"; value: 0 }
+                PauseAnimation { duration: Math.min(ViewTransition.index, 5) * 60 }
+                ParallelAnimation {
+                    Anim { property: "opacity"; to: 1; type: Anim.DefaultEffects }
+                    Anim { property: "y"; from: ViewTransition.destination.y + 16; type: Anim.DefaultSpatial }
+                }
+            }
+        }
 
         delegate: Item {
             id: shelf
@@ -60,8 +71,8 @@ Item {
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.leftMargin: 20
-                anchors.rightMargin: 12
+                anchors.leftMargin: 24
+                anchors.rightMargin: 16
                 height: 64
                 spacing: 4
 
@@ -97,8 +108,8 @@ Item {
                 orientation: ListView.Horizontal
                 clip: true
                 spacing: 16
-                leftMargin: 20
-                rightMargin: 20
+                leftMargin: 24
+                rightMargin: 24
                 boundsBehavior: Flickable.StopAtBounds
                 model: shelf.isGrid ? [] : shelf.modelData.items
 
@@ -133,8 +144,8 @@ Item {
                 flow: GridView.FlowTopToBottom
                 cellWidth: Math.min(440, Math.max(300, (width - 40) / 2))
                 cellHeight: 64
-                leftMargin: 12
-                rightMargin: 12
+                leftMargin: 16
+                rightMargin: 16
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 model: shelf.isGrid ? shelf.modelData.items : []

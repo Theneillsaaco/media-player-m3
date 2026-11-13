@@ -469,6 +469,14 @@ ApplicationWindow {
                         onMaximizeRequested: win.playerMode = "full"
                         onRestoreRequested: win.playerMode = "page"
                     }
+
+                    CornerMask {
+                        anchors.fill: parent
+                        z: 50
+                        radius: stageCard.radius
+                        color: appTheme.surface
+                        visible: win.playerMode !== "full"
+                    }
                 }
 
                 // Narrow window: the queue or the lyrics go under the picture, as YouTube Music does.

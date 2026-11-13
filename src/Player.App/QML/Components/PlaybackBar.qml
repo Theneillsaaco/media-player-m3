@@ -95,7 +95,7 @@ Rectangle {
                         Cover {
                             anchors.fill: parent
                             source: root.playback.currentArt
-                            radius: 8
+                            radius: 12
                         }
                         // The minimized video is drawn here (Main.qml parents the video layer to this item).
                         Item { id: slot; anchors.fill: parent }
@@ -110,7 +110,7 @@ Rectangle {
                         CornerMask {
                             anchors.fill: parent
                             visible: root.videoInSlot
-                            radius: 8
+                            radius: 12
                             color: root.color
                             z: 6
                         }
