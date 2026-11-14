@@ -140,7 +140,7 @@ internal sealed class PrefetchService(IMusicProvider? provider)
         }
     }
 
-    private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    private static long Now() => Clock.UnixNow();
 
     #region Fields
 

@@ -10,9 +10,13 @@ namespace Player.App.Services;
 
 internal enum LyricsStage { Idle, Loading, Synced, Plain, Instrumental, None, Error, Unavailable }
 
-/// <summary>What is known about the lyrics of one track. Version goes up with every change, so a poll can tell.</summary>
+/// <summary>
+/// What is known about the lyrics of one track. Version goes up with every change, so a poll can tell. Lines are the
+/// lyrics already parsed (timed for Synced, Start = -1 for Plain, null for every other stage), so nobody parses the
+/// text again.
+/// </summary>
 internal sealed record LyricsSnapshot(string TrackId, LyricsStage Stage, string Text, string Source, int Version,
-    string[]? Romaji = null, string[]? Translation = null);
+    string[]? Romaji = null, string[]? Translation = null, LyricLine[]? Lines = null);
 
 /// <summary>
 /// Finds the lyrics of a track: the local cache first, then each source in order, keeping the best (timed beats
@@ -116,25 +120,36 @@ internal sealed class LyricsService(
     private async Task LoadAsync(Track track, int ticket)
     {
         (LyricsStage Stage, string Text, string Source) result;
+        LyricLine[] lines = [];
         string[]? romaji = null, translation = null;
 
         try
         {
             result = await ResolveAsync(track);
-            (romaji, translation) = await ExtrasAsync(track, result);
+            lines = LinesOf(result.Stage, result.Text); // parsed once: the extras and the view model both use it
+            (romaji, translation) = await ExtrasAsync(track, result.Stage, lines);
         }
         catch (Exception ex)
         {
             Log.Warn("lyrics", "lookup failed for " + track.Id, ex);
             result = (LyricsStage.Error, "", "");
+            lines = [];
         }
 
         lock (_gate)
         {
             if (ticket == _ticket) // a newer request owns the answer
-                Publish(track.Id, result.Stage, result.Text, result.Source, romaji, translation);
+                Publish(track.Id, result.Stage, result.Text, result.Source, romaji, translation, lines);
         }
     }
+
+    /// <summary>The lyrics as lines: timed for a synced text, untimed for a plain one, none for any other stage.</summary>
+    private static LyricLine[] LinesOf(LyricsStage stage, string text) => stage switch
+    {
+        LyricsStage.Synced => Lrc.parse(text),
+        LyricsStage.Plain => Lrc.plain(text),
+        _ => [],
+    };
 
     private async Task<(LyricsStage Stage, string Text, string Source)> ResolveAsync(Track track)
     {
@@ -185,14 +200,7 @@ internal sealed class LyricsService(
 
     private (LyricsStage, string, string)? Cached(string trackId)
     {
-        CachedLyrics? row;
-
-        try { row = readCache(trackId); }
-        catch (Exception ex)
-        {
-            Log.Warn("lyrics", "cache read", ex);
-            return null;
-        }
+        var row = ReadCache(trackId);
 
         return row switch
         {
@@ -212,10 +220,10 @@ internal sealed class LyricsService(
     }
 
     private void Publish(string trackId, LyricsStage stage, string text = "", string source = "",
-        string[]? romaji = null, string[]? translation = null) =>
-        _snapshot = new LyricsSnapshot(trackId, stage, text, source, _snapshot.Version + 1, romaji, translation);
-    
-    private long Now() => clock?.Invoke() ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        string[]? romaji = null, string[]? translation = null, LyricLine[]? lines = null) =>
+        _snapshot = new LyricsSnapshot(trackId, stage, text, source, _snapshot.Version + 1, romaji, translation, lines);
+
+    private long Now() => clock?.Invoke() ?? Clock.UnixNow();
 
     private static string DelayKey(string trackId) => "lyrics.delay:" + trackId;
 
@@ -234,7 +242,7 @@ internal sealed class LyricsService(
         try { action(); }
         catch (Exception ex) { Log.Warn("lyrics", "storage", ex); }
     }
-    
+
     // ---- romaji and translation ----
 
     private const string ExtraKey = "lyrics.extra";
@@ -253,17 +261,15 @@ internal sealed class LyricsService(
         Write(() => writeSetting(ExtraKey, mode is "romaji" or "translation" or "both" ? mode : "off"));
 
     /// <summary>Never throws: the lyrics are shown even when the extras fail. Results are cached under "romaji:id" and "tr:lang:id".</summary>
-    private async Task<(string[]? Romaji, string[]? Translation)> ExtrasAsync(Track track, (LyricsStage Stage, string Text, string Source) found)
+    private async Task<(string[]? Romaji, string[]? Translation)> ExtrasAsync(Track track, LyricsStage stage, LyricLine[] lines)
     {
         var mode = Extra;
-        if (mode == "off" || found.Stage is not (LyricsStage.Synced or LyricsStage.Plain))
+        if (mode == "off" || stage is not (LyricsStage.Synced or LyricsStage.Plain))
             return (null, null);
 
-        var synced = found.Stage == LyricsStage.Synced;
-        var lines = synced ? Lrc.parse(found.Text) : Lrc.plain(found.Text);
         string[]? romaji = null, translation = null;
 
-        if (synced && mode is "romaji" or "both")
+        if (stage == LyricsStage.Synced && mode is "romaji" or "both")
             romaji = await Guarded(() => RomajiAsync(track, lines), "romaji");
         if (mode is "translation" or "both")
             translation = await Guarded(() => TranslationAsync(track, lines), "translation");

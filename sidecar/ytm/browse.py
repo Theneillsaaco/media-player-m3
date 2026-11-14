@@ -14,22 +14,12 @@ Every list item comes out in one of two shapes:
 The item normalisation follows Sung's helper/catalog.py (MIT), rewritten for this protocol.
 """
 import re
+from ytm_util import clock as _clock
 
 BROWSE_ID = re.compile(r"[A-Za-z0-9_-]{2,100}")
 VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 FILTERS = {"songs", "videos", "albums", "artists", "playlists"}
 SHELF_LIMIT = 14
-
-
-def _clock(text):
-    """'3:21' or '1:02:03' as seconds; 0 when it is not a time."""
-    parts = str(text or "").split(":")
-    if not 2 <= len(parts) <= 3 or not all(p.isdigit() for p in parts):
-        return 0
-    total = 0
-    for part in parts:
-        total = total * 60 + int(part)
-    return total
 
 
 def build(api, signed_in, get_auth, track, artwork, artist_names):

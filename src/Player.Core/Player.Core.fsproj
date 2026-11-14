@@ -33,5 +33,6 @@
     <Compile Include="Localization\Translations.fs" />
     <Compile Include="Localization\I18n.fs" />
     <Compile Include="Logging.fs" />
+    <Compile Include="Clock.fs" />
   </ItemGroup>
 </Project>

@@ -22,6 +22,7 @@
 
     <ItemGroup>
       <Compile Include="AutoplayTests.fs" />
+      <Compile Include="ClockTests.fs" />
       <Compile Include="I18nTests.fs" />
       <Compile Include="LrcCopiesTests.fs" />
       <Compile Include="PlayErrorsTests.fs" />

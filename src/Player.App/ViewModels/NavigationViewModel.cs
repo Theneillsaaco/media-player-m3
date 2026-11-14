@@ -2,6 +2,7 @@ using System.Text.Json;
 using Player.App.Models;
 using Player.App.Services;
 using Player.App.ViewModels.Base;
+using Player.Core;
 using Player.Core.Contracts;
 using Player.Core.Domain;
 
@@ -388,5 +389,5 @@ public class NavigationViewModel : ViewModelBase
         return false;
     }
 
-    private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    private static long Now() => Clock.UnixNow();
 }

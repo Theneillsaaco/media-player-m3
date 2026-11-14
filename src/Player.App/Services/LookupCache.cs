@@ -90,8 +90,8 @@ internal sealed class LookupCache<TKey, TValue>(
             Interlocked.Increment(ref _version);
         }
     }
-    
-    private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    private static long Now() => Clock.UnixNow();
     
     #region Fields
 

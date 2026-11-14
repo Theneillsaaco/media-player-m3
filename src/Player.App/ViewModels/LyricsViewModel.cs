@@ -138,12 +138,7 @@ public class LyricsViewModel : ViewModelBase
     {
         _version = snapshot.Version;
 
-        _lines = snapshot.Stage switch
-        {
-            LyricsStage.Synced => Lrc.parse(snapshot.Text),
-            LyricsStage.Plain => Lrc.plain(snapshot.Text),
-            _ => [],
-        };
+        _lines = snapshot.Lines ?? [];
 
         var stage = snapshot.Stage;
         if (_lines.Length == 0 && stage is LyricsStage.Synced or LyricsStage.Plain)

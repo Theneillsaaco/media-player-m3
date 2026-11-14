@@ -277,5 +277,5 @@ internal sealed class VideoService(
         _version++;
     }
 
-    private long Now() => clock?.Invoke() ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    private long Now() => clock?.Invoke() ?? Clock.UnixNow();
 }
