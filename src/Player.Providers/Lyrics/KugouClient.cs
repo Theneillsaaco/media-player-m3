@@ -3,13 +3,14 @@ using System.Text.Json;
 using Player.Core.Contracts;
 using Player.Core.Domain;
 using Player.Core.Lyrics;
+using static Player.Providers.JsonRead;
 
 namespace Player.Providers.Lyrics;
 
 /// <summary>Timed lyrics from Kugou (no key). The first candidate whose duration is within three seconds is used.</summary>
 public sealed class KugouClient : ILyricsSource, IDisposable
 {
-    public string Name => "Kugou";  
+    public string Name => "Kugou";
 
     public async Task<LyricsResult> Find(Track track)
     {
@@ -58,11 +59,6 @@ public sealed class KugouClient : ILyricsSource, IDisposable
         response.EnsureSuccessStatusCode();
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync());
     }
-
-    private static string Str(JsonElement e, string name) =>
-        !e.TryGetProperty(name, out var v) ? ""
-        : v.ValueKind == JsonValueKind.String ? v.GetString() ?? ""
-        : v.ValueKind == JsonValueKind.Number ? v.GetRawText() : "";
 
     #region Fields
 

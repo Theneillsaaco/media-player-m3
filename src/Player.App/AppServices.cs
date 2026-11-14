@@ -57,31 +57,27 @@ internal static class AppServices
                 DatabaseError = Tr.F("app.dbFailed", ex.Message);
             }
 
-            Theme = new ThemeService(
-                key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "theme setting", ex); return null; } },
-                (key, value) => Db?.SetSetting(key, value));
+            // Every service below reads and writes its settings through this: no database, or a failing one,
+            // just means defaults.
+            Settings = new SafeSettings(Db);
+
+            Theme = new ThemeService(Settings);
 
             var netease = new NetEaseClient();
             Lyrics = new LyricsService(
                 [.. new ILyricsSource?[] { Provider, new LrclibClient(), netease, new KugouClient() }.OfType<ILyricsSource>()],
                 id => Db?.GetLyrics(id),
                 (id, kind, source, body) => Db?.SaveLyrics(id, kind, source, body),
-                key => Db?.GetSetting(key),
-                (key, value) => Db?.SetSetting(key, value),
-                key => Db?.RemoveSetting(key),
+                Settings.Get,
+                Settings.Set,
+                Settings.Remove,
                 romajiSources: [netease],
                 translator: new GoogleTranslateClient());
 
-            Video = new VideoService(
-                Provider,
-                key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "video setting", ex); return null; } },
-                (key, value) => Db?.SetSetting(key, value));
+            Video = new VideoService(Provider, Settings.Get, Settings.Set);
+            Prefs = new PlaybackPrefs(Settings);
 
-            Prefs = new PlaybackPrefs(
-                key => { try { return Db?.GetSetting(key); } catch (Exception ex) { Log.Warn("app", "playback setting", ex); return null; } },
-                (key, value) => Db?.SetSetting(key, value));
-
-            // lectura...) la app sigue sin ella.
+            // If the cache folder cannot be made (permissions, read-only disk) the app goes on without it.
             try { Cache = new AudioCache(AppPaths.CacheDir("audio"), Prefs.CacheLimit); }
             catch (Exception ex) { Log.Warn("app", "audio cache unavailable", ex); }
 
@@ -103,9 +99,7 @@ internal static class AppServices
     {
         var value = I18n.normalize(language);
         I18n.select(value);
-
-        try { Db?.SetSetting(I18n.settingKey, value); }
-        catch (Exception ex) { Log.Warn("app", "language setting", ex); }
+        Settings.Set(I18n.settingKey, value);
 
         Status.Refresh();
         LanguageChanged?.Invoke();
@@ -129,6 +123,8 @@ internal static class AppServices
 
     public static IAudioEngine Engine { get; private set; } = null!;
     public static PlayerDatabase? Db { get; private set; }
+    /// <summary>The settings table, safe to use even when the database could not be opened.</summary>
+    public static SafeSettings Settings { get; private set; } = new(null);
     public static YtSidecarProvider? Provider { get; private set; }
     public static AccountService? Account { get; private set; }
     public static ScrobbleService? Scrobble { get; private set; }

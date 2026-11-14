@@ -43,13 +43,15 @@ public partial class PlayerDatabase : IDisposable
                 ("$s", service), ("$at", listen.StartedAt), ("$artist", listen.Artist),
                 ("$title", listen.Title), ("$album", listen.Album), ("$duration", listen.DurationSeconds),
                 ("$chosen", listen.Chosen ? 1 : 0));
-            Run("""
-                DELETE FROM scrobble_queue
-                WHERE service = $s AND id NOT IN
-                    (SELECT id FROM scrobble_queue WHERE service = $s ORDER BY id DESC LIMIT $keep)
-                """,
-                ("$s", service), ("$keep", keep));
 
+            // The trim only runs when the queue actually grew past the limit.
+            if (Convert.ToInt32(Scalar("SELECT COUNT(*) FROM scrobble_queue WHERE service = $s", ("$s", service))) > keep)
+                Run("""
+                    DELETE FROM scrobble_queue
+                    WHERE service = $s AND id NOT IN
+                        (SELECT id FROM scrobble_queue WHERE service = $s ORDER BY id DESC LIMIT $keep)
+                    """,
+                    ("$s", service), ("$keep", keep));
         }
     }
     
@@ -90,9 +92,17 @@ public partial class PlayerDatabase : IDisposable
         lock (_gate)
         {
             using var tx = _db.BeginTransaction();
-            
-            foreach (var id in ids)
-                Run("DELETE FROM scrobble_queue WHERE id = $id", ("$id", id));
+            using var cmd = _db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = "DELETE FROM scrobble_queue WHERE id = $id";
+            var id = cmd.Parameters.Add("$id", SqliteType.Integer);
+
+            foreach (var value in ids)
+            {
+                id.Value = value;
+                cmd.ExecuteNonQuery();
+            }
+
             tx.Commit();
         }
     }

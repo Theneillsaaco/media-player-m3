@@ -17,19 +17,13 @@ internal static class TrackMapper
             artist,
             artists.Length > 0 ? artists : artist.Length > 0 ? [artist] : [],
             Text(e, "album"),
-            e.TryGetProperty("seconds", out var s) && s.ValueKind == JsonValueKind.Number ? s.GetDouble() : 0.0,
+            JsonRead.Number(e, "seconds"),
             Text(e, "art"),
             Text(e, "kind") == "video" ? TrackKind.Video : TrackKind.Song);
     }
-    
-    public static string[] Strings(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Array 
-            ? [.. v.EnumerateArray()
-                .Where(x => x.ValueKind == JsonValueKind.String)
-                .Select(x => x.GetString()!)
-                .Where(s => s.Length > 0)] 
-            : [];
-    
-    public static string Text(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : ""; 
+
+    // Kept so the provider files can keep their `using static TrackMapper`.
+    public static string[] Strings(JsonElement e, string name) => JsonRead.Strings(e, name);
+
+    public static string Text(JsonElement e, string name) => JsonRead.Text(e, name);
 }

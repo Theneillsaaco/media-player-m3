@@ -1,5 +1,4 @@
 using System.Globalization;
-using Player.Core;
 using Player.Core.Playback;
 
 namespace Player.App.Services;
@@ -16,19 +15,18 @@ internal sealed class PlaybackPrefs
     private const string SpeedKey = "playback.speed";
     private const string CacheKey = "cache.limit";
 
-    private readonly Func<string, string?> _read;
-    private readonly Action<string, string> _write;
+    private readonly SafeSettings _settings;
 
-    public PlaybackPrefs(Func<string, string?> read, Action<string, string> write)
+    public PlaybackPrefs(SafeSettings settings)
     {
-        (_read, _write) = (read, write);
-        AutoPlay = Read(AutoPlayKey) != "0";
-        Normalize = Read(NormalizeKey) != "0";
-        Speed = double.TryParse(Read(SpeedKey), NumberStyles.Float, CultureInfo.InvariantCulture, out var speed)
+        _settings = settings;
+        AutoPlay = settings.Get(AutoPlayKey) != "0";
+        Normalize = settings.Get(NormalizeKey) != "0";
+        Speed = double.TryParse(settings.Get(SpeedKey), NumberStyles.Float, CultureInfo.InvariantCulture, out var speed)
             ? PlaybackSpeed.normalize(speed)
             : 1.0;
-        
-        CacheLimit = int.TryParse(Read(CacheKey), NumberStyles.Integer, CultureInfo.InvariantCulture, out var limit)
+
+        CacheLimit = int.TryParse(settings.Get(CacheKey), NumberStyles.Integer, CultureInfo.InvariantCulture, out var limit)
             ? CachePolicy.normalizeLimit(limit)
             : CachePolicy.defaultLimit;
     }
@@ -41,47 +39,31 @@ internal sealed class PlaybackPrefs
 
     /// <summary>0.5 to 3, 1 is normal.</summary>
     public double Speed { get; private set; }
-    
+
     /// <summary>How many songs the disk cache keeps; 0 turns it off.</summary>
     public int CacheLimit { get; private set; }
 
     public void SaveCacheLimit(int limit)
     {
         CacheLimit = CachePolicy.normalizeLimit(limit);
-        Write(CacheKey, CacheLimit.ToString(CultureInfo.InvariantCulture));
+        _settings.Set(CacheKey, CacheLimit.ToString(CultureInfo.InvariantCulture));
     }
 
     public void SaveAutoPlay(bool on)
     {
         AutoPlay = on;
-        Write(AutoPlayKey, on ? "1" : "0");
+        _settings.Set(AutoPlayKey, on ? "1" : "0");
     }
 
     public void SaveNormalize(bool on)
     {
         Normalize = on;
-        Write(NormalizeKey, on ? "1" : "0");
+        _settings.Set(NormalizeKey, on ? "1" : "0");
     }
 
     public void SaveSpeed(double speed)
     {
         Speed = PlaybackSpeed.normalize(speed);
-        Write(SpeedKey, Speed.ToString("0.##", CultureInfo.InvariantCulture));
-    }
-
-    private string? Read(string key)
-    {
-        try { return _read(key); }
-        catch (Exception ex)
-        {
-            Log.Warn("prefs", "read " + key, ex);
-            return null;
-        }
-    }
-
-    private void Write(string key, string value)
-    {
-        try { _write(key, value); }
-        catch (Exception ex) { Log.Warn("prefs", "save " + key, ex); }
+        _settings.Set(SpeedKey, Speed.ToString("0.##", CultureInfo.InvariantCulture));
     }
 }

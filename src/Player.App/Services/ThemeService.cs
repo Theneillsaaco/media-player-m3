@@ -1,4 +1,3 @@
-using Player.Core;
 using Player.Core.Theme;
 
 namespace Player.App.Services;
@@ -16,23 +15,23 @@ internal readonly record struct ThemeSnapshot(
 internal sealed class ThemeService : IDisposable
 {
     private const string DynamicKey = "theme.dynamic";
+    private const int MaxCachedSchemes = 32;
 
-    private readonly Func<string, string?> _read;
-    private readonly Action<string, string> _write;
+    private readonly SafeSettings _settings;
     private readonly SystemColorScheme _system = new();
     private readonly Dictionary<string, string> _tokens = [];
     private string _mode, _accent, _variant, _contrast;
     private string _coverSeed = "";
     private bool _systemDark, _dynamic;
 
-    public ThemeService(Func<string, string?> read, Action<string, string> write)
+    public ThemeService(SafeSettings settings)
     {
-        (_read, _write) = (read, write);
-        _mode = Appearance.normalizeMode(Read(Appearance.modeKey));
-        _accent = Appearance.normalizeAccent(Read(Appearance.accentKey));
-        _variant = Appearance.normalizeVariant(Read(Appearance.variantKey));
-        _contrast = Appearance.normalizeContrast(Read(Appearance.contrastKey));
-        _dynamic = Read(DynamicKey) == "1";
+        _settings = settings;
+        _mode = Appearance.normalizeMode(settings.Get(Appearance.modeKey));
+        _accent = Appearance.normalizeAccent(settings.Get(Appearance.accentKey));
+        _variant = Appearance.normalizeVariant(settings.Get(Appearance.variantKey));
+        _contrast = Appearance.normalizeContrast(settings.Get(Appearance.contrastKey));
+        _dynamic = settings.Get(DynamicKey) == "1";
         FollowSystem();
         Snapshot = Build();
     }
@@ -42,9 +41,9 @@ internal sealed class ThemeService : IDisposable
     public void ChooseMode(string mode)
     {
         _mode = Appearance.normalizeMode(mode);
-        Save(Appearance.modeKey, _mode);
+        _settings.Set(Appearance.modeKey, _mode);
         FollowSystem();
-        Snapshot = Build();
+        Rebuild();
     }
 
     /// <summary>False when the text is not a "#rrggbb" color (nothing changes then).</summary>
@@ -54,31 +53,31 @@ internal sealed class ThemeService : IDisposable
             return false;
 
         _accent = Appearance.normalizeAccent(hex);
-        Save(Appearance.accentKey, _accent);
-        Snapshot = Build();
+        _settings.Set(Appearance.accentKey, _accent);
+        Rebuild();
         return true;
     }
 
     public void ChooseVariant(string variant)
     {
         _variant = Appearance.normalizeVariant(variant);
-        Save(Appearance.variantKey, _variant);
-        Snapshot = Build();
+        _settings.Set(Appearance.variantKey, _variant);
+        Rebuild();
     }
 
     public void ChooseContrast(string contrast)
     {
         _contrast = Appearance.normalizeContrast(contrast);
-        Save(Appearance.contrastKey, _contrast);
-        Snapshot = Build();
+        _settings.Set(Appearance.contrastKey, _contrast);
+        Rebuild();
     }
 
     /// <summary>Takes the colors from the cover that plays (on) or from the chosen accent (off).</summary>
     public void ChooseDynamic(bool on)
     {
         _dynamic = on;
-        Save(DynamicKey, on ? "1" : "0");
-        Snapshot = Build();
+        _settings.Set(DynamicKey, on ? "1" : "0");
+        Rebuild();
     }
 
     /// <summary>
@@ -95,7 +94,7 @@ internal sealed class ThemeService : IDisposable
         if (!_dynamic)
             return false;
 
-        Snapshot = Build();
+        Rebuild();
         return true;
     }
 
@@ -110,11 +109,13 @@ internal sealed class ThemeService : IDisposable
             return false;
 
         _systemDark = now;
-        Snapshot = Build();
+        Rebuild();
         return true;
     }
 
     public void Dispose() => _system.Dispose();
+
+    private void Rebuild() => Snapshot = Build();
 
     private void FollowSystem()
     {
@@ -137,28 +138,12 @@ internal sealed class ThemeService : IDisposable
 
         if (!_tokens.TryGetValue(key, out var tokens))
         {
-            if (_tokens.Count >= 32)
+            if (_tokens.Count >= MaxCachedSchemes)
                 _tokens.Clear();
 
             tokens = _tokens[key] = Appearance.tokens(seed, dark, _variant, _contrast);
         }
 
         return new ThemeSnapshot(_mode, _accent, _variant, _contrast, dark, tokens, _dynamic);
-    }
-
-    private string? Read(string key)
-    {
-        try { return _read(key); }
-        catch (Exception ex)
-        {
-            Log.Warn("theme", "read " + key, ex);
-            return null;
-        }
-    }
-
-    private void Save(string key, string value)
-    {
-        try { _write(key, value); }
-        catch (Exception ex) { Log.Warn("theme", "save " + key, ex); }
     }
 }

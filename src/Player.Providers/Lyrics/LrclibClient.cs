@@ -3,6 +3,7 @@ using System.Text.Json;
 using Player.Core.Contracts;
 using Player.Core.Domain;
 using Player.Core.Lyrics;
+using static Player.Providers.JsonRead;
 
 namespace Player.Providers.Lyrics;
 
@@ -94,14 +95,8 @@ public sealed class LrclibClient : ILyricsSource, IDisposable
 
     private static string Escape(string value) => Uri.EscapeDataString(value);
 
-    private static string Text(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
-
-    private static bool IsInstrumental(JsonElement e) =>
-        e.TryGetProperty("instrumental", out var v) && v.ValueKind == JsonValueKind.True;
-
     private static bool HasContent(JsonElement e) =>
-        IsInstrumental(e) || Text(e, "syncedLyrics").Trim().Length > 0 || Text(e, "plainLyrics").Trim().Length > 0;
+        IsTrue(e, "instrumental") || Text(e, "syncedLyrics").Trim().Length > 0 || Text(e, "plainLyrics").Trim().Length > 0;
 
     private static double DurationGap(JsonElement e, double wanted) =>
         wanted > 0 && e.TryGetProperty("duration", out var d) && d.ValueKind == JsonValueKind.Number
@@ -127,7 +122,7 @@ public sealed class LrclibClient : ILyricsSource, IDisposable
         if (plain.Trim().Length > 0)
             return new LyricsResult(true, false, false, plain, "LRCLIB");
 
-        return IsInstrumental(e) ? new LyricsResult(true, true, false, "", "LRCLIB") : Missing;
+        return IsTrue(e, "instrumental") ? new LyricsResult(true, true, false, "", "LRCLIB") : Missing;
     }
 
     /// <summary>The JSON of a reply, null for 404 (not found); other failures throw so they are not mistaken for "no lyrics".</summary>
