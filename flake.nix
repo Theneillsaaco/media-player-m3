@@ -50,7 +50,7 @@
       devShells.${system}.default = pkgs.mkShell {
         inputsFrom = [ qt.qtbase qt.qtdeclarative ];
         nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
-        packages = [ pkgs.dotnet-sdk_10 pkgs.libsecret pkgs.flatpak pkgs.flatpak-builder ] ++ runtimeBins;
+        packages = [ pkgs.dotnet-sdk_11 pkgs.libsecret pkgs.flatpak pkgs.flatpak-builder ] ++ runtimeBins;
         shellHook = ''
           export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
           export QtDir=${qtPrefix}
@@ -70,8 +70,8 @@
 
         projectFile = "src/Kyuto.App/Kyuto.App.csproj";
         nugetDeps = ./deps.json;
-        dotnet-sdk = pkgs.dotnet-sdk_10;
-        dotnet-runtime = pkgs.dotnet-runtime_10;
+        dotnet-sdk = pkgs.dotnet-sdk_11;
+        dotnet-runtime = pkgs.dotnet-runtime_11;
 
         nativeBuildInputs = [ pkgs.stdenv.cc pkgs.cmake pkgs.ninja pkgs.pkg-config ];
         buildInputs = [ qt.qtbase qt.qtdeclarative ];
@@ -103,10 +103,10 @@
 
         postInstall = ''
           app=$out/lib/kyuto
-          qt=src/Kyuto.App/obj/Release/net10.0/qt/native
+          qt=src/Kyuto.App/obj/Release/net11.0/qt/native
         
           # Lo que Qt Bridge necesita junto a Kyuto.App
-          for d in src/Kyuto.App/bin/Release/net10.0/linux-x64 src/Kyuto.App/bin/Release/net10.0; do
+          for d in src/Kyuto.App/bin/Release/net11.0/linux-x64 src/Kyuto.App/bin/Release/net11.0; do
             for f in Application kyuto_app qt_bridge_metadata.json qtdeploy.txt; do
               if [ -e "$d/$f" ] && [ ! -e "$app/$f" ]; then
                 cp -r --no-preserve=mode "$d/$f" "$app/"

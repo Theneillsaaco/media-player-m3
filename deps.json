@@ -1,23 +1,18 @@
 [
   {
     "pname": "FSharp.Core",
-    "version": "10.1.403",
-    "hash": "sha256-UYJ9bh3HxXqAnLCp2k1FbvWgtaWDpz2byTJO6Cuzyr8="
-  },
-  {
-    "pname": "FSharp.Core",
-    "version": "10.1.404",
-    "hash": "sha256-xBSpqWuNRDX1GGhAC9g590q4XN5Bzw7LraGcNiWhUjY="
+    "version": "11.0.101",
+    "hash": "sha256-bBQ8ak4ATjILoU68RhtWjGDa6w/No+uNjlz6FCdrmqE="
   },
   {
     "pname": "Microsoft.Data.Sqlite",
-    "version": "10.0.15",
-    "hash": "sha256-EN3q/t/f+idvJoZ6QAvdkpChKmZ1UUMd2xqpzJZpp5s="
+    "version": "11.0.0",
+    "hash": "sha256-sjuN1KPNEwuF5PKBH0cWzGkA4+zAgQXRG0JGJrUcF18="
   },
   {
     "pname": "Microsoft.Data.Sqlite.Core",
-    "version": "10.0.15",
-    "hash": "sha256-VkeQmBIbfQ/rL+0RvsR0a5rkrhQQYB7LSpVMC4n5N8M="
+    "version": "11.0.0",
+    "hash": "sha256-TOckD8u12+rCwnhKo5vx3uM0+J1oTsXTfeeu81RLPb4="
   },
   {
     "pname": "QtGroup.Qt.Bridge.CSharp.linux-x64",
@@ -25,29 +20,34 @@
     "hash": "sha256-tQ4d4oJ9JFVLJ0s3+vB4/qBgbEP9tKoithI2G68ghuo="
   },
   {
+    "pname": "SQLite",
+    "version": "3.53.4",
+    "hash": "sha256-VkHrWOiEKf1z0J/ClL2qYQpumQmfQUHekSpeSqbXc8o="
+  },
+  {
     "pname": "SQLitePCLRaw.bundle_e_sqlite3",
-    "version": "2.1.13",
-    "hash": "sha256-iaIW+AWdCcq8tFq3WsLxgLczMjwn1Bz5qYHcX1tcbA8="
+    "version": "3.0.5",
+    "hash": "sha256-4yXOYahryjgfvTVIcmRIHhxqOWY1Rv7IIDX6ZhGYwqE="
+  },
+  {
+    "pname": "SQLitePCLRaw.config.e_sqlite3",
+    "version": "3.0.5",
+    "hash": "sha256-HDkIERpKFOiYg5g2vqnE2jkO3GabKXxATekkIqvuOrE="
   },
   {
     "pname": "SQLitePCLRaw.core",
-    "version": "2.1.13",
-    "hash": "sha256-2T1ferP4ZMR3IqLZAEjDGhqsdD4VPYe59KB1ie4vna8="
-  },
-  {
-    "pname": "SQLitePCLRaw.lib.e_sqlite3",
-    "version": "2.1.13",
-    "hash": "sha256-0H0TtHeRI8+lazNItQTVeiq2/BDHZPtuLJ14eYfjkgE="
+    "version": "3.0.5",
+    "hash": "sha256-dHa0uOBn2IxMtZijGJO1EQN7iOBcKNUk9LRDP+n2kEg="
   },
   {
     "pname": "SQLitePCLRaw.provider.e_sqlite3",
-    "version": "2.1.13",
-    "hash": "sha256-UT7yul0BwU0egDLZ0sosiYXffsfTUfDkCRdHYRSsH5w="
+    "version": "3.0.5",
+    "hash": "sha256-EMbT2qxDK7OC3aBsNeX3/8zjYYeSFBvZFlZSfwbvWyU="
   },
   {
     "pname": "Tmds.DBus.Generator",
-    "version": "0.95.2",
-    "hash": "sha256-JhNy5J6Oor22dj/eWc+ZwgB45awEW+yW2g3ZqQKB030="
+    "version": "0.95.3",
+    "hash": "sha256-58yYBjb8DGcb4k1jopnJvFUhkQ1PhgcGTcWzrCGsDLo="
   },
   {
     "pname": "Tmds.DBus.Protocol",
